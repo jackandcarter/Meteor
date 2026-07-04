@@ -1,0 +1,3 @@
+{"timestamp":"2026-07-04T13:37:43.9610680Z","server":"Lobby","category":"diagnostics.enabled","path":"/tmp/aetherxiv-traces/lobby-20260704-133743.jsonl"}
+{"timestamp":"2026-07-04T13:44:29.2790870Z","server":"Lobby","category":"lobby.session.accepted","remote":"127.0.0.1:53520","sessionLength":56,"sessionFingerprint":"c17912e7797d","version":"2012.09.19.0001","sequence":1,"userId":1}
+{"timestamp":"2026-07-04T13:44:34.6947580Z","server":"Lobby","category":"lobby.session.accepted","remote":"127.0.0.1:54710","sessionLength":56,"sessionFingerprint":"c17912e7797d","version":"2012.09.19.0001","sequence":1,"userId":1}
