@@ -1,0 +1,5 @@
+{"timestamp":"2026-07-07T01:06:37.9559600Z","server":"Lobby","category":"diagnostics.enabled","path":"/tmp/aetherxiv-traces/lobby-20260707-010637.jsonl"}
+{"timestamp":"2026-07-07T01:09:35.3720780Z","server":"Lobby","category":"lobby.session.accepted","remote":"172.59.98.90:62137","sessionLength":56,"sessionFingerprint":"cf137679693e","version":"2012.09.19.0001","sequence":1,"userId":1}
+{"timestamp":"2026-07-07T01:09:41.1614980Z","server":"Lobby","category":"lobby.session.accepted","remote":"172.59.98.90:65530","sessionLength":56,"sessionFingerprint":"cf137679693e","version":"2012.09.19.0001","sequence":1,"userId":1}
+{"timestamp":"2026-07-07T01:16:18.5149680Z","server":"Lobby","category":"lobby.session.accepted","remote":"172.59.98.90:18092","sessionLength":56,"sessionFingerprint":"cf137679693e","version":"2012.09.19.0001","sequence":1,"userId":1}
+{"timestamp":"2026-07-07T01:16:25.3244200Z","server":"Lobby","category":"lobby.session.accepted","remote":"172.59.98.90:8182","sessionLength":56,"sessionFingerprint":"cf137679693e","version":"2012.09.19.0001","sequence":1,"userId":1}
