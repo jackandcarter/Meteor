@@ -1,7 +1,0 @@
-{"timestamp":"2026-07-07T01:07:20.0109640Z","server":"World","category":"diagnostics.enabled","path":"/tmp/aetherxiv-traces/world-20260707-010720.jsonl"}
-{"timestamp":"2026-07-07T01:09:53.0719590Z","server":"World","category":"packet.classification","context":"world type 0x08","classification":"world.session-heartbeat-candidate","type":"0x8","opcode":"0x0","source":"0x0","target":"0x0","size":24,"payloadLength":8}
-{"timestamp":"2026-07-07T01:09:53.2049840Z","server":"World","category":"packet.classification","context":"world type 0x08","classification":"world.session-heartbeat-candidate","type":"0x8","opcode":"0x0","source":"0x0","target":"0x0","size":24,"payloadLength":8}
-{"timestamp":"2026-07-07T01:13:04.0929010Z","server":"World","category":"world.session.end.request","session":1,"character":"Ian Again","reason":"socket closed","zone":166}
-{"timestamp":"2026-07-07T01:16:37.5760670Z","server":"World","category":"packet.classification","context":"world type 0x08","classification":"world.session-heartbeat-candidate","type":"0x8","opcode":"0x0","source":"0x0","target":"0x0","size":24,"payloadLength":8}
-{"timestamp":"2026-07-07T01:16:37.7056470Z","server":"World","category":"packet.classification","context":"world type 0x08","classification":"world.session-heartbeat-candidate","type":"0x8","opcode":"0x0","source":"0x0","target":"0x0","size":24,"payloadLength":8}
-{"timestamp":"2026-07-07T01:19:11.3205220Z","server":"World","category":"world.session.end.request","session":1,"character":"Ian Again","reason":"socket closed","zone":166}
