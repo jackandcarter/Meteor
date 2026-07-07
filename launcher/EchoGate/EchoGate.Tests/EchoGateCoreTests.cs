@@ -1146,6 +1146,32 @@ public sealed class EchoGateCoreTests
     }
 
     [Fact]
+    public void RuntimeDiscoveryFindsSystemWineOnPath()
+    {
+        string wineDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        string wineCommand = Path.Combine(wineDirectory, "wine");
+        string wine64Command = Path.Combine(wineDirectory, "wine64");
+
+        IReadOnlyList<RuntimeCandidate> candidates = RuntimeDiscovery.Discover(
+            path => string.Equals(path, wineCommand, StringComparison.Ordinal)
+                || string.Equals(path, wine64Command, StringComparison.Ordinal),
+            _ => false,
+            _ => Array.Empty<string>(),
+            _ => Array.Empty<string>(),
+            wineDirectory);
+
+        Assert.Equal(2, candidates.Count);
+        Assert.Contains(candidates, candidate =>
+            candidate.Name == "System Wine"
+            && candidate.Kind == WineRuntimeKind.WinePrefix
+            && candidate.Command == wineCommand);
+        Assert.Contains(candidates, candidate =>
+            candidate.Name == "System Wine 64"
+            && candidate.Kind == WineRuntimeKind.WinePrefix
+            && candidate.Command == wine64Command);
+    }
+
+    [Fact]
     public void RuntimeDiscoveryDoesNotAutoAdoptCustomHomeWinePrefix()
     {
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

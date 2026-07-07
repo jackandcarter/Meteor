@@ -645,6 +645,7 @@ namespace AetherXIV.Core.World
                             break;
                         else
                         {
+                            PacketDiagnostics.LogBasePacket("World", "client-recv", basePacket);
                             mPacketProcessor.ProcessPacket(conn, basePacket);
                         }
 
@@ -655,6 +656,14 @@ namespace AetherXIV.Core.World
                         Array.Copy(conn.buffer, offset, conn.buffer, 0, bytesRead - offset);
 
                     conn.lastPartialSize = bytesRead - offset;
+                    if (conn.lastPartialSize > 0)
+                    {
+                        Program.Log.Info(
+                            "World partial packet buffered: remote={0} bufferedBytes={1} totalBytes={2}",
+                            GetConnectionAddress(conn),
+                            conn.lastPartialSize,
+                            bytesRead);
+                    }
 
                     //Build any queued subpackets into basepackets and send
                     conn.FlushQueuedSendPackets();

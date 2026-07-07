@@ -48,16 +48,67 @@ namespace AetherXIV.Core.World
                 if (subpacket.header.type == 0x01)
                 {                    
                     HelloPacket hello = new HelloPacket(packet.data);
+                    Program.Log.Info(
+                        "World hello received: remote={0} connectionType=0x{1:X} session={2} invalid={3}",
+                        client.GetAddress(),
+                        packet.header.connectionType,
+                        hello.sessionId,
+                        hello.invalidPacket);
+
+                    if (hello.invalidPacket || hello.sessionId == 0)
+                    {
+                        Program.Log.Error(
+                            "World hello rejected: remote={0} connectionType=0x{1:X} session={2} invalid={3}",
+                            client.GetAddress(),
+                            packet.header.connectionType,
+                            hello.sessionId,
+                            hello.invalidPacket);
+                        continue;
+                    }
 
                     if (packet.header.connectionType == BasePacket.TYPE_ZONE)
                     {
                         mServer.AddSession(client, Session.Channel.ZONE, hello.sessionId);
                         Session session = mServer.GetSession(hello.sessionId);
+                        if (session == null)
+                        {
+                            Program.Log.Error("World zone hello failed: session {0} was not added.", hello.sessionId);
+                            continue;
+                        }
+
+                        Program.Log.Info(
+                            "World zone session loaded: session={0} character={1} currentZone={2} activeLinkshell={3}",
+                            session.sessionId,
+                            session.characterName ?? "",
+                            session.currentZoneId,
+                            session.activeLinkshellName ?? "");
+
                         session.routing1 = mServer.GetWorldManager().GetZoneServer(session.currentZoneId);
+                        if (session.routing1 == null)
+                        {
+                            Program.Log.Error(
+                                "World zone hello failed: session={0} character={1} currentZone={2} has no map route.",
+                                session.sessionId,
+                                session.characterName ?? "",
+                                session.currentZoneId);
+                            continue;
+                        }
+
                         session.routing1.SendSessionStart(session, true);       
                     }
                     else if (packet.header.connectionType == BasePacket.TYPE_CHAT)
+                    {
                         mServer.AddSession(client, Session.Channel.CHAT, hello.sessionId);
+                        Program.Log.Info("World chat session loaded: session={0}", hello.sessionId);
+                    }
+                    else
+                    {
+                        Program.Log.Error(
+                            "World hello rejected: unsupported connectionType=0x{0:X} session={1}",
+                            packet.header.connectionType,
+                            hello.sessionId);
+                        continue;
+                    }
 
                     client.QueuePacket(_0x7Packet.BuildPacket(0x0E016EE5));
                     client.QueuePacket(_0x2Packet.BuildPacket(hello.sessionId));
@@ -82,14 +133,30 @@ namespace AetherXIV.Core.World
                 {                
                     //Send to the correct zone server
                     uint targetSession = subpacket.header.targetId;
+                    Session target = mServer.GetSession(targetSession);
 
-                    InterceptProcess(mServer.GetSession(targetSession), subpacket);
+                    if (target == null)
+                    {
+                        Program.Log.Error(
+                            "World game message dropped: opcode=0x{0:X} targetSession={1} has no active session.",
+                            subpacket.gameMessage.opcode,
+                            targetSession);
+                        continue;
+                    }
 
-                    if (mServer.GetSession(targetSession).routing1 != null)
-                        mServer.GetSession(targetSession).routing1.SendPacket(subpacket);
+                    InterceptProcess(target, subpacket);
 
-                    if (mServer.GetSession(targetSession).routing2 != null)
-                        mServer.GetSession(targetSession).routing2.SendPacket(subpacket);
+                    if (target.routing1 != null)
+                        target.routing1.SendPacket(subpacket);
+                    else
+                        Program.Log.Error(
+                            "World game message could not route: opcode=0x{0:X} session={1} zone={2} has no primary map route.",
+                            subpacket.gameMessage.opcode,
+                            target.sessionId,
+                            target.currentZoneId);
+
+                    if (target.routing2 != null)
+                        target.routing2.SendPacket(subpacket);
                 }
                 //World Server Type
                 else if (subpacket.header.type >= 0x1000)
@@ -168,6 +235,14 @@ namespace AetherXIV.Core.World
 
         public void InterceptProcess(Session session, SubPacket subpacket)
         {
+            if (session == null)
+            {
+                Program.Log.Error(
+                    "World intercept skipped: opcode=0x{0:X} has no session.",
+                    subpacket.gameMessage.opcode);
+                return;
+            }
+
             switch (subpacket.gameMessage.opcode)
             {
                 case 0x00C9:
@@ -184,6 +259,11 @@ namespace AetherXIV.Core.World
                     }                    
                     break;
                 case 0x6:
+                    Program.Log.Info(
+                        "World login ready opcode received: session={0} character={1} zone={2}",
+                        session.sessionId,
+                        session.characterName ?? "",
+                        session.currentZoneId);
                     mServer.GetWorldManager().DoLogin(session);
                     break;
                     //Special case for groups. If it's a world group, send values, else send to zone server

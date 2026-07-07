@@ -43,7 +43,8 @@ public static class RuntimeDiscovery
         Func<string, bool> fileExists,
         Func<string, bool> directoryExists,
         Func<string, IReadOnlyList<string>> whiskyBottleLister,
-        Func<string, IReadOnlyList<string>> homeWinePrefixLister)
+        Func<string, IReadOnlyList<string>> homeWinePrefixLister,
+        string? executableSearchPath = null)
     {
         ArgumentNullException.ThrowIfNull(fileExists);
         ArgumentNullException.ThrowIfNull(directoryExists);
@@ -62,7 +63,75 @@ public static class RuntimeDiscovery
             Path.Combine(home, ".wine"),
             "Approved Wine Stable cask");
 
+        AddWineCommandsFromPath(candidates, fileExists, Path.Combine(home, ".wine"), executableSearchPath);
+
         return candidates;
+    }
+
+    private static void AddWineCommandsFromPath(
+        List<RuntimeCandidate> candidates,
+        Func<string, bool> fileExists,
+        string prefixPath,
+        string? executableSearchPath)
+    {
+        AddIfCommandExists(
+            candidates,
+            fileExists,
+            "System Wine",
+            WineRuntimeKind.WinePrefix,
+            "wine",
+            prefixPath,
+            "PATH",
+            executableSearchPath);
+
+        AddIfCommandExists(
+            candidates,
+            fileExists,
+            "System Wine 64",
+            WineRuntimeKind.WinePrefix,
+            "wine64",
+            prefixPath,
+            "PATH",
+            executableSearchPath);
+    }
+
+    private static void AddIfCommandExists(
+        List<RuntimeCandidate> candidates,
+        Func<string, bool> fileExists,
+        string name,
+        WineRuntimeKind kind,
+        string command,
+        string? bottleOrPrefix,
+        string source,
+        string? executableSearchPath)
+    {
+        string? resolvedCommand = ResolveExecutable(command, fileExists, executableSearchPath);
+        if (resolvedCommand is null)
+            return;
+
+        if (candidates.Any(candidate => string.Equals(candidate.Command, resolvedCommand, StringComparison.Ordinal)))
+            return;
+
+        candidates.Add(new RuntimeCandidate(name, kind, resolvedCommand, bottleOrPrefix, source));
+    }
+
+    private static string? ResolveExecutable(
+        string command,
+        Func<string, bool> fileExists,
+        string? executableSearchPath)
+    {
+        if (Path.IsPathFullyQualified(command))
+            return fileExists(command) ? command : null;
+
+        string searchPath = executableSearchPath ?? Environment.GetEnvironmentVariable("PATH") ?? "";
+        foreach (string directory in searchPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string candidate = Path.Combine(directory, command);
+            if (fileExists(candidate))
+                return candidate;
+        }
+
+        return null;
     }
 
     private static void AddIfFileExists(
