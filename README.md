@@ -1,10 +1,8 @@
 # AetherXIV 2.0
 
-AetherXIV 2.0 is a modern server-core and launcher foundation for AetherXIV
-Core and EchoGate.Next. The workspace is designed for long-term cross-platform
-development, clean service boundaries, testable packet and scripting behavior,
-and a database foundation that can grow without locking development to one
-operating system.
+AetherXIV 2.0 is a modern server-core and launcher foundation for FFXIV 1.23b Client.
+The workspace is designed for long-term cross-platform development, clean service boundaries, testable packet and scripting behavior,
+and a database foundation that can grow into a fully seeded asset.
 
 ## Supported Platforms
 
