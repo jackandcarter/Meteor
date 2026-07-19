@@ -1,0 +1,206 @@
+# AetherXIV 1.3 local stack: MariaDB + Lobby/World/Map + the PHP web
+# launcher service. From the repo root:
+#
+#   docker compose up -d --build   # build images, seed the DB, run the stack
+#   docker compose logs -f world   # follow one service
+#   docker compose down            # stop (keeps the DB volume)
+#
+# The MariaDB volume only seeds Data/sql on its FIRST boot (an empty
+# aetherxiv13-db-data volume). Re-running `up` against an existing volume
+# does not re-import the base seed; only tools/apply-db-migrations.sh (via
+# the db-init service) runs again, and it is checksum-guarded so already
+# applied migrations are skipped. To force a full reseed from scratch:
+#
+#   docker compose down -v
+#   docker compose up -d --build
+#
+# Map refuses to start (SMOKE_FAIL, exit 40, restart loop) until a
+# host-prepared Data/staticactors.bin exists: run
+#   CLIENT_DIR="/path/to/FINAL FANTASY XIV" ./tools/prepare-client-data.sh
+# on the HOST, then `docker compose restart map` to pick it up (Data/ is
+# bind-mounted read-only into the containers, so no image rebuild needed).
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: ${AETHER_DB_ROOT_PASS:-aether_dev_root}
+      MARIADB_DATABASE: ffxiv_server
+      MARIADB_USER: aetherxiv
+      MARIADB_PASSWORD: ${AETHER_DB_PASS:-aether_dev}
+    command: ["--character-set-server=utf8", "--collation-server=utf8_general_ci"]
+    volumes:
+      - aetherxiv13-db-data:/var/lib/mysql
+      # Seed via docker/db-seed.sh rather than mounting Data/sql directly at
+      # initdb.d: the entrypoint would otherwise execute Data/sql's helper
+      # scripts (import.sh/export.sh) and abort initialization.
+      - ./Data/sql:/seed:ro
+      - ./docker/db-seed.sh:/docker-entrypoint-initdb.d/db-seed.sh:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    ports:
+      - "${AETHER_DB_BIND:-3306}:3306"
+    restart: unless-stopped
+
+  # One-shot: apply Data/sql/migrations/ (the base Data/sql/*.sql seed above
+  # is not migration-tracked and only runs once, on an empty DB volume).
+  db-init:
+    image: mariadb:11.4
+    entrypoint: ["bash", "/opt/aetherxiv/tools/apply-db-migrations.sh"]
+    # Mount only what the script needs. Mounting the repo root would expose
+    # .env.defaults, which tools/load-local-env.sh sources AFTER the process
+    # environment and would clobber DB_APP_HOST back to 127.0.0.1.
+    volumes:
+      - ./tools:/opt/aetherxiv/tools:ro
+      - ./Data/sql/migrations:/opt/aetherxiv/Data/sql/migrations:ro
+    environment:
+      DB_APP_HOST: mariadb
+      DB_APP_PORT: "3306"
+      DB_APP_USER: aetherxiv
+      DB_APP_PASS: ${AETHER_DB_PASS:-aether_dev}
+      DB_NAME: ffxiv_server
+      # Pin empty so the script's app-user fallback path is used instead of
+      # any admin/sudo path.
+      DB_ADMIN_USER: ""
+      DB_ADMIN_SUDO: "0"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    image: aetherxiv-13-web:local
+    build:
+      context: .
+      target: web
+    environment:
+      AETHER_DB_HOST: mariadb
+      AETHER_DB_PORT: "3306"
+      AETHER_DB_NAME: ffxiv_server
+      AETHER_DB_USER: aetherxiv
+      AETHER_DB_PASS: ${AETHER_DB_PASS:-aether_dev}
+    volumes:
+      - ./Data/www:/opt/aetherxiv/Data/www:ro
+    ports:
+      - "${AETHER_WEB_BIND:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1',8080)?0:1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  lobby:
+    image: aetherxiv-13:local
+    build:
+      context: .
+      target: server
+    command: ["lobby"]
+    environment:
+      AETHER_DB_HOST: mariadb
+      AETHER_DB_PORT: "3306"
+      AETHER_DB_NAME: ffxiv_server
+      AETHER_DB_USER: aetherxiv
+      AETHER_DB_PASS: ${AETHER_DB_PASS:-aether_dev}
+      LOBBY_IP: 0.0.0.0
+      AETHER_READY_FILE: /tmp/lobby.ready
+    volumes:
+      - ./Data:/opt/aetherxiv/Data:ro
+    # lobby owns the shared network namespace for world/map (see network_mode
+    # below on those services), so it is the only one that publishes ports.
+    # No map port here: map binds loopback inside the shared netns and is
+    # reached only by world's relay, never by the client.
+    ports:
+      - "${AETHER_LOBBY_BIND:-54994}:54994"
+      - "${AETHER_WORLD_BIND:-54992}:54992"
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/lobby.ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  world:
+    image: aetherxiv-13:local
+    command: ["world"]
+    # Shares lobby's network namespace so DB-seeded 127.0.0.1 inter-server
+    # addresses (servers.address / server_zones.serverIp) keep working.
+    # No ports here: lobby already published the shared netns's ports.
+    network_mode: "service:lobby"
+    environment:
+      AETHER_DB_HOST: mariadb
+      AETHER_DB_PORT: "3306"
+      AETHER_DB_NAME: ffxiv_server
+      AETHER_DB_USER: aetherxiv
+      AETHER_DB_PASS: ${AETHER_DB_PASS:-aether_dev}
+      WORLD_IP: 0.0.0.0
+      AETHER_READY_FILE: /tmp/world.ready
+    volumes:
+      - ./Data:/opt/aetherxiv/Data:ro
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/world.ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      lobby:
+        condition: service_started
+      mariadb:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  map:
+    image: aetherxiv-13:local
+    command: ["map"]
+    network_mode: "service:lobby"
+    environment:
+      AETHER_DB_HOST: mariadb
+      AETHER_DB_PORT: "3306"
+      AETHER_DB_NAME: ffxiv_server
+      AETHER_DB_USER: aetherxiv
+      AETHER_DB_PASS: ${AETHER_DB_PASS:-aether_dev}
+      # Loopback on purpose, matching the native default: the map server
+      # filters its boot-time zone list by its OWN bind ip/port against
+      # server_zones.serverIp/serverPort (seeded 127.0.0.1:1989), and
+      # clients never dial map directly - world relays all zone traffic.
+      # Binding 0.0.0.0 here loads ZERO zones and silently breaks zone-in.
+      MAP_IP: 127.0.0.1
+      AETHER_READY_FILE: /tmp/map.ready
+    volumes:
+      - ./Data:/opt/aetherxiv/Data:ro
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/map.ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      lobby:
+        condition: service_started
+      mariadb:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  aetherxiv13-db-data:

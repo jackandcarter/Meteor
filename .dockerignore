@@ -1,0 +1,15 @@
+.git
+**/bin/
+**/obj/
+.env
+.env.local
+*.jsonl
+*.log
+
+# Desktop launcher and test projects are not referenced by
+# AetherXIV.Core.sln; excluding them keeps the build context small.
+launcher/
+tests/
+playtest-bridge/
+docs/
+*.png

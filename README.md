@@ -16,6 +16,7 @@ Use the platform guide that matches the machine you are setting up:
 - [Linux ARM/x86](docs/guides/LINUX_ARM_X86.md)
 - [Windows ARM/x86](docs/guides/WINDOWS_ARM_X86.md)
 - [Steam Deck experimental](docs/guides/STEAM_DECK_EXPERIMENTAL.md)
+- [Docker Compose local stack](docs/guides/DOCKER_COMPOSE.md)
 
 For a quick project overview:
 
