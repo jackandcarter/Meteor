@@ -50,7 +50,10 @@ public sealed class UmbraRenderBridgeTests
 
         UmbraNativeRenderEvent frame = CreateEvent(UmbraNativeRenderEventKind.Frame) with { FrameNumber = 1 };
         Assert.Equal(0, runtime.RenderBridge.Process(frame));
-        int otherThreadResult = await Task.Run(() => runtime.RenderBridge.Process(frame));
+        int otherThreadResult = int.MinValue;
+        Thread otherThread = new(() => otherThreadResult = runtime.RenderBridge.Process(frame));
+        otherThread.Start();
+        Assert.True(otherThread.Join(TimeSpan.FromSeconds(5)), "Render-thread rejection did not complete.");
         Assert.Equal(-4, otherThreadResult);
     }
 
