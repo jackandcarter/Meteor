@@ -88,12 +88,28 @@ jobs:
           echo "39574efa1132c3ca0d5c77dd2eddbe4a49cca0d6cc2c290ff4924493a1c40314  ${archive}" | sha256sum --check
           tar -xJf "${archive}" -C "${runtime_root}/extract"
           wine="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wine"
+          wineboot="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wineboot"
+          wineserver="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wineserver"
           helper="bin/build/Release/Linux/launcher/app/Helpers/win-x86/AetherXIV.Launcher.ClientLauncher.exe"
           "${wine}" --version
-          timeout 180s xvfb-run -a env \
+          timeout 120s xvfb-run -a env \
+            WINEDEBUG=-all \
+            WINEDLLOVERRIDES=mscoree,mshtml= \
+            WINEPREFIX="${runtime_root}/prefix" \
+            "${wineboot}" -u
+          timeout 30s env \
             WINEDEBUG=-all \
             WINEPREFIX="${runtime_root}/prefix" \
+            "${wineserver}" -w
+          timeout 60s xvfb-run -a env \
+            WINEDEBUG=-all \
+            WINEDLLOVERRIDES=mscoree,mshtml= \
+            WINEPREFIX="${runtime_root}/prefix" \
             "${wine}" "${helper}" --probe | tee "${runtime_root}/probe.log"
+          timeout 30s env \
+            WINEDEBUG=-all \
+            WINEPREFIX="${runtime_root}/prefix" \
+            "${wineserver}" -w
           grep -Fq "AETHERXIV_CLIENT_HELPER_OK" "${runtime_root}/probe.log"
 
       - name: Package the Linux release
