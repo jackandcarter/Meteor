@@ -365,7 +365,7 @@
             <TextBlock Grid.Row="2" Text="Launch helper" VerticalAlignment="Center" />
             <ComboBox x:Name="LaunchHelperModeBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" SelectedIndex="0" SelectionChanged="ClientLaunchSettings_SelectionChanged">
               <ComboBoxItem>Automatic</ComboBoxItem>
-              <ComboBoxItem>32-bit helper (x86)</ComboBoxItem>
+              <ComboBoxItem>32-bit helper (x86, Windows only)</ComboBoxItem>
               <ComboBoxItem>64-bit helper (x64)</ComboBoxItem>
             </ComboBox>
 

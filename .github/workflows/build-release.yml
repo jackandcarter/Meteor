@@ -90,7 +90,8 @@ jobs:
           wine="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wine"
           wineboot="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wineboot"
           wineserver="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wineserver"
-          helper="bin/build/Release/Linux/launcher/app/Helpers/win-x86/AetherXIV.Launcher.ClientLauncher.exe"
+          helper="bin/build/Release/Linux/launcher/app/Helpers/win-x64/AetherXIV.Launcher.ClientLauncher.exe"
+          injector="bin/build/Release/Linux/launcher/app/Helpers/win-x64/Umbra.NativeInjector.x86.exe"
           "${wine}" --version
           timeout 120s xvfb-run -a env \
             WINEDEBUG=-all \
@@ -106,11 +107,16 @@ jobs:
             WINEDLLOVERRIDES=mscoree,mshtml= \
             WINEPREFIX="${runtime_root}/prefix" \
             "${wine}" "${helper}" --probe | tee "${runtime_root}/probe.log"
+          timeout 60s xvfb-run -a env \
+            WINEDEBUG=-all \
+            WINEPREFIX="${runtime_root}/prefix" \
+            "${wine}" "${injector}" --probe | tee "${runtime_root}/injector-probe.log"
           timeout 30s env \
             WINEDEBUG=-all \
             WINEPREFIX="${runtime_root}/prefix" \
             "${wineserver}" -w
           grep -Fq "AETHERXIV_CLIENT_HELPER_OK" "${runtime_root}/probe.log"
+          grep -Fq "AETHERXIV_NATIVE_INJECTOR_OK" "${runtime_root}/injector-probe.log"
 
       - name: Package the Linux release
         run: |
@@ -203,12 +209,17 @@ jobs:
           echo "b50dc50ec7f41d58b115a6b685d4d1315ba3c797bd3aa0f49213f2703cb82388  ${archive}" | shasum -a 256 --check
           tar -xJf "${archive}" -C "${runtime_root}/extract"
           wine="${runtime_root}/extract/Wine Stable.app/Contents/Resources/wine/bin/wine"
-          helper="bin/build/Release/MacOS/AetherXIV Launcher.app/Contents/MacOS/Helpers/win-x86/AetherXIV.Launcher.ClientLauncher.exe"
+          helper="bin/build/Release/MacOS/AetherXIV Launcher.app/Contents/MacOS/Helpers/win-x64/AetherXIV.Launcher.ClientLauncher.exe"
+          injector="bin/build/Release/MacOS/AetherXIV Launcher.app/Contents/MacOS/Helpers/win-x64/Umbra.NativeInjector.x86.exe"
           "${wine}" --version
           WINEDEBUG=-all \
             WINEPREFIX="${runtime_root}/prefix" \
             "${wine}" "${helper}" --probe | tee "${runtime_root}/probe.log"
+          WINEDEBUG=-all \
+            WINEPREFIX="${runtime_root}/prefix" \
+            "${wine}" "${injector}" --probe | tee "${runtime_root}/injector-probe.log"
           grep -Fq "AETHERXIV_CLIENT_HELPER_OK" "${runtime_root}/probe.log"
+          grep -Fq "AETHERXIV_NATIVE_INJECTOR_OK" "${runtime_root}/injector-probe.log"
 
       - name: Package the macOS release
         run: |

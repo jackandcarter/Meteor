@@ -54,8 +54,9 @@ Linux/
 ```
 
 The desktop entries target `/opt/aetherxiv`, contain `Terminal=false`, and point
-to the packaged Core and Launcher icons. The Launcher also contains Windows
-x64/x86 helpers and Umbra for the Wine-hosted game.
+to the packaged Core and Launcher icons. The Launcher contains a self-contained
+Windows x64 managed helper plus the native x86 Umbra payload used with the
+32-bit Wine-hosted game. A 32-bit .NET runtime is not required.
 
 ## Output reset warning
 

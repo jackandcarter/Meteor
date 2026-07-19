@@ -36,7 +36,7 @@ bin/build/Release/SteamOS/
 ```
 
 It includes Core, Launcher, all services, database tools, desktop entries and
-their icon assets, Windows helpers, and Umbra.
+their icon assets, the Windows x64 managed helper, and native x86 Umbra payload.
 
 ## Output reset and verification
 

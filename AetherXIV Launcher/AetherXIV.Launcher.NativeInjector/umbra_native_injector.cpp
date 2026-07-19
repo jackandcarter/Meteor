@@ -277,6 +277,12 @@ int Inject(DWORD processId, const std::wstring& dllPath, const std::wstring& log
 
 int wmain(int argc, wchar_t** argv)
 {
+    if (argc == 2 && std::wcscmp(argv[1], L"--probe") == 0)
+    {
+        std::puts("AETHERXIV_NATIVE_INJECTOR_OK x86-compatible");
+        return 0;
+    }
+
     std::vector<std::wstring> args;
     args.reserve(static_cast<size_t>(argc));
     for (int i = 0; i < argc; i++)

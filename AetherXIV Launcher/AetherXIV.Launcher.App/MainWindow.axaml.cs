@@ -1265,11 +1265,10 @@ public sealed partial class MainWindow : Window
             SetLaunchInProgress("Launching game...", "Launching game...");
             ClientLaunchHelperMode helperMode = ReadLaunchHelperMode();
             UmbraLaunchOptions umbraLaunchOptions = await ResolveUmbraLaunchOptionsForLaunchAsync(clientInstall);
-            if (umbraLaunchOptions.Enabled
-                && platform.RequiresCompatibilityRuntime
+            if (platform.RequiresCompatibilityRuntime
                 && helperMode == ClientLaunchHelperMode.X86)
             {
-                AppendLog("Umbra on Wine uses the 64-bit helper plus native x86 injector; avoiding the 32-bit managed helper for this launch.");
+                AppendLog("Wine uses the 64-bit managed helper for reliable .NET hosting; x86 game and Umbra work remains in the native x86 processes.");
                 helperMode = ClientLaunchHelperMode.X64;
             }
 

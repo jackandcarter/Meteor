@@ -34,7 +34,7 @@ if [[ -n "${AETHERXIV_HELPER_RIDS:-}" ]]; then
 elif [[ -n "${AETHERXIV_HELPER_RID:-}" ]]; then
   HELPER_RIDS="${AETHERXIV_HELPER_RID}"
 else
-  HELPER_RIDS="win-x64 win-x86"
+  HELPER_RIDS="win-x64"
 fi
 
 reset_output_root() {

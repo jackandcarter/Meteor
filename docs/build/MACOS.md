@@ -62,7 +62,8 @@ bin/build/Release/MacOS/
 ```
 
 The server payload is embedded inside `AetherXIV Core.app`. The Launcher bundle
-contains both Windows helper architectures and the Umbra payload needed by Wine.
+contains the self-contained Windows x64 managed helper and native x86 Umbra
+payload needed by Wine. The 32-bit game does not require a 32-bit .NET runtime.
 
 ## Output reset warning
 
