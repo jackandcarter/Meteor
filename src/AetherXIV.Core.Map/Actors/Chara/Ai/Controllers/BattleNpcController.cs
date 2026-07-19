@@ -21,7 +21,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai.controllers
         protected DateTime neutralTime;
         protected DateTime waitTime;
 
-        private bool firstSpell = true;
         protected DateTime lastRoamUpdate;
         protected DateTime battleStartTime;
         private DateTime lastNoActionTrace;
@@ -113,8 +112,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai.controllers
             {
                 //owner.ChangeState(SetActorStatePacket.MAIN_STATE_ACTIVE);
 
-                // reset casting
-                firstSpell = true;
                 // todo: find a better place to put this?
                 if (owner.GetState() != SetActorStatePacket.MAIN_STATE_ACTIVE)
                     owner.ChangeState(SetActorStatePacket.MAIN_STATE_ACTIVE);

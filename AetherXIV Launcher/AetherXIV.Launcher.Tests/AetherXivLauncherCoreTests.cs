@@ -1139,9 +1139,44 @@ public sealed class AetherXivLauncherCoreTests
         Assert.Equal("Homebrew Wine Stable", candidate.Name);
         Assert.Equal(WineRuntimeKind.WinePrefix, candidate.Kind);
         Assert.Contains("Wine Stable.app", candidate.Command, StringComparison.Ordinal);
+        Assert.Null(candidate.BottleOrPrefix);
         Assert.DoesNotContain(candidates, runtime => runtime.Name.Contains("XIV on Mac", StringComparison.Ordinal));
         Assert.DoesNotContain(candidates, runtime => runtime.Kind == WineRuntimeKind.WhiskyBottle);
         Assert.DoesNotContain(candidates, runtime => runtime.Kind == WineRuntimeKind.CrossOverBottle);
+    }
+
+    [Fact]
+    public void RuntimeSetupGuidanceUsesMacOsWineInstructions()
+    {
+        RuntimeSetupGuidance guidance = RuntimeSetupGuidance.ForPlatform(
+            new LauncherPlatform(LauncherOperatingSystem.MacOS, "osx-arm64"));
+
+        Assert.Contains("macOS", guidance.Title, StringComparison.Ordinal);
+        Assert.Equal("wiki.winehq.org", guidance.GuideUri.Host);
+        Assert.Contains("Rosetta", guidance.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeSetupGuidanceRecognizesSteamOsBeforeArchFamily()
+    {
+        RuntimeSetupGuidance guidance = RuntimeSetupGuidance.ForPlatform(
+            new LauncherPlatform(LauncherOperatingSystem.Linux, "linux-x64"),
+            _ => "ID=steamos\nID_LIKE=arch\n");
+
+        Assert.Contains("SteamOS", guidance.Title, StringComparison.Ordinal);
+        Assert.Contains("persistent", guidance.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("STEAMOS.md", guidance.GuideUri.AbsoluteUri, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeSetupGuidanceUsesWineHqPackagesForUbuntu()
+    {
+        RuntimeSetupGuidance guidance = RuntimeSetupGuidance.ForPlatform(
+            new LauncherPlatform(LauncherOperatingSystem.Linux, "linux-x64"),
+            _ => "ID=ubuntu\nID_LIKE=debian\n");
+
+        Assert.Contains("Debian-Ubuntu", guidance.GuideUri.AbsoluteUri, StringComparison.Ordinal);
+        Assert.Contains("32-bit", guidance.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1178,7 +1213,8 @@ public sealed class AetherXivLauncherCoreTests
         Assert.Contains(candidates, candidate =>
             candidate.Name == "System Wine"
             && candidate.Kind == WineRuntimeKind.WinePrefix
-            && candidate.Command == wineCommand);
+            && candidate.Command == wineCommand
+            && candidate.BottleOrPrefix is null);
         Assert.Contains(candidates, candidate =>
             candidate.Name == "System Wine 64"
             && candidate.Kind == WineRuntimeKind.WinePrefix
@@ -1376,6 +1412,68 @@ public sealed class AetherXivLauncherCoreTests
         Assert.Equal("-all", selected.Environment["WINEDEBUG"]);
     }
 
+    [Theory]
+    [InlineData("osx-arm64", "11.0_1", "b50dc50ec7f41d58b115a6b685d4d1315ba3c797bd3aa0f49213f2703cb82388")]
+    [InlineData("osx-x64", "11.0_1", "b50dc50ec7f41d58b115a6b685d4d1315ba3c797bd3aa0f49213f2703cb82388")]
+    [InlineData("linux-x64", "11.0", "39574efa1132c3ca0d5c77dd2eddbe4a49cca0d6cc2c290ff4924493a1c40314")]
+    public void BuiltInRuntimeCatalogPinsSupportedArtifacts(string runtimeIdentifier, string version, string sha256)
+    {
+        RuntimeArtifact artifact = BuiltInRuntimeCatalog.Find(runtimeIdentifier)!;
+
+        Assert.NotNull(artifact);
+        Assert.Equal(runtimeIdentifier, artifact.PlatformRid);
+        Assert.Equal(version, artifact.Version);
+        Assert.Equal(sha256, artifact.Sha256);
+        Assert.Equal("tar.xz", artifact.ArchiveFormat);
+        Assert.StartsWith("https://github.com/", artifact.ArchiveUrl, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuiltInRuntimeCatalogRejectsUnsupportedArchitecture()
+    {
+        Assert.Null(BuiltInRuntimeCatalog.Find("linux-arm64"));
+        Assert.Empty(BuiltInRuntimeCatalog.ForPlatform("linux-arm64").Artifacts);
+    }
+
+    [Fact]
+    public void RuntimePrerequisitesRequireRosettaOnlyForAppleSiliconMacOs()
+    {
+        Assert.True(RuntimePlatformPrerequisites.RequiresRosetta(
+            new LauncherPlatform(LauncherOperatingSystem.MacOS, "osx-arm64"),
+            System.Runtime.InteropServices.Architecture.Arm64));
+        Assert.False(RuntimePlatformPrerequisites.RequiresRosetta(
+            new LauncherPlatform(LauncherOperatingSystem.MacOS, "osx-x64"),
+            System.Runtime.InteropServices.Architecture.X64));
+        Assert.False(RuntimePlatformPrerequisites.RequiresRosetta(
+            new LauncherPlatform(LauncherOperatingSystem.Linux, "linux-arm64"),
+            System.Runtime.InteropServices.Architecture.Arm64));
+    }
+
+    [Fact]
+    public void RuntimePrerequisitesParseMissingLinuxLibrariesWithoutDuplicates()
+    {
+        IReadOnlyList<string> missing = RuntimePlatformPrerequisites.ParseMissingLinuxLibraries("""
+            libX11.so.6 => not found
+            libvulkan.so.1 => not found
+            libX11.so.6 => not found
+            libm.so.6 => /lib/libm.so.6 (0x01)
+            """);
+
+        Assert.Equal(new[] { "libX11.so.6", "libvulkan.so.1" }, missing);
+    }
+
+    [Theory]
+    [InlineData("ID=ubuntu\nID_LIKE=debian", "apt")]
+    [InlineData("ID=steamos\nID_LIKE=arch", "SteamOS/Arch")]
+    [InlineData("ID=fedora", "software manager")]
+    public void RuntimePrerequisitesProvideDistributionFamilyGuidance(string osRelease, string expected)
+    {
+        Assert.Contains(
+            expected,
+            RuntimePlatformPrerequisites.LinuxDependencyGuidance(osRelease),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task RuntimeDownloadServiceInstallsValidatedZipArchive()
     {
@@ -1410,6 +1508,36 @@ public sealed class AetherXivLauncherCoreTests
                 new HttpClient(new StaticPatchHandler(archive)),
                 runtimesRoot: Path.Combine(root, "runtimes"),
                 cacheRoot: Path.Combine(root, "cache")));
+    }
+
+    [Fact]
+    public async Task RuntimeDownloadServiceInstallsValidatedTarXzArchive()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string root = CreateTempDirectory();
+        string payloadRoot = Path.Combine(root, "payload");
+        string executable = Path.Combine(payloadRoot, "bin", "wine");
+        Directory.CreateDirectory(Path.GetDirectoryName(executable)!);
+        File.WriteAllText(executable, "#!/bin/sh\n");
+        string archivePath = Path.Combine(root, "runtime.tar.xz");
+        CreateTarXzArchive(payloadRoot, archivePath);
+        byte[] archive = File.ReadAllBytes(archivePath);
+        RuntimeArtifact artifact = CreateRuntimeArtifact(archive) with
+        {
+            ArchiveUrl = "https://cdn.example.test/runtime.tar.xz",
+            ArchiveFormat = "tar.xz"
+        };
+
+        RuntimeDownloadResult result = await RuntimeDownloadService.DownloadAndInstallAsync(
+            artifact,
+            new HttpClient(new StaticPatchHandler(archive)),
+            runtimesRoot: Path.Combine(root, "runtimes"),
+            cacheRoot: Path.Combine(root, "cache"));
+
+        Assert.True(File.Exists(result.Install.ExecutablePath));
+        Assert.Equal("#!/bin/sh\n", File.ReadAllText(result.Install.ExecutablePath));
     }
 
     [Fact]
@@ -1582,6 +1710,28 @@ public sealed class AetherXivLauncherCoreTests
         Assert.Equal("wine", resolved.Command);
         Assert.Equal("/home/devunit/.wine", resolved.PrefixPath);
         Assert.Equal("/home/devunit/.wine", resolved.Environment["WINEPREFIX"]);
+    }
+
+    [Fact]
+    public void RuntimeProfileResolverIsolatesDetectedWineWithoutExplicitPrefix()
+    {
+        RuntimeCandidate detected = new(
+            "System Wine",
+            WineRuntimeKind.WinePrefix,
+            "/usr/bin/wine",
+            null,
+            "PATH");
+
+        WineRuntimeProfile resolved = RuntimeProfileResolver.Resolve(
+            RuntimeSelectionMode.AutomaticManaged,
+            null,
+            new[] { detected },
+            WineRuntimeProfile.Custom("Custom", "/custom/wine"),
+            "/managed/aetherxiv-prefix");
+
+        Assert.Equal("/usr/bin/wine", resolved.Command);
+        Assert.Equal("/managed/aetherxiv-prefix", resolved.PrefixPath);
+        Assert.Equal("/managed/aetherxiv-prefix", resolved.Environment["WINEPREFIX"]);
     }
 
     [Fact]
@@ -1841,6 +1991,27 @@ public sealed class AetherXivLauncherCoreTests
         }
 
         return output.ToArray();
+    }
+
+    private static void CreateTarXzArchive(string payloadRoot, string archivePath)
+    {
+        string tarCommand = File.Exists("/usr/bin/tar") ? "/usr/bin/tar" : "tar";
+        System.Diagnostics.ProcessStartInfo startInfo = new()
+        {
+            FileName = tarCommand,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        startInfo.ArgumentList.Add("-cJf");
+        startInfo.ArgumentList.Add(archivePath);
+        startInfo.ArgumentList.Add("-C");
+        startInfo.ArgumentList.Add(payloadRoot);
+        startInfo.ArgumentList.Add(".");
+
+        using System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo)!;
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.True(process.ExitCode == 0, $"tar.xz test archive creation failed: {error}");
     }
 
     private static RuntimeArtifact CreateRuntimeArtifact(byte[] archive)

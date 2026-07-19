@@ -7,7 +7,7 @@ namespace AetherXIV.Core.Map.packets.receive
 {
     class HandshakePacket
     {
-        bool invalidPacket = false;
+        public bool invalidPacket = false;
 
         public uint actorID;
 

@@ -9,7 +9,6 @@ namespace AetherXIV.Core.Lobby.DataObjects
         public ushort serverId;
         public string name;
         public ushort state;
-        public string charaInfo;
         public bool isLegacy;
         public bool doRename;
         public uint currentZoneId;

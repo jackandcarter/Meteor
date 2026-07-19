@@ -1,0 +1,26 @@
+.git
+.github
+.vs
+.secrets
+.local-backups
+bin
+**/bin
+**/obj
+**/TestResults
+TestResults
+tests
+docs
+assets
+AetherXIV Launcher
+Legacy Meteor:Aether
+ffxiv_traces
+*.user
+*.suo
+*.pdb
+*.md
+!README.md
+.DS_Store
+**/.DS_Store
+.env
+.env.*
+!.env.example

@@ -1,0 +1,75 @@
+name: aetherxiv
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${AETHERXIV_DB_ROOT_PASSWORD:?Copy .env.example to .env and set AETHERXIV_DB_ROOT_PASSWORD}
+      MARIADB_ROOT_HOST: "%"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
+    networks:
+      - backend
+
+  server:
+    image: aetherxiv/server:2.0
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+        restart: true
+    environment:
+      AETHERXIV_DB_HOST: mariadb
+      AETHERXIV_DB_PORT: "3306"
+      AETHERXIV_DB_NAME: ffxiv_server
+      AETHERXIV_DB_USER: aetherxiv
+      AETHERXIV_DB_PASSWORD: ${AETHERXIV_DB_PASSWORD:?Copy .env.example to .env and set AETHERXIV_DB_PASSWORD}
+      AETHERXIV_DB_ADMIN_USER: root
+      AETHERXIV_DB_ADMIN_PASSWORD: ${AETHERXIV_DB_ROOT_PASSWORD:?Copy .env.example to .env and set AETHERXIV_DB_ROOT_PASSWORD}
+      AETHERXIV_DB_ALLOWED_HOSTS: "%"
+      AETHERXIV_PUBLIC_HOST: ${AETHERXIV_PUBLIC_HOST:-127.0.0.1}
+      AETHERXIV_MAP_PORT: "1989"
+      AETHERXIV_WORLD_PORT: ${AETHERXIV_WORLD_PORT:-54992}
+      AETHERXIV_LOBBY_PORT: ${AETHERXIV_LOBBY_PORT:-54994}
+      AETHERXIV_LAUNCHER_SERVICES_PORT: ${AETHERXIV_LAUNCHER_SERVICES_PORT:-8080}
+      AETHERXIV_ENABLE_LAUNCHER_SERVICES: ${AETHERXIV_ENABLE_LAUNCHER_SERVICES:-true}
+      AETHERXIV_LAUNCHER_ALLOW_ACCOUNT_CREATE: ${AETHERXIV_LAUNCHER_ALLOW_ACCOUNT_CREATE:-true}
+      AETHERXIV_CORE_BACKUP_DIR: /var/lib/aetherxiv/backups
+    ports:
+      - "${AETHERXIV_LAUNCHER_SERVICES_PORT:-8080}:${AETHERXIV_LAUNCHER_SERVICES_PORT:-8080}/tcp"
+      - "${AETHERXIV_WORLD_PORT:-54992}:${AETHERXIV_WORLD_PORT:-54992}/tcp"
+      - "${AETHERXIV_LOBBY_PORT:-54994}:${AETHERXIV_LOBBY_PORT:-54994}/tcp"
+    volumes:
+      - database-backups:/var/lib/aetherxiv/backups
+      - server-logs:/var/log/aetherxiv
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    networks:
+      - frontend
+      - backend
+
+volumes:
+  mariadb-data:
+  database-backups:
+  server-logs:
+
+networks:
+  frontend:
+  backend:
+    internal: true

@@ -15,7 +15,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai
         private Character owner;
         private readonly Dictionary<uint, StatusEffect> effects;
         public static readonly int MAX_EFFECTS = 20;
-        private bool sendUpdate = false;
         private DateTime lastTick;// Do all effects tick at the same time like regen?
         private List<SubPacket> statusSubpackets;
         private ActorPropertyPacketUtil statusTimerPropPacketUtil;
@@ -194,7 +193,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai
 
                 if (effects.Count < MAX_EFFECTS)
                 {
-                    newEffect.CallLuaFunction(this.owner, "onGain", this.owner, newEffect, actionContainer);
+                    newEffect.CallLuaFunction("onGain", this.owner, newEffect, actionContainer);
 
                     effects.Add(newEffect.GetStatusEffectId(), newEffect);
 
@@ -246,7 +245,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai
 
                 // function onLose(actor, effect)
                 effects.Remove(effect.GetStatusEffectId());
-                effect.CallLuaFunction(owner, "onLose", owner, effect, actionContainer);
+                effect.CallLuaFunction("onLose", owner, effect, actionContainer);
                 owner.RecalculateStats();
                 removedEffect = true;
             }
@@ -351,7 +350,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai
             foreach (var effect in effects)
             {
                 argsWithEffect[0] = effect;
-                effect.CallLuaFunction(owner, function, argsWithEffect);
+                effect.CallLuaFunction(function, argsWithEffect);
             }
         }
 
@@ -399,8 +398,8 @@ namespace AetherXIV.Core.Map.actors.chara.ai
             newEffect.SetMagnitude(magnitude);
             newEffect.SetDuration(duration);
             newEffect.SetOwner(effectToBeReplaced.GetOwner());
-            effectToBeReplaced.CallLuaFunction(owner, "onLose", owner, effectToBeReplaced);
-            newEffect.CallLuaFunction(owner, "onGain", owner, newEffect);
+            effectToBeReplaced.CallLuaFunction("onLose", owner, effectToBeReplaced);
+            newEffect.CallLuaFunction("onGain", owner, newEffect);
             effects.Remove(effectToBeReplaced.GetStatusEffectId());
 
             newEffect.SetStartTime(DateTime.Now);

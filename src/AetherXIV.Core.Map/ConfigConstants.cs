@@ -1,7 +1,6 @@
 using AetherXIV.Core.Common;
 using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 
 namespace AetherXIV.Core.Map
@@ -47,12 +46,10 @@ namespace AetherXIV.Core.Map
 
         public static void ApplyLaunchArgs(string[] launchArgs)
         {
-            var args = (from arg in launchArgs select arg.ToLower().Trim().TrimStart('-')).ToList();
-
-            for (var i = 0; i + 1 < args.Count; i += 2)
+            for (var i = 0; i + 1 < launchArgs.Length; i += 2)
             {
-                var arg = args[i];
-                var val = args[i + 1];
+                var arg = launchArgs[i].Trim().TrimStart('-').ToLowerInvariant();
+                var val = launchArgs[i + 1].Trim();
                 var legit = false;
 
                 if (arg == "ip")

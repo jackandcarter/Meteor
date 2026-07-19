@@ -455,37 +455,37 @@
                       Grid.ColumnSpan="2"
                       SelectedIndex="0"
                       SelectionChanged="RuntimeMode_SelectionChanged"
-                      ToolTip.Tip="Approved Runtime uses the AetherXIV runtime when installed, or Wine Stable if it is already present.">
-              <ComboBoxItem>Approved Runtime</ComboBoxItem>
+                      ToolTip.Tip="Automatic Wine prefers the verified Launcher-managed runtime, then a recognized local Wine runtime, with an isolated FFXIV prefix.">
+              <ComboBoxItem>Automatic Wine</ComboBoxItem>
               <ComboBoxItem>Custom Runtime</ComboBoxItem>
             </ComboBox>
 
-            <TextBlock Grid.Row="2" Text="Runtime package" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Text="Wine setup" VerticalAlignment="Center" />
             <TextBlock x:Name="RuntimeCatalogStatus" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="Not checked" TextWrapping="Wrap" VerticalAlignment="Center" />
 
-            <TextBlock Grid.Row="3" Text="Installed runtime" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="3" Text="Runtime status" VerticalAlignment="Center" />
             <TextBlock x:Name="ManagedRuntimeStatus" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="Not installed" TextWrapping="Wrap" VerticalAlignment="Center" />
 
-            <TextBlock Grid.Row="4" Text="Runtime progress" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="4" Text="Validation progress" VerticalAlignment="Center" />
             <ProgressBar x:Name="RuntimeProgressBar" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Minimum="0" Maximum="100" Value="0" />
 
             <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
               <Button x:Name="InstallRuntimeButton"
                       Content="Install Runtime"
                       Click="InstallRuntime_Click"
-                      ToolTip.Tip="Downloads the approved AetherXIV Wine runtime, verifies it, and installs it for this launcher." />
+                      ToolTip.Tip="Downloads the pinned AetherXIV Wine package for this platform, verifies its checksum, installs it into Launcher storage, and validates it." />
               <Button x:Name="ValidateRuntimeButton" Content="Validate Runtime" Click="ValidateRuntime_Click" />
               <Button x:Name="ResetPrefixButton" Content="Reset Prefix" Click="ResetPrefix_Click" />
             </StackPanel>
 
-            <TextBlock Grid.Row="6" Text="Approved fallback" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="6" Text="Detected runtime" VerticalAlignment="Center" />
             <ComboBox x:Name="DetectedRuntimeBox"
                       Grid.Row="6"
                       Grid.Column="1"
                       Grid.ColumnSpan="2"
                       ToolTip.Tip="Only approved detected runtimes are listed here. GPTK, Whisky, CrossOver, and random prefixes are not auto-selected." />
 
-            <TextBlock Grid.Row="7" Text="Approved runtimes" VerticalAlignment="Top" />
+            <TextBlock Grid.Row="7" Text="Detected runtimes" VerticalAlignment="Top" />
             <TextBox x:Name="RuntimeCandidatesBox"
                      Grid.Row="7"
                      Grid.Column="1"

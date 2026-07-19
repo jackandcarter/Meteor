@@ -5,7 +5,7 @@ namespace AetherXIV.Core.Map.packets.receive
 {
     class UpdatePlayerPositionPacket
     {
-        bool invalidPacket = false;
+        public bool invalidPacket = false;
 
         public ulong timestamp;
         public float x, y, z, rot;

@@ -32,6 +32,10 @@ starting a separate terminal.
 
 The build scripts publish the Core and Launcher GUIs self-contained. Server
 hosts are intentionally framework-dependent to keep the server package smaller.
+The four existing platform build commands perform an early prerequisite check
+and report every missing tool together. They do not install SDKs, compilers, or
+package managers. GitHub Actions provisions those tools before invoking the
+same build commands used by developers.
 
 ## macOS build host
 
@@ -120,17 +124,20 @@ installation.
 
 - No Wine runtime is needed.
 - The game client must be able to run as a 32-bit Windows application.
-- A Microsoft Visual C++ x86 redistributable may be needed when native payloads
-  were produced with MSVC rather than the statically linked MinGW path.
+- AetherXIV's native x86 payloads statically link their compiler runtime.
 - Any legacy DirectX prerequisites required by the original client remain game
   prerequisites, not Launcher dependencies.
 
 ### macOS
 
-- An approved Wine-compatible runtime selected or installed through the
-  Launcher.
+- The checksum-pinned managed Wine runtime installed by the Launcher, or a
+  compatible local macOS runtime detected and validated by the Launcher.
 - Rosetta 2 when the selected compatibility runtime contains Intel-only macOS
-  components.
+  components. Runtime validation triggers Apple's normal prompt and waits for
+  completion when Rosetta is absent.
+- GStreamer is optional for launching; without it some Wine-hosted movies or
+  media may not play. The Launcher does not install its unsigned upstream
+  package automatically.
 - Permission for the Launcher and compatibility runtime to access the client,
   prefix, plugin, cache, and log directories.
 
@@ -138,10 +145,14 @@ installation.
 
 - A graphical X11 session or XWayland compatibility layer.
 - Avalonia's native desktop libraries: X11, ICE, SM, and Fontconfig.
-- An approved Wine-compatible runtime selected or installed through the
-  Launcher.
-- Working 32-bit graphics/userspace support for the selected Wine runtime and
-  the legacy x86 game client.
+- The checksum-pinned portable Wine runtime installed by the Launcher, or a
+  compatible local runtime detected and validated by the Launcher.
+- Working host graphics drivers for the legacy x86 game client. The selected
+  amd64-wow64 Wine build does not require 32-bit Linux libraries.
+
+Before prefix creation, the Launcher checks the selected Linux Wine executable
+and its principal X11, audio, GStreamer, and Vulkan drivers with `ldd`. A missing
+library blocks validation with its exact soname and platform-family guidance.
 
 Distribution package names vary. On Debian/Ubuntu, the Avalonia libraries are
 commonly provided by `libx11-6`, `libice6`, `libsm6`, and `libfontconfig1`.
@@ -176,6 +187,15 @@ Platform-specific build sources:
 - [MSYS2](https://www.msys2.org/) as an alternative Windows MinGW-w64 environment
 - [Ubuntu package search](https://packages.ubuntu.com/) for distribution-provided build and desktop libraries
 - [WineHQ downloads](https://www.winehq.org/download) for advanced custom-runtime users
+- [Gcenx macOS Wine builds](https://github.com/Gcenx/macOS_Wine_builds), the
+  source of the pinned macOS Wine 11.0_1 archive
+- [Kron4ek Wine builds](https://github.com/Kron4ek/Wine-Builds), the source of
+  the pinned Linux Wine 11.0 amd64-wow64 archive
+
+The Launcher ships the pinned package definitions and checksums, not copies of
+the upstream Wine archives. **Install Runtime** downloads the selected archive
+directly from its upstream release and refuses a byte-length or SHA-256
+mismatch.
 
 Do not substitute a newer major .NET SDK without also updating `global.json` and
 validating the complete build. AetherXIV currently pins SDK `10.0.203`.

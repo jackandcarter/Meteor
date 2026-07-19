@@ -7,9 +7,10 @@ best-effort.
 ## Before you begin
 
 You need the complete `SteamOS` release, a user-owned Final Fantasy XIV 1.23b
-client, MariaDB, the .NET 10 ASP.NET Core Runtime, an approved Wine-compatible
-runtime, and the Linux desktop libraries listed in the
-[dependency matrix](../BUILD_AND_RUNTIME_DEPENDENCIES.md).
+client, MariaDB, the .NET 10 ASP.NET Core Runtime, internet access for the
+Launcher-managed Wine download, and the Linux desktop libraries listed in the
+[dependency matrix](../BUILD_AND_RUNTIME_DEPENDENCIES.md). A separate Wine
+installation is not required.
 
 SteamOS has a read-only base image. System updates can replace packages or
 changes made outside persistent storage. Plan where MariaDB data, runtimes,
@@ -34,16 +35,23 @@ not open a terminal.
 2. Verify dependencies and complete database setup.
 3. Start the stack and wait for all services.
 4. Open **AetherXIV Launcher**, save **Localhost**, and locate the 1.23b client.
-5. Select and validate an approved runtime.
+5. Select **Install Runtime**. The portable Linux x64 package is verified and
+   installed in persistent Launcher application data, without modifying the
+   read-only SteamOS base image. Validation lists any missing host library;
+   install it in a persistent SteamOS/Arch environment and validate again.
 6. Enable Umbra if desired, then log in.
 
 Running the server and client together is convenient for development but may
 be resource intensive on a Steam Deck. A remote AetherXIV server can be selected
 from the Launcher's **Server** tab instead.
 
+If the persistent Wine executable is not available on the desktop session's
+`PATH`, choose **Custom Runtime** and enter its absolute executable path. Do not
+disable SteamOS read-only protection merely to make automatic detection work.
+
 ## After SteamOS updates
 
-Recheck the .NET runtime, MariaDB service, 32-bit graphics support, desktop-entry
+Recheck the .NET runtime, MariaDB service, graphics support, desktop-entry
 paths, and executable bits. Launcher-managed data and prefixes should remain in
 writable user storage.
 

@@ -112,7 +112,7 @@ namespace AetherXIV.Core.Map.utils
                     cmd.Parameters.AddWithValue("@id", 100);
                     cmd.Parameters.AddWithValue("@displayNameId", 100);
                   
-                    string line, line2;
+                    string line;
                     Regex csvSplit = new Regex("(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)", RegexOptions.Compiled);
                     System.IO.StreamReader file = new System.IO.StreamReader("D:\\Coding\\FFXIV Related\\FFXIV Tool\\2012.09.19.0001.decode.csv\\actorclass.csv");
                     while ((line = file.ReadLine()) != null)

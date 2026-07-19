@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using AetherXIV.Core.Map.Actors;
-using AetherXIV.Core.Map.lua;
 
 namespace AetherXIV.Core.Map.actors.chara.ai
 {
@@ -10,8 +9,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai
         public DateTime startTime;
         public uint durationMs;
         public bool checkState;
-        // todo: lua function
-        LuaScript script;
     }
 
     class ActionQueue
@@ -20,7 +17,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai
         private Queue<Action> actionQueue;
         private Queue<Action> timerQueue;
 
-        public bool IsEmpty { get { return actionQueue.Count > 0 || timerQueue.Count > 0; } }
+        public bool IsEmpty { get { return actionQueue.Count == 0 && timerQueue.Count == 0; } }
 
         public ActionQueue(Character owner)
         {

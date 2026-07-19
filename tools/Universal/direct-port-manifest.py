@@ -32,7 +32,52 @@ RUNTIME_ASSETS = (
     ("Map/navmesh/SHARPNAV_LICENSE", "Map Server/navmesh/SHARPNAV_LICENSE", "Data/navmesh/SHARPNAV_LICENSE"),
 )
 
+SQL_ASSET_ADAPTATIONS = {
+    "gamedata_actor_class.sql": (
+        "Trace-reviewed event conditions correct the market-entrance box metadata and restore the ChocoboStop notice "
+        "and push-circle contracts while preserving the imported actor-class dataset."
+    ),
+}
+
+PORT_NATIVE_SOURCES = {
+    "src/AetherXIV.Core.Map/Actors/Chara/Ai/BattleCastPresentationPolicy.cs": (
+        "Trace-backed mapping of player and battle-NPC cast types to client chant presentation IDs."
+    ),
+    "src/AetherXIV.Core.Map/Actors/Chara/Player/EquipmentStatPolicy.cs": (
+        "Client-version-specific equipment scaling and bonus-pair policy reconstructed from reviewed runtime evidence."
+    ),
+    "src/AetherXIV.Core.Map/ChocoboService.cs": (
+        "Server-owned chocobo rental, purchase, naming, issuance, and persistence orchestration."
+    ),
+    "src/AetherXIV.Core.Map/ChocoboStopPolicy.cs": (
+        "Evidence-gated mounted interaction and destination policy for observed ChocoboStop boundaries."
+    ),
+    "src/AetherXIV.Core.Map/GrandCompanyShopService.cs": (
+        "Atomic Grand Company seal purchase flow for company-specific chocobo issuance items."
+    ),
+    "src/AetherXIV.Core.Map/PlayerSessionTransitionPolicy.cs": (
+        "Single-owner policy for logout and quit transitions across Map and World session cleanup."
+    ),
+    "src/AetherXIV.Core.Map/RepairService.cs": (
+        "Server-owned validation and atomic persistence for NPC equipment repair."
+    ),
+    "src/AetherXIV.Core.Map/SeamlessBoundaryPolicy.cs": (
+        "Reviewed movement-boundary policy for merge and destination crossings."
+    ),
+    "src/AetherXIV.Core.Map/ZoneTransitionPositionPolicy.cs": (
+        "Validation policy for pending zone-transition arrival acknowledgements."
+    ),
+}
+
 ADAPTATIONS = {
+    "Common/Blowfish.cs": (
+        "The legacy signed-byte Blowfish key schedule is expressed with explicit unchecked integer conversions, "
+        "preserving the client-compatible cipher result while avoiding a misleading signed bitwise warning."
+    ),
+    "Common/EfficientHashTables.cs": (
+        "Private nested element types use conventional PascalCase names; hash calculation, bucket layout, and lookup "
+        "behavior are unchanged."
+    ),
     "Common/DevDiagnostics.cs": (
         "Environment variable names were updated to the AetherXIV product prefix without "
         "changing diagnostic enablement or output behavior."
@@ -50,37 +95,150 @@ ADAPTATIONS = {
         "The modern host fixes the process working directory to AppContext.BaseDirectory so the "
         "legacy relative config paths resolve identically in centralized and published builds. "
         "The legacy DEBUG console listener is registered through Trace.Listeners, the supported "
-        ".NET 10 equivalent of the removed Debug.Listeners API."
+        ".NET 10 equivalent of the removed Debug.Listeners API. Non-interactive standard input also skips the "
+        "legacy keypress prompt so containerized services can exit cleanly."
+    ),
+    "Lobby/ClientConnection.cs": (
+        "Never-assigned account and character-creation scratch fields are removed; the populated user, session, "
+        "character ID, slot, and world fields remain unchanged."
+    ),
+    "Lobby/DataObjects/CharaInfo.cs": (
+        "The reserved face-info byte is initialized explicitly to its protocol value of zero."
+    ),
+    "Lobby/DataObjects/Character.cs": (
+        "An unassigned character-info string that was never serialized or consumed is removed."
+    ),
+    "Lobby/Server.cs": (
+        "The existing socket cleanup routine is restored as a stoppable background worker after listener startup. "
+        "Connection-list access is synchronized, disconnected sockets are disposed through the normal path, and "
+        "shutdown wakes and joins the worker."
     ),
     "World/Program.cs": (
         "The modern host fixes the process working directory to AppContext.BaseDirectory so the "
         "legacy relative config paths resolve identically in centralized and published builds. "
         "The legacy DEBUG console listener is registered through Trace.Listeners, the supported "
-        ".NET 10 equivalent of the removed Debug.Listeners API."
+        ".NET 10 equivalent of the removed Debug.Listeners API. Non-interactive standard input also skips the "
+        "legacy keypress prompt so containerized services can exit cleanly."
+    ),
+    "World/Actor/Group/Work/GroupGlobalTemp.cs": (
+        "The unassigned director reference is removed from temporary group state; all populated group fields remain."
+    ),
+    "World/DataObjects/DBWorld.cs": (
+        "The unpopulated and unused message-of-the-day field is removed from the world record."
+    ),
+    "World/DataObjects/ClientConnection.cs": (
+        "World connections use graceful socket shutdown followed by close, tolerating already-disposed sockets during "
+        "idempotent service shutdown."
+    ),
+    "World/DataObjects/Session.cs": (
+        "The never-assigned secondary zone route is removed; each session retains its single authoritative zone route."
+    ),
+    "World/DataObjects/ZoneServer.cs": (
+        "Zone-server connections have an explicit disposal-safe disconnect path, and asynchronous receive handles "
+        "shutdown races without logging expected socket-disposal failures."
+    ),
+    "World/Database.cs": (
+        "World loading now populates list position, bounded population, and active status from the existing servers "
+        "schema instead of leaving those values at defaults."
+    ),
+    "World/PacketProcessor.cs": (
+        "Forwarding uses the session's single authoritative zone route after removal of the unreachable secondary route."
+    ),
+    "World/Server.cs": (
+        "The World host has an idempotent graceful-shutdown path that closes listeners and clients, disconnects zone "
+        "servers, clears sessions, and makes asynchronous accept/receive callbacks safe during socket disposal."
+    ),
+    "World/WorldMaster.cs": (
+        "World shutdown can explicitly disconnect every registered zone-server connection."
+    ),
+    "World/Packets/WorldPackets/Receive/Group/LinkshellInviteCancelPacket.cs": (
+        "Unparsed name and actor fields are removed because cancellation is keyed by the authenticated source session."
     ),
     "Map/Program.cs": (
         "The modern host fixes the process working directory to AppContext.BaseDirectory so the "
         "legacy relative config, static-actor, and Lua paths resolve identically in centralized and published builds. "
         "The legacy DEBUG console listener is registered through Trace.Listeners, the supported "
-        ".NET 10 equivalent of the removed Debug.Listeners API."
+        ".NET 10 equivalent of the removed Debug.Listeners API. Non-interactive standard input also skips the "
+        "legacy keypress prompt so containerized services can exit cleanly."
     ),
     "Map/Utils/NavmeshUtils.cs": (
         "The legacy navmesh file is loaded from the packaged application base directory instead of traversing "
-        "the process working directory. The SharpNav serializer, file contents, and pathfinding behavior are unchanged."
+        "the process working directory. The SharpNav serializer, file contents, and pathfinding behavior are unchanged. "
+        "An unused local polygon-limit constant is removed."
+    ),
+    "Map/Utils/SQLGeneration.cs": (
+        "An unused secondary line buffer is removed from SQL generation; emitted SQL is unchanged."
     ),
     "Lobby/ConfigConstants.cs": (
-        "The existing legacy launch-argument adapter accepts the database port supplied by the AetherXIV Core app."
+        "The legacy launch-argument adapter accepts the database port supplied by AetherXIV Core and preserves case-sensitive database values such as container secrets."
     ),
     "World/ConfigConstants.cs": (
-        "The existing legacy launch-argument adapter accepts the database port supplied by the AetherXIV Core app."
+        "The legacy launch-argument adapter accepts the database port supplied by AetherXIV Core and preserves case-sensitive database values such as container secrets."
     ),
     "Map/ConfigConstants.cs": (
-        "The existing legacy launch-argument adapter accepts the database port supplied by the AetherXIV Core app."
+        "The legacy launch-argument adapter accepts the database port supplied by AetherXIV Core and preserves case-sensitive database values such as container secrets."
     ),
     "Map/Actors/Area/Area.cs": (
         "The actor-number allocator is shared by spawned actors and directors, matching the official unified "
         "zone actor sequence and preventing recycled or colliding IDs after dynamic despawns. The existing "
-        "private-area range remains unchanged."
+        "private-area range remains unchanged. An unused area-script field is removed; runtime scripts continue "
+        "through the existing Lua engine."
+    ),
+    "Map/Actors/Actor.cs": (
+        "Event-status packets honor trace-derived per-condition enabled state instead of enabling every notice and "
+        "push-circle condition unconditionally."
+    ),
+    "Map/Actors/Chara/Ai/AIContainer.cs": (
+        "Mounted players are prevented from using battle items, engaging, casting, using abilities, or using weapon "
+        "skills, with the observed refusal messages for item and engage requests. The unimplemented item-use state "
+        "also fails closed with diagnostics instead of silently completing without consuming or applying an item."
+    ),
+    "Map/Actors/Chara/Ai/Controllers/BattleNpcController.cs": (
+        "An assigned-but-unread first-spell flag is removed; the controller's spell-list and combat selection behavior "
+        "are unchanged."
+    ),
+    "Map/Actors/Chara/Ai/Helpers/ActionQueue.cs": (
+        "The uninitialized Lua-script field and its stale import are removed from the dormant action-queue skeleton, "
+        "and its empty-state property now reports the queue state with the correct polarity."
+    ),
+    "Map/Actors/Chara/Ai/Helpers/PathFind.cs": (
+        "An unused path-following flag is removed; path calculation and movement behavior are unchanged."
+    ),
+    "Map/Actors/Chara/Ai/Helpers/TargetFind.cs": (
+        "Unused target-category state and its unreferenced enum are removed; active target flags and AOE selection remain."
+    ),
+    "Map/Actors/Chara/Ai/State/AbilityState.cs": (
+        "An assigned-but-unread hit-target flag is removed; ability target finding remains authoritative."
+    ),
+    "Map/Actors/Chara/Ai/State/ItemState.cs": (
+        "Unassigned item and duplicate owner fields plus a stale import are removed from the dormant item-state skeleton."
+    ),
+    "Map/Actors/Chara/Ai/State/MagicState.cs": (
+        "Assigned-but-unread hit-target and hit-direction values are removed; spell target finding and command "
+        "execution remain unchanged."
+    ),
+    "Map/Actors/Chara/Ai/State/WeaponSkillState.cs": (
+        "Weapon-skill cast presentation uses the trace-backed player/NPC cast-type mapping and emits structured "
+        "diagnostics instead of a single hard-coded chant ID."
+    ),
+    "Map/Actors/Chara/Ai/StatusEffect.cs": (
+        "Status-effect callbacks execute the script loaded and cached for that effect. This removes an unreachable "
+        "fallback and avoids reloading the Lua file on each tick while preserving the missing-function sentinel."
+    ),
+    "Map/Actors/Chara/Ai/StatusEffectContainer.cs": (
+        "An unused update flag is removed, and callback call sites use the effect's cached-script API directly; "
+        "status-effect add, remove, tick, and packet flows remain unchanged."
+    ),
+    "Map/Actors/Group/TradeGroup.cs": (
+        "The never-assigned topic-group field and getter are removed; authenticated trade membership remains unchanged."
+    ),
+    "Map/Actors/Chara/ItemPackage.cs": (
+        "Inventory packages can apply already-committed service transactions in memory without duplicate database "
+        "writes, including non-persisting slot realignment for committed removals."
+    ),
+    "Map/Actors/EventList.cs": (
+        "Event conditions carry trace-derived enablement and push-circle wire fields while retaining legacy defaults "
+        "for captures that do not provide them."
     ),
     "Map/Actors/Director/Director.cs": (
         "Official party_battle_leve traffic identifies directors in the zone NPC actor family, includes the "
@@ -102,14 +260,44 @@ ADAPTATIONS = {
         "When a persisted opening SimpleContent area is absent after restart, the runtime now reconstructs it "
         "through the existing legacy CreateContentArea/content-script/director path instead of clearing the private-area "
         "boundary and projecting battle-side quest flags onto the public grounded-NPC scene. Phase 10 continues to the "
-        "legacy post-battle area."
+        "legacy post-battle area. Trade offers are validated as an aggregate against destination package capacity, "
+        "and the incomplete non-atomic transfer path now fails closed instead of falsely reporting success without "
+        "moving items."
     ),
     "Map/DataObjects/Session.cs": (
         "Session ending is idempotent so a later World close confirmation cannot extend the Map cleanup grace window."
     ),
     "Map/PacketProcessor.cs": (
         "A locally completed logout or quit is not saved and removed a second time when World observes the socket close. "
-        "The existing World session-end confirmation is still emitted."
+        "The existing World session-end confirmation is still emitted. Truncated ping and position payloads are now "
+        "rejected and diagnosed instead of producing zero-valued gameplay data."
+    ),
+    "Map/Packets/Receive/HandshakePacket.cs": (
+        "Packet validity is exposed consistently with the other receive parsers so malformed dormant handshake payloads "
+        "can be rejected by a future dispatcher without changing the parsed actor ID."
+    ),
+    "Map/Packets/Receive/PingPacket.cs": (
+        "Packet validity is exposed to the dispatcher, which now rejects truncated ping payloads."
+    ),
+    "Map/Packets/Receive/UpdatePlayerPositionPacket.cs": (
+        "Packet validity is exposed to the dispatcher, which now rejects truncated movement payloads before position use."
+    ),
+    "Map/Packets/Receive/_0x02ReceivePacket.cs": (
+        "Packet validity is exposed consistently with the other receive parsers for this dormant legacy opcode parser."
+    ),
+    "Map/Packets/Send/Actor/Events/EventConditionDiagnostics.cs": (
+        "Push-circle diagnostics include every configurable wire field used to compare runtime packets with captures."
+    ),
+    "Map/Packets/Send/Actor/Events/SetPushEventConditionWithCircle.cs": (
+        "Push-circle packets serialize the reviewed per-condition source, radii, flags, and reserved byte instead of "
+        "hard-coded placeholders."
+    ),
+    "Map/Properties/AssemblyInfo.cs": (
+        "Map internals are visible to the dedicated regression-test assembly."
+    ),
+    "Map/Server.cs": (
+        "The Map host has an idempotent graceful-shutdown path that stops accepts, quiesces the zone loop, persists live "
+        "sessions, closes World connectivity, and tolerates asynchronous socket-disposal races."
     ),
     "Map/Actors/Chara/Npc/BattleNpc.cs": (
         "The stray unconditional claimed-hate assignment after the existing passive/engaged/party calculation "
@@ -138,7 +326,7 @@ ADAPTATIONS = {
     "Map/Database.cs": (
         "Attribute-point allocation is persisted atomically in the existing characters_class_attributes table before "
         "the in-memory player state is changed, completing the official bonus-point exchange without adding a parallel "
-        "progression store or changing legacy stat formulas."
+        "progression store or changing legacy stat formulas. Unused ticket-state and status-effect query locals are removed."
     ),
 }
 
@@ -184,6 +372,21 @@ def capture(reference_root: Path, repo_root: Path, manifest: Path) -> int:
                 }
             )
 
+    for port_path, reason in PORT_NATIVE_SOURCES.items():
+        destination = repo_root / port_path
+        if not destination.is_file():
+            raise SystemExit(f"Missing port-native source: {destination}")
+        entries.append(
+            {
+                "originPath": "",
+                "originSha256": "",
+                "portPath": port_path,
+                "portSha256": sha256(destination),
+                "disposition": "port-native",
+                "reason": reason,
+            }
+        )
+
     runtime_assets: list[dict[str, str]] = []
     for asset_key, reference_path, port_path in RUNTIME_ASSETS:
         origin = reference_root / reference_path
@@ -217,16 +420,20 @@ def capture(reference_root: Path, repo_root: Path, manifest: Path) -> int:
             raise SystemExit(f"Missing ported SQL asset: {destination}")
         origin_hash = sha256(origin)
         port_hash = sha256(destination)
-        if origin_hash != port_hash:
+        exact = origin_hash == port_hash
+        asset_key = relative.as_posix()
+        if not exact and asset_key not in SQL_ASSET_ADAPTATIONS:
             raise SystemExit(f"SQL asset differs from reference: {relative.as_posix()}")
-        runtime_assets.append(
-            {
-                "originPath": f"Data/sql/{relative.as_posix()}",
-                "originSha256": origin_hash,
-                "portPath": destination.relative_to(repo_root).as_posix(),
-                "portSha256": port_hash,
-            }
-        )
+        asset = {
+            "originPath": f"Data/sql/{relative.as_posix()}",
+            "originSha256": origin_hash,
+            "portPath": destination.relative_to(repo_root).as_posix(),
+            "portSha256": port_hash,
+        }
+        if not exact:
+            asset["disposition"] = "data-adaptation"
+            asset["reason"] = SQL_ASSET_ADAPTATIONS[asset_key]
+        runtime_assets.append(asset)
 
     payload = {
         "schema": "aetherxiv.direct-port-source-manifest.v1",
@@ -285,6 +492,8 @@ def verify(repo_root: Path, manifest: Path) -> int:
 
     component_counts: dict[str, int] = {}
     for entry in entries:
+        if entry["disposition"] == "port-native":
+            continue
         component = entry["originPath"].split("/", 1)[0]
         component_counts[component] = component_counts.get(component, 0) + 1
     if component_counts != EXPECTED_SOURCE_COUNTS:
@@ -306,7 +515,7 @@ def verify(repo_root: Path, manifest: Path) -> int:
     adapted = len(entries) - exact
     print(
         f"Direct-port source verified: {len(entries)} C# files "
-        f"({exact} exact, {adapted} adapted), {len(runtime_assets)} exact runtime/data assets."
+        f"({exact} exact, {adapted} adapted or port-native), {len(runtime_assets)} runtime/data assets."
     )
     return 0
 

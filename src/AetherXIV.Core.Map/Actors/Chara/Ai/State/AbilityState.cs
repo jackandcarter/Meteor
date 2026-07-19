@@ -112,7 +112,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai.state
         public override void OnComplete()
         {
             owner.LookAt(target);
-            bool hitTarget = false;
 
             skill.targetFind.FindWithinArea(target, skill.validTarget, skill.aoeTarget);
             isCompleted = true;

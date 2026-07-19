@@ -9,6 +9,5 @@
         public ushort population;
         public string name;
         public bool   isActive;
-        public string motd;
     }
 }

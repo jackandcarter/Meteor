@@ -48,8 +48,19 @@ namespace AetherXIV.Core.Map
                     if (subpacket.gameMessage.opcode == 0x0001)
                     {
                         PingPacket pingPacket = new PingPacket(subpacket.data);
-                        session.QueuePacket(PongPacket.BuildPacket(session.id, pingPacket.time));
-                        session.Ping();
+                        if (!pingPacket.invalidPacket)
+                        {
+                            session.QueuePacket(PongPacket.BuildPacket(session.id, pingPacket.time));
+                            session.Ping();
+                        }
+                        else
+                        {
+                            DevDiagnostics.Trace(
+                                "client.packet.invalid",
+                                "session", session.id,
+                                "opcode", "0x0001",
+                                "reason", "ping payload is truncated");
+                        }
                     }
                     else
                     {
@@ -156,8 +167,19 @@ namespace AetherXIV.Core.Map
                     case 0x0001:
                         //subpacket.DebugPrintSubPacket();
                         PingPacket pingPacket = new PingPacket(subpacket.data);
-                        session.QueuePacket(PongPacket.BuildPacket(session.id, pingPacket.time));
-                        session.Ping();
+                        if (!pingPacket.invalidPacket)
+                        {
+                            session.QueuePacket(PongPacket.BuildPacket(session.id, pingPacket.time));
+                            session.Ping();
+                        }
+                        else
+                        {
+                            DevDiagnostics.Trace(
+                                "client.packet.invalid",
+                                "session", session.id,
+                                "opcode", "0x0001",
+                                "reason", "ping payload is truncated");
+                        }
                         break;
                     //Unknown
                     case 0x0002:
@@ -227,6 +249,15 @@ namespace AetherXIV.Core.Map
                     case 0x00CA:
                         //Update Position
                         UpdatePlayerPositionPacket posUpdate = new UpdatePlayerPositionPacket(subpacket.data);
+                        if (posUpdate.invalidPacket)
+                        {
+                            DevDiagnostics.Trace(
+                                "client.packet.invalid",
+                                "session", session.id,
+                                "opcode", "0x00CA",
+                                "reason", "position payload is truncated");
+                            break;
+                        }
                         DevDiagnostics.Trace(
                             "client.position",
                             "session", session.id,

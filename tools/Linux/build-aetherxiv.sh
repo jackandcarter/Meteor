@@ -88,6 +88,23 @@ require_mingw_x86() {
   fi
 }
 
+check_build_prerequisites() {
+  local missing=()
+  if ! command -v "${DOTNET_BIN}" >/dev/null 2>&1 \
+      || ! "${DOTNET_BIN}" --list-sdks 2>/dev/null | awk '{print $1}' | grep -Fxq '10.0.203'; then
+    missing+=(".NET SDK 10.0.203 (dotnet)")
+  fi
+  command -v python3 >/dev/null 2>&1 || missing+=("Python 3 (python3)")
+  command -v i686-w64-mingw32-g++ >/dev/null 2>&1 || missing+=("MinGW-w64 (i686-w64-mingw32-g++)")
+
+  if ((${#missing[@]} > 0)); then
+    echo "AetherXIV Linux build prerequisites are missing:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    echo "See docs/build/${PLATFORM_NAME^^}.md before running this build again." >&2
+    exit 40
+  fi
+}
+
 build_umbra_native_injector() {
   require_mingw_x86
 
@@ -153,6 +170,7 @@ build_umbra_bootstrap() {
   cp -R "${LAUNCHER_ROOT}/Umbra/assets" "${framework_dir}/Assets"
 }
 
+check_build_prerequisites
 reset_output_root
 
 echo "Publishing server hosts..."

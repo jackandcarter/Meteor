@@ -52,7 +52,6 @@ namespace AetherXIV.Core.Map
         public Dictionary<ulong, RelationGroup> mRelationGroups = new Dictionary<ulong, RelationGroup>();
         public Dictionary<ulong, TradeGroup> mTradeGroups = new Dictionary<ulong, TradeGroup>();
         private Object groupLock = new Object();
-        private Object tradeLock = new Object();
         public ulong groupIndexId = 1;
 
         public WorldManager(Server server)
@@ -2039,16 +2038,27 @@ namespace AetherXIV.Core.Map
             Player failurePlayerOffer = null;
             Player failureCauser = null;
 
-            //TODO Add full inventory check
+            if (!CanReceiveTradeOffer(p2, p1Offer))
+            {
+                failCode = 1;
+                failurePlayerOffer = p1;
+                failureCauser = p2;
+            }
+            else if (!CanReceiveTradeOffer(p1, p2Offer))
+            {
+                failCode = 1;
+                failurePlayerOffer = p2;
+                failureCauser = p1;
+            }
 
             //Check items. If there is a failcode abort and set.
-            for (ushort i = 0; i < p1Offer.GetCapacity(); i++)
+            for (ushort i = 0; failCode == 0 && i < p1Offer.GetCapacity(); i++)
             {
                 InventoryItem p1ItemToP2 = p1Offer.GetItemAtSlot(i);
                 InventoryItem p2ItemToP1 = p2Offer.GetItemAtSlot(i);
             
-                int failCodeP1 = CheckIfCanTrade(p1, p2, p1ItemToP2); //P2's inv caused a failcode for P1
-                int failCodeP2 = CheckIfCanTrade(p2, p1, p2ItemToP1); //P1's inv caused a failcode for P2
+                int failCodeP1 = CheckIfCanTrade(p2, p1ItemToP2); //P2's inv caused a failcode for P1
+                int failCodeP2 = CheckIfCanTrade(p1, p2ItemToP1); //P1's inv caused a failcode for P2
 
                 if (failCodeP1 != 0)
                 {
@@ -2084,57 +2094,17 @@ namespace AetherXIV.Core.Map
                 break;
             }
 
-            //If all good, perform the swap.
+            // Inventory writes are not yet implemented as one atomic database
+            // transaction. Never acknowledge a trade that moved no items.
             if (failCode == 0)
             {
-                lock (tradeLock)
-                {
-                    for (ushort i = 0; i < p1Offer.GetCapacity(); i++)
-                    {
-                        InventoryItem p1ItemToP2 = p1Offer.GetItemAtSlot(i);
-                        InventoryItem p2ItemToP1 = p2Offer.GetItemAtSlot(i);
-
-
-                        //Transfer P1 -> P2
-                        if (p1ItemToP2 != null)
-                        {
-                            /*
-                            if (p1ItemToP2.GetItemData().maxStack > 1)
-                            {
-                                p1.GetItemPackage(p1ItemToP2.itemPackage).RemoveItem(p1ItemToP2.itemId, p1ItemToP2.GetTradeQuantity(), p1ItemToP2.quality);
-                                p2.GetItemPackage(p1ItemToP2.itemPackage).AddItem(p1ItemToP2.itemId, p1ItemToP2.GetTradeQuantity(), p1ItemToP2.quality);
-                            }
-                            else
-                            {
-                                p1.GetItemPackage(p1ItemToP2.itemPackage).RemoveItem(p1ItemToP2);
-                                p2.GetItemPackage(p1ItemToP2.itemPackage).AddItem(p1ItemToP2);
-                            }
-                            */
-                        }
-
-                        //Transfer P2 -> P1
-                        if (p2ItemToP1 != null)
-                        {
-
-                            /*
-                            if (p2ItemToP1.GetItemData().maxStack > 1)
-                            {
-                                p2.GetItemPackage(p2ItemToP1.itemPackage).RemoveItem(p2ItemToP1.itemId, p2ItemToP1.GetTradeQuantity(), p2ItemToP1.quality);
-                                p1.GetItemPackage(p2ItemToP1.itemPackage).AddItem(p2ItemToP1.itemId, p2ItemToP1.GetTradeQuantity(), p2ItemToP1.quality);
-                            }
-                            else
-                            {
-                                p2.GetItemPackage(p2ItemToP1.itemPackage).RemoveItem(p2ItemToP1);
-                                p1.GetItemPackage(p2ItemToP1.itemPackage).AddItem(p2ItemToP1);
-                            }
-                            */
-                        }
-
-                    }
-                }
-
-                p1.SendGameMessage(GetActor(), 25039, 0x20); //The trade is complete.
-                p2.SendGameMessage(GetActor(), 25039, 0x20); //The trade is complete.
+                DevDiagnostics.Trace(
+                    "trade.transaction.unavailable",
+                    "player1", p1.actorId,
+                    "player2", p2.actorId,
+                    "reason", "atomic inventory transfer is not implemented");
+                p1.SendGameMessage(GetActor(), 25099, 0x20); //Unable to complete transaction.
+                p2.SendGameMessage(GetActor(), 25099, 0x20); //Unable to complete transaction.
             }
 
             //Cleanup the trade and delete the tradegroup.
@@ -2143,18 +2113,50 @@ namespace AetherXIV.Core.Map
             DeleteTradeGroup(group.groupIndex);
         }
 
-        private int CheckIfCanTrade(Player itemOwner, Player itemReceiver, InventoryItem item)
+        private bool CanReceiveTradeOffer(Player receiver, ReferencedItemPackage offer)
+        {
+            var itemsByPackage = new Dictionary<ushort, List<InventoryItem>>();
+            for (ushort slot = 0; slot < offer.GetCapacity(); slot++)
+            {
+                InventoryItem item = offer.GetItemAtSlot(slot);
+                if (item == null)
+                    continue;
+
+                if (item.GetTradeQuantity() <= 0)
+                    return false;
+
+                List<InventoryItem> items;
+                if (!itemsByPackage.TryGetValue(item.itemPackage, out items))
+                {
+                    items = new List<InventoryItem>();
+                    itemsByPackage.Add(item.itemPackage, items);
+                }
+                items.Add(item);
+            }
+
+            foreach (var packageItems in itemsByPackage)
+            {
+                ItemPackage destination = receiver.GetItemPackage(packageItems.Key);
+                if (destination == null)
+                    return false;
+
+                uint[] itemIds = packageItems.Value.Select(item => item.itemId).ToArray();
+                uint[] quantities = packageItems.Value.Select(item => (uint)item.GetTradeQuantity()).ToArray();
+                byte[] qualities = packageItems.Value.Select(item => item.quality).ToArray();
+                if (!destination.CanAdd(itemIds, quantities, qualities))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private int CheckIfCanTrade(Player itemReceiver, InventoryItem item)
         {
             if (item == null)
                 return 0;
 
-            //Check if their inventory can't hold all these things
-            if (false)
-            {
-                return 1;
-            }
             //Check if they already have a unique
-            else if (item.GetItemData().isRare && itemReceiver.HasItem(item.itemId))
+            if (item.GetItemData().isRare && itemReceiver.HasItem(item.itemId))
             {
                 return 2;
             }

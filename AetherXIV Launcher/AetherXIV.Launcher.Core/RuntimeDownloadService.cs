@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
 
@@ -13,6 +14,8 @@ public sealed record RuntimeDownloadResult(ManagedRuntimeInstall Install, IReadO
 
 public static class RuntimeDownloadService
 {
+    private sealed record ProcessRunResult(int ExitCode, string Output, string Error);
+
     public static async Task<RuntimeDownloadResult> DownloadAndInstallAsync(
         RuntimeArtifact artifact,
         HttpClient httpClient,
@@ -24,7 +27,7 @@ public static class RuntimeDownloadService
         ArgumentNullException.ThrowIfNull(artifact);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        if (!string.Equals(artifact.ArchiveFormat, "zip", StringComparison.OrdinalIgnoreCase))
+        if (!IsSupportedArchiveFormat(artifact.ArchiveFormat))
             throw new NotSupportedException($"Runtime archive format is not supported: {artifact.ArchiveFormat}");
 
         string runtimeRoot = Path.GetFullPath(runtimesRoot ?? RuntimeInstallStore.RuntimesRoot);
@@ -32,7 +35,10 @@ public static class RuntimeDownloadService
         Directory.CreateDirectory(runtimeRoot);
         Directory.CreateDirectory(downloadRoot);
 
-        string archivePath = Path.Combine(downloadRoot, $"{artifact.StableId}.zip");
+        string archiveExtension = string.Equals(artifact.ArchiveFormat, "zip", StringComparison.OrdinalIgnoreCase)
+            ? ".zip"
+            : ".tar.xz";
+        string archivePath = Path.Combine(downloadRoot, $"{artifact.StableId}{archiveExtension}");
         await DownloadArchiveAsync(artifact, httpClient, archivePath, progress, cancellationToken);
         ValidateArchive(artifact, archivePath);
 
@@ -41,7 +47,19 @@ public static class RuntimeDownloadService
             Directory.Delete(installRoot, true);
 
         Directory.CreateDirectory(installRoot);
-        ExtractZip(archivePath, installRoot);
+        try
+        {
+            if (string.Equals(artifact.ArchiveFormat, "zip", StringComparison.OrdinalIgnoreCase))
+                ExtractZip(archivePath, installRoot);
+            else
+                await ExtractTarXzAsync(archivePath, installRoot, cancellationToken);
+        }
+        catch
+        {
+            if (Directory.Exists(installRoot))
+                Directory.Delete(installRoot, true);
+            throw;
+        }
 
         string executablePath = ResolveInstalledPath(installRoot, artifact.ExecutableRelativePath);
         if (!File.Exists(executablePath))
@@ -74,6 +92,12 @@ public static class RuntimeDownloadService
         });
     }
 
+    private static bool IsSupportedArchiveFormat(string archiveFormat)
+    {
+        return string.Equals(archiveFormat, "zip", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(archiveFormat, "tar.xz", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static async Task DownloadArchiveAsync(
         RuntimeArtifact artifact,
         HttpClient httpClient,
@@ -85,49 +109,58 @@ public static class RuntimeDownloadService
         string tempPath = $"{archivePath}.download";
         if (File.Exists(tempPath))
             File.Delete(tempPath);
-
-        progress?.Report(new RuntimeDownloadProgress(
-            $"Downloading runtime: {artifact.Name} {artifact.Version}",
-            0,
-            artifact.SizeBytes,
-            true));
-
-        using HttpResponseMessage response = await httpClient.GetAsync(
-            sourceUri,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        await using Stream input = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using FileStream output = File.Create(tempPath);
-
-        byte[] buffer = new byte[256 * 1024];
-        long downloaded = 0;
-        long lastReport = -1;
-        while (true)
+        try
         {
-            int read = await input.ReadAsync(buffer, cancellationToken);
-            if (read == 0)
-                break;
+            progress?.Report(new RuntimeDownloadProgress(
+                $"Downloading runtime: {artifact.Name} {artifact.Version}",
+                0,
+                artifact.SizeBytes,
+                true));
 
-            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-            downloaded += read;
+            using HttpResponseMessage response = await httpClient.GetAsync(
+                sourceUri,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            response.EnsureSuccessStatusCode();
 
-            if (downloaded - lastReport >= 8 * 1024 * 1024 || downloaded == artifact.SizeBytes)
+            await using (Stream input = await response.Content.ReadAsStreamAsync(cancellationToken))
+            await using (FileStream output = File.Create(tempPath))
             {
-                lastReport = downloaded;
-                progress?.Report(new RuntimeDownloadProgress(
-                    $"Downloading runtime: {downloaded}/{artifact.SizeBytes} bytes",
-                    downloaded,
-                    artifact.SizeBytes,
-                    false));
+                byte[] buffer = new byte[256 * 1024];
+                long downloaded = 0;
+                long lastReport = -1;
+                while (true)
+                {
+                    int read = await input.ReadAsync(buffer, cancellationToken);
+                    if (read == 0)
+                        break;
+
+                    await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    downloaded += read;
+
+                    if (downloaded - lastReport >= 8 * 1024 * 1024 || downloaded == artifact.SizeBytes)
+                    {
+                        lastReport = downloaded;
+                        progress?.Report(new RuntimeDownloadProgress(
+                            $"Downloading runtime: {downloaded}/{artifact.SizeBytes} bytes",
+                            downloaded,
+                            artifact.SizeBytes,
+                            false));
+                    }
+                }
             }
+
+            if (File.Exists(archivePath))
+                File.Delete(archivePath);
+
+            File.Move(tempPath, archivePath);
         }
-
-        if (File.Exists(archivePath))
-            File.Delete(archivePath);
-
-        File.Move(tempPath, archivePath);
+        catch
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+            throw;
+        }
     }
 
     private static void ValidateArchive(RuntimeArtifact artifact, string archivePath)
@@ -160,6 +193,65 @@ public static class RuntimeDownloadService
             Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
             entry.ExtractToFile(targetPath, true);
         }
+    }
+
+    private static async Task ExtractTarXzAsync(
+        string archivePath,
+        string installRoot,
+        CancellationToken cancellationToken)
+    {
+        if (OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Managed Wine tar.xz packages are only used on macOS and Linux.");
+
+        string tarCommand = File.Exists("/usr/bin/tar") ? "/usr/bin/tar" : "tar";
+        ProcessRunResult listing = await RunTarAsync(
+            tarCommand,
+            ["-tJf", archivePath],
+            cancellationToken);
+        if (listing.ExitCode != 0)
+            throw new InvalidDataException($"Runtime archive listing failed: {listing.Error.Trim()}");
+
+        foreach (string entry in listing.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            _ = ResolveInstalledPath(installRoot, entry);
+
+        ProcessRunResult extraction = await RunTarAsync(
+            tarCommand,
+            ["-xJf", archivePath, "-C", installRoot],
+            cancellationToken);
+        if (extraction.ExitCode != 0)
+            throw new InvalidDataException($"Runtime archive extraction failed: {extraction.Error.Trim()}");
+    }
+
+    private static async Task<ProcessRunResult> RunTarAsync(
+        string command,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        ProcessStartInfo startInfo = new()
+        {
+            FileName = command,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        foreach (string argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+
+        using Process process = new() { StartInfo = startInfo };
+        try
+        {
+            process.Start();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException)
+        {
+            throw new PlatformNotSupportedException("The system tar utility is required to install the managed Wine runtime.", ex);
+        }
+
+        Task<string> outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        Task<string> errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+        return new ProcessRunResult(process.ExitCode, await outputTask, await errorTask);
     }
 
     private static string ResolveInstalledPath(string installRoot, string relativePath)

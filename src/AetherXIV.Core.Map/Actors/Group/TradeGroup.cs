@@ -11,7 +11,6 @@ namespace AetherXIV.Core.Map.actors.group
     {
         public RelationWork work = new RelationWork();
         private uint charaOther;
-        private ulong topicGroup;
 
         public TradeGroup(ulong groupIndex, uint host, uint other)
             : base(groupIndex)
@@ -39,11 +38,6 @@ namespace AetherXIV.Core.Map.actors.group
         public override uint GetTypeId()
         {
             return Group.TradeRelationGroup;
-        }
-
-        public ulong GetTopicGroupIndex()
-        {
-            return topicGroup;
         }
 
         public override List<GroupMember> BuildMemberList(uint id)

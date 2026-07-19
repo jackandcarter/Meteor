@@ -67,6 +67,31 @@ public static class RuntimeValidator
         }
 
         string logPath = RuntimeLaunchDiagnostics.CreateLogPath("runtime-validate");
+        RuntimePrerequisiteResult prerequisites = await RuntimePlatformPrerequisites.CheckAsync(
+            profile.Command,
+            cancellationToken);
+        await File.AppendAllTextAsync(
+            logPath,
+            $"platform_prerequisites={prerequisites.Message}{Environment.NewLine}",
+            cancellationToken);
+        foreach (string warning in prerequisites.Warnings)
+        {
+            await File.AppendAllTextAsync(
+                logPath,
+                $"platform_warning={warning}{Environment.NewLine}",
+                cancellationToken);
+        }
+
+        if (!prerequisites.IsReady)
+        {
+            return new RuntimeValidationResult(
+                false,
+                prerequisites.Message,
+                null,
+                profile.Name,
+                logPath);
+        }
+
         Dictionary<string, string> environment = new(profile.Environment);
         string runtimeTarget = profile.Name;
         string? normalizedPrefix = null;
@@ -114,9 +139,10 @@ public static class RuntimeValidator
             cancellationToken);
         if (version.ExitCode != 0)
         {
+            string detail = FirstUsefulLine(version.Error, version.Output);
             return new RuntimeValidationResult(
                 false,
-                $"Runtime version check failed with exit code {version.ExitCode}.",
+                $"Runtime version check failed with exit code {version.ExitCode}: {detail}",
                 version.Output.Trim(),
                 runtimeTarget,
                 logPath);
@@ -193,10 +219,25 @@ public static class RuntimeValidator
 
         return new RuntimeValidationResult(
             true,
-            "Runtime, Wine prefix, and client launch helper are ready.",
+            prerequisites.Warnings.Count == 0
+                ? "Runtime, Wine prefix, and client launch helper are ready."
+                : $"Runtime, Wine prefix, and client launch helper are ready. {string.Join(" ", prerequisites.Warnings)}",
             version.Output.Trim(),
             runtimeTarget,
             logPath);
+    }
+
+    private static string FirstUsefulLine(params string[] values)
+    {
+        foreach (string value in values)
+        {
+            string? line = value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(line))
+                return line;
+        }
+
+        return "No additional error detail was reported.";
     }
 
     private static async Task<ProcessRunResult> RunAndLogAsync(

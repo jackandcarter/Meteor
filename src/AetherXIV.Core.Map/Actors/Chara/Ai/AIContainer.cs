@@ -102,7 +102,14 @@ namespace AetherXIV.Core.Map.actors.chara.ai
                 }
                 if (CanChangeState())
                 {
-                    ChangeState(new ItemState((Player)owner, target, (ushort)slot, itemId));
+                    DevDiagnostics.Trace(
+                        "battle.item.unavailable",
+                        "player", owner.actorId,
+                        "target", target != null ? target.actorId : 0,
+                        "slot", slot,
+                        "itemId", itemId,
+                        "reason", "item-use state is not implemented");
+                    ((Player)owner).SendGameMessage(Server.GetWorldManager().GetActor(), 32544, 0x20, itemId);
                 }
                 else
                 {

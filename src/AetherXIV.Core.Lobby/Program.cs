@@ -165,7 +165,7 @@ namespace AetherXIV.Core.Lobby
 
         private static int ExitOrPrompt(bool smoke, int exitCode)
         {
-            if (smoke)
+            if (smoke || Console.IsInputRedirected)
                 return exitCode;
 
             Log.Info("Press any key to continue...");

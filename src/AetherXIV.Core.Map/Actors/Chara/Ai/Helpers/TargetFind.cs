@@ -34,20 +34,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai
         MainTargetPartyOnly = 0x8000,   //Must be used on main target's party (This is for Protect basically.)
     }
 
-    /// <summary> Targeting from/to different entity types </summary>
-    enum TargetFindCharacterType : byte
-    {
-        None,
-        /// <summary> Player can target all <see cref="Player">s in party </summary>
-        PlayerToPlayer,
-        /// <summary> Player can target all <see cref="BattleNpc"/>s (excluding player owned <see cref="Pet"/>s) </summary>
-        PlayerToBattleNpc,
-        /// <summary> BattleNpc can target other <see cref="BattleNpc"/>s </summary>
-        BattleNpcToBattleNpc,
-        /// <summary> BattleNpc can target <see cref="Player"/>s and their <see cref="Pet"/>s </summary>
-        BattleNpcToPlayer,
-    }
-
     /// <summary> Type of AOE region to create </summary>
     enum TargetFindAOEType : byte
     {
@@ -75,7 +61,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai
         private Character owner;
         private Character mainTarget;           //This is the target that the skill is being used on
         private Character masterTarget;         //If mainTarget is a pet, this is the owner
-        private TargetFindCharacterType findType;
         private ValidTarget validTarget;
         private TargetFindAOETarget aoeTarget;
         private TargetFindAOEType aoeType;
@@ -100,7 +85,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai
         public void Reset()
         {
             this.mainTarget = owner;
-            this.findType = TargetFindCharacterType.None;
             this.validTarget = ValidTarget.Enemy;
             this.aoeType = TargetFindAOEType.None;
             this.aoeTarget = TargetFindAOETarget.Target;

@@ -13,6 +13,7 @@ DB_APP_USER="${AETHERXIV_DB_USER:-aetherxiv}"
 DB_APP_PASS="${AETHERXIV_DB_PASSWORD:-aether_dev}"
 DB_ADMIN_USER="${AETHERXIV_DB_ADMIN_USER:-root}"
 DB_ADMIN_PASS="${AETHERXIV_DB_ADMIN_PASSWORD:-}"
+DB_ALLOWED_HOSTS="${AETHERXIV_DB_ALLOWED_HOSTS:-localhost,127.0.0.1}"
 MODE=setup
 DROP_DATABASE=0
 CLEAN_MIGRATE=0
@@ -100,6 +101,20 @@ fi
 
 literal() { local value="$1"; value="${value//\\/\\\\}"; value="${value//\'/\'\'}"; printf '%s' "$value"; }
 identifier() { local value="$1"; value="${value//\`/\`\`}"; printf '%s' "$value"; }
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print tolower($1)}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print tolower($1)}'
+  else
+    echo "A SHA-256 tool is required (shasum or sha256sum)." >&2
+    return 2
+  fi
+}
+write_sha256_sidecar() {
+  local path="$1"
+  printf '%s  %s\n' "$(sha256_file "${path}")" "$(basename "${path}")" > "${path}.sha256"
+}
 
 verify_database() {
   local database_literal table missing=()
@@ -173,9 +188,10 @@ LAST_BACKUP_PATH=""
 backup_database() {
   command -v "${MYSQLDUMP_BIN}" >/dev/null 2>&1 || { echo "Database dump client is required before modifying an existing database." >&2; exit 2; }
   mkdir -p "${BACKUP_DIR}"
-  local path="${BACKUP_DIR}/${DB_NAME}-$(date -u +'%Y%m%dT%H%M%SZ').sql"
+  local path
+  path="${BACKUP_DIR}/${DB_NAME}-$(date -u +'%Y%m%dT%H%M%SZ').sql"
   "${dump[@]}" --routines --triggers --single-transaction "${DB_NAME}" > "${path}"
-  shasum -a 256 "${path}" > "${path}.sha256"
+  write_sha256_sidecar "${path}"
   LAST_BACKUP_PATH="${path}"
   echo "Backed up ${DB_NAME} to ${path}"
 }
@@ -211,7 +227,7 @@ clean_migrate_database() {
   done
   ((${#preserved[@]} > 0)) || { echo "No player tables were available to migrate." >&2; exit 25; }
   "${dump[@]}" --single-transaction --no-create-info --complete-insert --replace --hex-blob --skip-triggers "${DB_NAME}" "${preserved[@]}" > "${migration_data}"
-  shasum -a 256 "${migration_data}" > "${migration_data}.sha256"
+  write_sha256_sidecar "${migration_data}"
 
   set +e
   "${admin[@]}" -e "DROP DATABASE \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci" \
@@ -258,7 +274,12 @@ else
   fi
 
   "${admin[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
-  for host in localhost 127.0.0.1; do
+  IFS=',' read -r -a allowed_hosts <<< "${DB_ALLOWED_HOSTS}"
+  ((${#allowed_hosts[@]} > 0)) || { echo "At least one database application host is required." >&2; exit 2; }
+  for host in "${allowed_hosts[@]}"; do
+    host="${host#"${host%%[![:space:]]*}"}"
+    host="${host%"${host##*[![:space:]]}"}"
+    [[ -n "${host}" ]] || { echo "Database application hosts cannot be empty." >&2; exit 2; }
     host_literal="$(literal "${host}")"
     "${admin[@]}" -e "CREATE USER IF NOT EXISTS '${user_literal}'@'${host_literal}' IDENTIFIED BY '${pass_literal}'; ALTER USER '${user_literal}'@'${host_literal}' IDENTIFIED BY '${pass_literal}'; GRANT ALL PRIVILEGES ON \`${db_id}\`.* TO '${user_literal}'@'${host_literal}'"
   done
@@ -276,7 +297,7 @@ else
 fi
 
 "${admin[@]}" "${DB_NAME}" -e "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8"
-baseline_checksum="$(shasum -a 256 "${BASELINE_FILE}" | awk '{print tolower($1)}')"
+baseline_checksum="$(sha256_file "${BASELINE_FILE}")"
 recorded_baseline="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1")"
 if ((MIGRATE_ONLY == 1)) && [[ -z "${recorded_baseline}" ]]; then
   echo "The existing database has no recorded direct-core baseline; administrative repair is required." >&2
@@ -292,7 +313,7 @@ fi
 for migration in "${MIGRATIONS_DIR}"/*.sql; do
   [[ -e "${migration}" ]] || continue
   name="$(basename "${migration}")"
-  checksum="$(shasum -a 256 "${migration}" | awk '{print tolower($1)}')"
+  checksum="$(sha256_file "${migration}")"
   recorded="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='${name}' LIMIT 1")"
   if [[ -n "${recorded}" ]]; then
     if [[ "${recorded}" != "${checksum}" ]]; then

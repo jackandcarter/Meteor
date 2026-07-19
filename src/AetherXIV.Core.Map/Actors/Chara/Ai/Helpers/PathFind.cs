@@ -20,7 +20,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai
     {
         private Character owner;
         private List<Vector3> path;
-        private bool canFollowPath;
         float distanceFromPoint;
 
         private PathFindFlags pathFlags;

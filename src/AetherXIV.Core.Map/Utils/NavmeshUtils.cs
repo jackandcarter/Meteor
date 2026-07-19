@@ -94,7 +94,6 @@ namespace AetherXIV.Core.Map.utils
                 navMeshQuery.FindNearestPoly(ref ep, ref e, out endPt);
                 
                 //calculate the overall path, which contains an array of polygon references
-                int MAX_POLYS = 256;
                 var path = new SharpNav.Pathfinding.Path();
 
                 navMeshQuery.FindPath(ref startPt, ref endPt, filter, path);

@@ -22,27 +22,46 @@ namespace AetherXIV.Core.Lobby
         private PacketProcessor mProcessor;
 
         private Thread cleanupThread;
-        private bool killCleanupThread = false;
+        private readonly ManualResetEvent cleanupStop = new ManualResetEvent(false);
 
         private void SocketCleanup()
         {
             Program.Log.Info("Cleanup thread started; it will run every {0} seconds.", CLEANUP_THREAD_SLEEP_TIME);
-            while (!killCleanupThread)
+            while (!cleanupStop.WaitOne(0))
             {
                 int count = 0;
-                for (int i = mConnectionList.Count - 1; i >= 0; i--)
+                lock (mConnectionList)
                 {
-                    ClientConnection conn = mConnectionList[i];
-                    if (conn.socket.Poll(1, SelectMode.SelectRead) && conn.socket.Available == 0)
+                    for (int i = mConnectionList.Count - 1; i >= 0; i--)
                     {
-                        conn.socket.Disconnect(false);
-                        mConnectionList.Remove(conn);
-                        count++;
+                        ClientConnection conn = mConnectionList[i];
+                        bool disconnected;
+                        try
+                        {
+                            disconnected = conn.socket == null
+                                || (conn.socket.Poll(1, SelectMode.SelectRead) && conn.socket.Available == 0);
+                        }
+                        catch (SocketException)
+                        {
+                            disconnected = true;
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            disconnected = true;
+                        }
+
+                        if (disconnected)
+                        {
+                            conn.Disconnect();
+                            mConnectionList.RemoveAt(i);
+                            count++;
+                        }
                     }
                 }
                 if (count != 0)
                     Program.Log.Info("{0} connections were cleaned up.", count);
-                Thread.Sleep(CLEANUP_THREAD_SLEEP_TIME*1000);
+                if (cleanupStop.WaitOne(TimeSpan.FromSeconds(CLEANUP_THREAD_SLEEP_TIME)))
+                    break;
             }
         }
 
@@ -50,9 +69,6 @@ namespace AetherXIV.Core.Lobby
         public bool StartServer()
         {
             Interlocked.Exchange(ref mStopping, 0);
-            //cleanupThread = new Thread(new ThreadStart(socketCleanup));
-            //cleanupThread.Name = "LobbyThread:Cleanup";
-            //cleanupThread.Start();
 
             IPEndPoint serverEndPoint = new System.Net.IPEndPoint(IPAddress.Parse(ConfigConstants.OPTIONS_BINDIP), int.Parse(ConfigConstants.OPTIONS_PORT));
            
@@ -73,7 +89,8 @@ namespace AetherXIV.Core.Lobby
                 throw new ApplicationException("Error occured while binding socket, check inner exception", e);
             }
             try
-            {               
+            {
+                mProcessor = new PacketProcessor();
                 mServerSocket.BeginAccept(new AsyncCallback(AcceptCallback), mServerSocket);
             }
             catch (Exception e)
@@ -81,11 +98,18 @@ namespace AetherXIV.Core.Lobby
                 throw new ApplicationException("Error occured starting listeners, check inner exception", e);
             }
 
+            cleanupStop.Reset();
+            cleanupThread = new Thread(SocketCleanup)
+            {
+                Name = "LobbyThread:Cleanup",
+                IsBackground = true
+            };
+            cleanupThread.Start();
+
             Console.ForegroundColor = ConsoleColor.White;
             Program.Log.Info("Lobby Server has started @ {0}:{1}", (mServerSocket.LocalEndPoint as IPEndPoint).Address, (mServerSocket.LocalEndPoint as IPEndPoint).Port);
             Console.ForegroundColor = ConsoleColor.Gray;
 
-            mProcessor = new PacketProcessor();
             StartupReadySignal.TryWrite("Lobby", String.Format("{0}:{1}", (mServerSocket.LocalEndPoint as IPEndPoint).Address, (mServerSocket.LocalEndPoint as IPEndPoint).Port));
 
             return true;
@@ -114,9 +138,10 @@ namespace AetherXIV.Core.Lobby
             foreach (ClientConnection connection in connections)
                 connection.Disconnect();
 
-            killCleanupThread = true;
+            cleanupStop.Set();
             if (cleanupThread != null && cleanupThread.IsAlive)
                 cleanupThread.Join(1000);
+            cleanupThread = null;
 
             DevDiagnostics.Trace(
                 "service.shutdown.lobby.completed",

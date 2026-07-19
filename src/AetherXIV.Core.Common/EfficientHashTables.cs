@@ -6,23 +6,23 @@ namespace AetherXIV.Core.Common
     {
         public class Efficient64bitHashTable<T>
         {
-            private class element
+            private class Element
             {
                 public ulong _key;
                 public T _value;
             };
-            private element[][] _buckets;
+            private Element[][] _buckets;
             private uint _capacity;
 
             public Efficient64bitHashTable()
             {
                 _capacity = 214373;    // some prime number
-                _buckets = new element[_capacity][];
+                _buckets = new Element[_capacity][];
             }
             public Efficient64bitHashTable(uint capacity)
             {
                 _capacity = capacity;
-                _buckets = new element[_capacity][];
+                _buckets = new Element[_capacity][];
             }
 
             public uint Hash(ulong key)
@@ -33,9 +33,9 @@ namespace AetherXIV.Core.Common
             public void Add(ulong key, T value)
             {
                 uint hsh = Hash(key);
-                element[] e;
+                Element[] e;
                 if (_buckets[hsh] == null)
-                    _buckets[hsh] = e = new element[1];
+                    _buckets[hsh] = e = new Element[1];
                 else
                 {
                     foreach (var elem in _buckets[hsh])
@@ -44,17 +44,17 @@ namespace AetherXIV.Core.Common
                             elem._value = value;
                             return;
                         }
-                    e = new element[_buckets[hsh].Length + 1];
+                    e = new Element[_buckets[hsh].Length + 1];
                     Array.Copy(_buckets[hsh], 0, e, 1, _buckets[hsh].Length);
                     _buckets[hsh] = e;
                 }
-                e[0] = new element { _key = key, _value = value };
+                e[0] = new Element { _key = key, _value = value };
             }
 
             public T Get(ulong key)
             {
                 uint hsh = Hash(key);
-                element[] e = _buckets[hsh];
+                Element[] e = _buckets[hsh];
                 if (e == null) return default(T);
                 foreach (var f in e)
                     if (f._key == key)
@@ -65,7 +65,7 @@ namespace AetherXIV.Core.Common
             public bool Has(ulong key)
             {
                 uint hsh = Hash(key);
-                element[] e = _buckets[hsh];
+                Element[] e = _buckets[hsh];
                 if (e == null) return false;
                 foreach (var f in e)
                     if (f._key == key)
@@ -85,23 +85,23 @@ namespace AetherXIV.Core.Common
 
         public class Efficient32bitHashTable<T>
         {
-            private class element
+            private class Element
             {
                 public uint _key;
                 public T _value;
             };
-            private element[][] _buckets;
+            private Element[][] _buckets;
             private uint _capacity;
 
             public Efficient32bitHashTable()
             {
                 _capacity = 463;    // some prime number
-                _buckets = new element[_capacity][];
+                _buckets = new Element[_capacity][];
             }
             public Efficient32bitHashTable(uint capacity)
             {
                 _capacity = capacity;
-                _buckets = new element[_capacity][];
+                _buckets = new Element[_capacity][];
             }
 
             public uint Hash(uint key)
@@ -112,9 +112,9 @@ namespace AetherXIV.Core.Common
             public void Add(uint key, T value)
             {
                 uint hsh = Hash(key);
-                element[] e;
+                Element[] e;
                 if (_buckets[hsh] == null)
-                    _buckets[hsh] = e = new element[1];
+                    _buckets[hsh] = e = new Element[1];
                 else
                 {
                     foreach (var elem in _buckets[hsh])
@@ -123,17 +123,17 @@ namespace AetherXIV.Core.Common
                             elem._value = value;
                             return;
                         }
-                    e = new element[_buckets[hsh].Length + 1];
+                    e = new Element[_buckets[hsh].Length + 1];
                     Array.Copy(_buckets[hsh], 0, e, 1, _buckets[hsh].Length);
                     _buckets[hsh] = e;
                 }
-                e[0] = new element { _key = key, _value = value };
+                e[0] = new Element { _key = key, _value = value };
             }         
 
             public T Get(uint key)
             {
                 uint hsh = Hash(key);
-                element[] e = _buckets[hsh];
+                Element[] e = _buckets[hsh];
                 if (e == null) return default(T);
                 foreach (var f in e)
                     if (f._key == key)

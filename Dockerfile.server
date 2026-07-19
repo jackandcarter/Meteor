@@ -1,0 +1,93 @@
+# syntax=docker/dockerfile:1
+
+ARG DOTNET_VERSION=10.0
+
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . .
+
+RUN dotnet publish src/AetherXIV.Core.Map/AetherXIV.Core.Map.csproj \
+      --configuration Release \
+      --self-contained false \
+      --output /out/servers/map \
+      -m:1 \
+      /nodeReuse:false \
+      /p:UseAppHost=false \
+    && dotnet publish src/AetherXIV.Core.World/AetherXIV.Core.World.csproj \
+      --configuration Release \
+      --self-contained false \
+      --output /out/servers/world \
+      -m:1 \
+      /nodeReuse:false \
+      /p:UseAppHost=false \
+    && dotnet publish src/AetherXIV.Core.Lobby/AetherXIV.Core.Lobby.csproj \
+      --configuration Release \
+      --self-contained false \
+      --output /out/servers/lobby \
+      -m:1 \
+      /nodeReuse:false \
+      /p:UseAppHost=false \
+    && dotnet publish src/AetherXIV.Launcher.Host/AetherXIV.Launcher.Host.csproj \
+      --configuration Release \
+      --self-contained false \
+      --output /out/servers/launcher-services \
+      -m:1 \
+      /nodeReuse:false \
+      /p:UseAppHost=false \
+    && python3 tools/Universal/create-direct-core-database-package.py \
+      --repo-root /src \
+      --output-dir /out/database
+
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends mariadb-client tini \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/aetherxiv
+COPY --from=build /out/servers ./servers
+COPY --from=build /out/database ./database
+COPY docker/server/entrypoint.sh docker/server/healthcheck.sh ./bin/
+
+RUN chmod 0755 ./bin/entrypoint.sh ./bin/healthcheck.sh ./database/setup.sh \
+    && mkdir -p \
+      /var/lib/aetherxiv/backups \
+      /var/log/aetherxiv/map \
+      /var/log/aetherxiv/world \
+      /var/log/aetherxiv/lobby \
+    && rm -rf ./servers/map/logs ./servers/world/logs ./servers/lobby/logs \
+    && ln -s /var/log/aetherxiv/map ./servers/map/logs \
+    && ln -s /var/log/aetherxiv/world ./servers/world/logs \
+    && ln -s /var/log/aetherxiv/lobby ./servers/lobby/logs \
+    && chown -R app:app /opt/aetherxiv /var/lib/aetherxiv /var/log/aetherxiv
+
+ENV AETHERXIV_DB_HOST=mariadb \
+    AETHERXIV_DB_PORT=3306 \
+    AETHERXIV_DB_NAME=ffxiv_server \
+    AETHERXIV_DB_USER=aetherxiv \
+    AETHERXIV_DB_ADMIN_USER=root \
+    AETHERXIV_DB_ALLOWED_HOSTS=% \
+    AETHERXIV_CORE_BACKUP_DIR=/var/lib/aetherxiv/backups \
+    AETHERXIV_MAP_PORT=1989 \
+    AETHERXIV_WORLD_PORT=54992 \
+    AETHERXIV_LOBBY_PORT=54994 \
+    AETHERXIV_LAUNCHER_SERVICES_PORT=8080 \
+    AETHERXIV_PUBLIC_HOST=127.0.0.1 \
+    AETHERXIV_ENABLE_LAUNCHER_SERVICES=true \
+    AETHERXIV_LAUNCHER_ALLOW_ACCOUNT_CREATE=true
+
+USER app
+
+EXPOSE 8080 54992 54994
+
+VOLUME ["/var/lib/aetherxiv/backups", "/var/log/aetherxiv"]
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=4 \
+  CMD ["/opt/aetherxiv/bin/healthcheck.sh"]
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/aetherxiv/bin/entrypoint.sh"]

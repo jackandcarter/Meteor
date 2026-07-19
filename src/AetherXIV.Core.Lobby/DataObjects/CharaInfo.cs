@@ -136,6 +136,7 @@ namespace AetherXIV.Core.Lobby.DataObjects
                     faceInfo.irisSize = appearance.faceIrisSize;
                     faceInfo.mouth = appearance.faceMouth;
                     faceInfo.nose = appearance.faceNose;
+                    faceInfo.unknown = 0;
 
                     string location1 = "prv0Inn01\0";
                     string location2 = "defaultTerritory\0";

@@ -418,7 +418,8 @@ namespace AetherXIV.Core.Common
 		        data = 0x00000000;
 		        for (k = 0; k < 4; ++k)
 		        {
-			        data = (data << 8) | (SByte)key[j];
+			        int signedKeyByte = unchecked((sbyte)key[j]);
+			        data = unchecked((int)(((uint)data << 8) | (uint)signedKeyByte));
 			        j = (short)(j + 1);
 			        if (j >= key.Length)
 			        {

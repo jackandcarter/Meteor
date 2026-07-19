@@ -463,7 +463,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai
             if (tickMs != 0 && (tick - lastTick).TotalMilliseconds >= tickMs)
             {
                 lastTick = tick;
-                if (LuaEngine.CallLuaStatusEffectFunction(this.owner, this, "onTick", this.owner, this, resultContainer) > 0)
+                if (CallLuaFunction("onTick", this.owner, this, resultContainer) > 0)
                     return true;
             }
 
@@ -474,19 +474,17 @@ namespace AetherXIV.Core.Map.actors.chara.ai
             return false;
         }
 
-        public int CallLuaFunction(Character chara, string functionName, params object[] args)
+        public int CallLuaFunction(string functionName, params object[] args)
         {
+            if (script == null)
+                return -1;
 
-            DynValue res = new DynValue();
+            DynValue function = script.Globals.Get(functionName);
+            if (function.IsNil())
+                return -1;
 
-            return lua.LuaEngine.CallLuaStatusEffectFunction(chara, this, functionName, args);
-            if (!script.Globals.Get(functionName).IsNil())
-            {
-                res = script.Call(script.Globals.Get(functionName), args);
-                if (res != null)
-                    return (int)res.Number;
-            }
-
+            DynValue result = script.Call(function, args);
+            return result != null && result.Type == DataType.Number ? (int)result.Number : -1;
         }
 
         public Character GetOwner()

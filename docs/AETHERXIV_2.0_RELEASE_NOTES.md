@@ -74,7 +74,7 @@ __                                                                         __
 - Existing installations can be backed up and updated in place. Incompatible installations can use a clean migration that preserves accounts, characters, character-owned progress, social records, retainers, support records and customized launcher content.
 - Account and character totals are checked after migration. If the transfer fails or totals do not match, the untouched backup is restored automatically.
 - Development-only actor workbench and decode-staging tables are removed from the runtime database.
-- New tables support launcher presentation, news, reel captions, patch/runtime catalogs, Umbra framework artifacts, plugin repositories and plugin blocks.
+- New tables support launcher presentation, news, reel captions, patch catalogs, Umbra framework artifacts, plugin repositories and plugin blocks.
 - Class attribute allocations now have a canonical persistence table.
 - Guildleve search-point actor data and Central Shroud enemy pools, groups and spawn positions are included as production migrations.
 
@@ -114,13 +114,13 @@ __                                                                         __
 - The home screen has been redesigned with new AetherXIV branding, a darker visual theme, animated ambient particles and an automatic image reel with manual navigation.
 - Reel captions and news presentation can be changed from the AetherXIV Core app without rebuilding the launcher.
 - Launcher news supports per-section colors, scheduled publication, banners and links.
-- The old PHP launcher-service dependency has been replaced by a modern launcher host for config, status, news, login, account creation, patches, runtimes and Umbra catalogs.
+- The old PHP launcher-service dependency has been replaced by a modern launcher host for config, status, news, login, account creation, patches and Umbra catalogs.
 - Localhost, project-server and custom server profiles are easier to switch between and are saved between sessions.
 - Client validation still checks the selected FFXIV 1.x install before enabling launch.
 - Patch downloads reuse files that are already valid, and the complete patch chain is checksum-verified before application.
-- Patch and runtime operations now show progress and can be cancelled.
+- Patch and managed Wine downloads show verified progress.
 - The launcher can open the FFXIV configuration tool against the correct native or Wine profile.
-- macOS and Linux can use an approved managed Wine runtime or an advanced custom runtime. Windows launches the client directly.
+- macOS, Linux and SteamOS can install a platform-selected, checksum-pinned managed Wine 11.0 runtime directly from the Launcher, without using the game server as a catalog. On Apple silicon, validation waits for Apple's Rosetta installation prompt; on Linux it reports missing host libraries before Wine starts. Local Wine installations remain detectable, and runtime/prefix/helper validation is required before launch. Windows launches the client directly.
 - Runtime validation, prefix preparation, client-helper selection, Umbra injection and launch logs are collected into one launch plan with clearer failure messages.
 - Framework, plugin repository and blocklist locations are supplied by the selected server instead of being fixed in the launcher.
 
@@ -165,6 +165,7 @@ __                                                                         __
 - Every platform build creates the same organized release layout for servers, launcher, UI, database and runtime assets.
 - Release verification rejects source files in the output, missing executables, incomplete runtime data and mismatched direct-port files.
 - Development verification can build both solutions, run all tests and validate the Lua/direct-core manifests from one entry point.
+- Existing platform build commands now report missing SDK, Python and native compiler prerequisites before modifying release output. Docker release validation also starts a temporary MariaDB-backed Compose stack and checks service health.
 
 __                                                                         __
 **Debug and diagnostics**

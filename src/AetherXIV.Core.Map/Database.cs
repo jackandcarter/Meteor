@@ -2329,7 +2329,6 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
                     cmd.Parameters.AddWithValue("@charId", owner.actorId);
                     cmd.Parameters.AddWithValue("@type", type);
 
-                    ushort slot = 0;
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -2894,7 +2893,6 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
 
         public static void closeTicket(string playerName)
         {
-            bool isOpen = false;
             using (MySqlConnection conn = new MySqlConnection(String.Format("Server={0}; Port={1}; Database={2}; UID={3}; Password={4}", ConfigConstants.DATABASE_HOST, ConfigConstants.DATABASE_PORT, ConfigConstants.DATABASE_NAME, ConfigConstants.DATABASE_USERNAME, ConfigConstants.DATABASE_PASSWORD)))
             {
                 try
@@ -3169,8 +3167,6 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
 
         public static void SavePlayerStatusEffects(Player player)
         {
-            string[] faqs = null;
-            List<string> raw = new List<string>();
             using (MySqlConnection conn = new MySqlConnection(String.Format("Server={0}; Port={1}; Database={2}; UID={3}; Password={4}", ConfigConstants.DATABASE_HOST, ConfigConstants.DATABASE_PORT, ConfigConstants.DATABASE_NAME, ConfigConstants.DATABASE_USERNAME, ConfigConstants.DATABASE_PASSWORD)))
             {
                 try

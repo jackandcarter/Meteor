@@ -26,9 +26,8 @@ public sealed partial class MainWindow : Window
     private readonly HttpClient httpClient = new();
     private readonly LauncherPlatform platform = LauncherPlatform.Current;
     private CancellationTokenSource? patchCancellation;
-    private CancellationTokenSource? runtimeCancellation;
+    private bool runtimeBusy;
     private LauncherConfig? launcherConfig;
-    private RuntimeCatalog? runtimeCatalog;
     private RuntimeArtifact? selectedRuntimeArtifact;
     private ManagedRuntimeInstall? managedRuntimeInstall;
     private UmbraFrameworkCatalog? umbraFrameworkCatalog;
@@ -75,8 +74,9 @@ public sealed partial class MainWindow : Window
         particleTimer.Start();
         LoadSavedProfile();
         AppendLog("AetherXIV Launcher initialized.");
+        selectedRuntimeArtifact = BuiltInRuntimeCatalog.Find(platform.RuntimeIdentifier);
         ScanRuntimeCandidates(false);
-        RefreshInstalledManagedRuntimeStatus();
+        RefreshRuntimeSetupStatus();
         RefreshInstalledUmbraFrameworkStatus();
         ValidateClientIfSelected();
         UpdateHomeState();
@@ -1033,14 +1033,9 @@ public sealed partial class MainWindow : Window
         ScanRuntimeCandidates(true);
     }
 
-    private async void RefreshRuntimeCatalog_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        await RefreshRuntimeCatalogAsync();
-    }
-
     private async void InstallRuntime_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (runtimeCancellation is not null)
+        if (runtimeBusy)
             return;
 
         if (!platform.RequiresCompatibilityRuntime)
@@ -1049,18 +1044,15 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (selectedRuntimeArtifact is null)
-            await RefreshRuntimeCatalogAsync();
-
+        selectedRuntimeArtifact ??= BuiltInRuntimeCatalog.Find(platform.RuntimeIdentifier);
         if (selectedRuntimeArtifact is null)
         {
-            ManagedRuntimeStatus.Text = "No approved runtime package is available for this platform.";
-            AppendLog("Runtime install blocked: catalog did not provide an approved runtime package.");
+            OpenRuntimeSetupGuidance();
             return;
         }
 
-        runtimeCancellation = new CancellationTokenSource();
         SetRuntimeBusy(true);
+        RuntimeProgressBar.IsIndeterminate = false;
         RuntimeProgressBar.Value = 0;
 
         try
@@ -1078,35 +1070,60 @@ public sealed partial class MainWindow : Window
                     AppendLog(update.Message);
             });
 
-            RuntimeDownloadResult result = await RuntimeDownloadService.DownloadAndInstallAsync(
+            RuntimeDownloadResult installResult = await RuntimeDownloadService.DownloadAndInstallAsync(
                 selectedRuntimeArtifact,
                 httpClient,
-                progress,
-                runtimeCancellation.Token);
-
-            managedRuntimeInstall = result.Install;
-            RuntimeProgressBar.Value = 100;
-            ManagedRuntimeStatus.Text = $"Installed: {managedRuntimeInstall.Name} {managedRuntimeInstall.Version}";
-            foreach (string message in result.Messages)
+                progress);
+            managedRuntimeInstall = installResult.Install;
+            foreach (string message in installResult.Messages)
                 AppendLog(message);
+
+            ManagedRuntimeStatus.Text = RuntimePrerequisiteStatusText("Runtime installed");
+            AppendLog(ManagedRuntimeStatus.Text);
+            RuntimeProgressBar.IsIndeterminate = true;
+            RuntimeValidationResult validation = await RuntimeValidator.ValidateAsync(
+                managedRuntimeInstall,
+                RuntimeInstallStore.ManagedPrefixPath);
+            RuntimeProgressBar.IsIndeterminate = false;
+            RuntimeProgressBar.Value = validation.IsReady ? 100 : 0;
+            ManagedRuntimeStatus.Text = validation.IsReady
+                ? $"Ready: {validation.VersionText}. {validation.Message}"
+                : $"Installed, but validation failed: {validation.Message}";
+            AppendLog($"Managed runtime validation: {validation.Message}");
+            AppendLog($"Managed runtime validation log: {validation.LogPath}");
             SaveCurrentProfile();
-        }
-        catch (OperationCanceledException)
-        {
-            ManagedRuntimeStatus.Text = "Runtime install cancelled.";
-            AppendLog("Runtime install cancelled.");
         }
         catch (Exception ex)
         {
-            ManagedRuntimeStatus.Text = "Runtime install failed.";
-            AppendLog($"Runtime install failed: {ex.Message}");
+            RuntimeProgressBar.IsIndeterminate = false;
+            ManagedRuntimeStatus.Text = "Runtime installation failed.";
+            AppendLog($"Runtime installation failed: {ex.Message}");
         }
         finally
         {
-            runtimeCancellation.Dispose();
-            runtimeCancellation = null;
             SetRuntimeBusy(false);
             UpdateRuntimeUiState();
+        }
+    }
+
+    private void OpenRuntimeSetupGuidance()
+    {
+        RuntimeSetupGuidance guidance = RuntimeSetupGuidance.ForCurrentPlatform();
+        RuntimeCatalogStatus.Text = guidance.Summary;
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = guidance.GuideUri.AbsoluteUri,
+                UseShellExecute = true
+            });
+            ManagedRuntimeStatus.Text = "Finish Wine setup, then select Scan Runtimes and Validate Runtime.";
+            AppendLog($"Opened platform Wine setup guidance: {guidance.GuideUri}");
+        }
+        catch (Exception ex)
+        {
+            ManagedRuntimeStatus.Text = "Could not open the Wine setup guide.";
+            AppendLog($"Wine setup guide failed to open: {ex.Message}");
         }
     }
 
@@ -1124,12 +1141,14 @@ public sealed partial class MainWindow : Window
         try
         {
             WineRuntimeProfile runtimeProfile = ReadRuntimeProfile();
+            ManagedRuntimeStatus.Text = RuntimePrerequisiteStatusText("Validating runtime");
+            AppendLog(ManagedRuntimeStatus.Text);
             RuntimeValidationResult result = await RuntimeValidator.ValidateAsync(
                 runtimeProfile,
                 RuntimeInstallStore.ManagedPrefixPath);
 
             ManagedRuntimeStatus.Text = result.IsReady
-                ? $"Ready: {result.VersionText}"
+                ? $"Ready: {result.VersionText}. {result.Message}"
                 : result.Message;
             AppendLog($"Runtime validation: {result.Message}");
             AppendLog($"Runtime validation log: {result.LogPath}");
@@ -1152,9 +1171,7 @@ public sealed partial class MainWindow : Window
         try
         {
             RuntimeInstallStore.ResetManagedPrefix();
-            ManagedRuntimeStatus.Text = managedRuntimeInstall is null
-                ? "Runtime prefix reset. Runtime is not installed."
-                : $"Runtime prefix reset for {managedRuntimeInstall.Name} {managedRuntimeInstall.Version}.";
+            ManagedRuntimeStatus.Text = "Runtime prefix reset. Validate the selected Wine runtime to recreate it.";
             AppendLog($"Runtime prefix reset: {RuntimeInstallStore.ManagedPrefixPath}");
         }
         catch (Exception ex)
@@ -1691,7 +1708,6 @@ public sealed partial class MainWindow : Window
 
             LauncherNewsFeed? news = await client.GetNewsAsync(timeout.Token);
             await ApplyNewsFeedAsync(news, timeout.Token);
-            await RefreshRuntimeCatalogAsync(timeout.Token);
             SaveCurrentProfile();
         }
         catch (Exception ex)
@@ -1700,59 +1716,9 @@ public sealed partial class MainWindow : Window
             HomeServerStatus.Text = "Server: service unavailable";
             AppendLog($"Launcher service refresh failed: {ex.Message}");
             await ApplyNewsFeedAsync(null);
-            RuntimeCatalogStatus.Text = "Approved runtime package unavailable.";
-        }
-    }
-
-    private async Task RefreshRuntimeCatalogAsync(CancellationToken cancellationToken = default)
-    {
-        if (!platform.RequiresCompatibilityRuntime)
-        {
-            RuntimeCatalogStatus.Text = "Windows builds launch the client directly.";
-            ManagedRuntimeStatus.Text = "No compatibility runtime required.";
-            return;
         }
 
-        string serviceUrl = LauncherServiceUrlBox.Text ?? "";
-        if (string.IsNullOrWhiteSpace(serviceUrl))
-        {
-            RuntimeCatalogStatus.Text = "Launcher service is not configured.";
-            RefreshInstalledManagedRuntimeStatus();
-            return;
-        }
-
-        try
-        {
-            RuntimeCatalogStatus.Text = "Checking approved runtime package...";
-            LauncherApiClient client = new(httpClient, serviceUrl);
-            runtimeCatalog = await client.GetRuntimeCatalogAsync(
-                platform.RuntimeIdentifier,
-                launcherConfig?.RuntimeCatalogUrl,
-                cancellationToken);
-            selectedRuntimeArtifact = runtimeCatalog?.SelectDefault();
-
-            if (selectedRuntimeArtifact is null)
-            {
-                RuntimeCatalogStatus.Text = $"No approved runtime package is available for {platform.RuntimeIdentifier}.";
-                managedRuntimeInstall = null;
-                ManagedRuntimeStatus.Text = "Approved detected or custom runtimes remain available.";
-            }
-            else
-            {
-                RuntimeCatalogStatus.Text = $"Available: {FormatRuntimeArtifact(selectedRuntimeArtifact)}";
-                RefreshInstalledManagedRuntimeStatus();
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            RuntimeCatalogStatus.Text = "Approved runtime package unavailable.";
-            AppendLog($"Approved runtime package check failed: {ex.Message}");
-            RefreshInstalledManagedRuntimeStatus();
-        }
-        finally
-        {
-            UpdateRuntimeUiState();
-        }
+        RefreshRuntimeSetupStatus();
     }
 
     private async Task RefreshUmbraFrameworkCatalogAsync(CancellationToken cancellationToken = default)
@@ -1894,13 +1860,13 @@ public sealed partial class MainWindow : Window
                 {
                     new TextBlock
                     {
-                        Text = "No approved runtime was found.",
+                        Text = "No Wine runtime was found.",
                         FontSize = 20,
                         FontWeight = Avalonia.Media.FontWeight.SemiBold
                     },
                     new TextBlock
                     {
-                        Text = "AetherXIV Launcher can install the approved Wine runtime, or you can point it at a custom runtime manually.",
+                        Text = "AetherXIV Launcher can download, verify, install, and validate its tested Wine runtime for this computer. You can also point it at a custom runtime.",
                         TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                         Foreground = Avalonia.Media.Brushes.LightGray
                     },
@@ -2265,9 +2231,9 @@ public sealed partial class MainWindow : Window
             DetectedRuntimeBox.SelectedIndex = 0;
 
         if (appendLog)
-            AppendLog($"Approved runtime scan found {runtimeCandidates.Count} candidate(s).");
+            AppendLog($"Wine runtime scan found {runtimeCandidates.Count} candidate(s).");
 
-        UpdateRuntimeUiState();
+        RefreshRuntimeSetupStatus();
     }
 
     private void UpdateHomeState()
@@ -2351,23 +2317,34 @@ public sealed partial class MainWindow : Window
         return info;
     }
 
-    private void RefreshInstalledManagedRuntimeStatus()
+    private void RefreshRuntimeSetupStatus()
     {
         if (!platform.RequiresCompatibilityRuntime)
+        {
+            RuntimeCatalogStatus.Text = "Windows launches the client directly; Wine is not required.";
+            ManagedRuntimeStatus.Text = "Windows native runtime.";
             return;
+        }
 
+        selectedRuntimeArtifact ??= BuiltInRuntimeCatalog.Find(platform.RuntimeIdentifier);
         if (selectedRuntimeArtifact is null)
         {
-            managedRuntimeInstall = null;
-            ManagedRuntimeStatus.Text = "Approved runtime package not checked.";
+            RuntimeSetupGuidance guidance = RuntimeSetupGuidance.ForCurrentPlatform();
+            RuntimeCatalogStatus.Text = guidance.Summary;
+            ManagedRuntimeStatus.Text = runtimeCandidates.Count == 0
+                ? "No managed package or local Wine runtime is available for this platform."
+                : $"Detected {runtimeCandidates.Count} local runtime candidate(s); validate the selected runtime.";
             UpdateRuntimeUiState();
             return;
         }
 
         managedRuntimeInstall = RuntimeInstallStore.FindInstalled(selectedRuntimeArtifact);
-        ManagedRuntimeStatus.Text = managedRuntimeInstall is null
-            ? $"Not installed: {selectedRuntimeArtifact.Name} {selectedRuntimeArtifact.Version}"
-            : $"Installed: {managedRuntimeInstall.Name} {managedRuntimeInstall.Version}";
+        RuntimeCatalogStatus.Text = $"Managed package: {FormatRuntimeArtifact(selectedRuntimeArtifact)}";
+        ManagedRuntimeStatus.Text = managedRuntimeInstall is not null
+            ? $"Installed: {managedRuntimeInstall.Name} {managedRuntimeInstall.Version}; validate before launch."
+            : runtimeCandidates.Count == 0
+                ? "Not installed. Select Install Runtime to download and validate Wine."
+                : $"Managed runtime not installed; {runtimeCandidates.Count} local candidate(s) detected.";
         UpdateRuntimeUiState();
     }
 
@@ -2391,7 +2368,10 @@ public sealed partial class MainWindow : Window
 
     private void SetRuntimeBusy(bool isBusy)
     {
-        InstallRuntimeButton.IsEnabled = !isBusy && selectedRuntimeArtifact is not null;
+        runtimeBusy = isBusy;
+        InstallRuntimeButton.IsEnabled = !isBusy
+            && platform.RequiresCompatibilityRuntime
+            && ReadRuntimeMode() == RuntimeSelectionMode.AutomaticManaged;
         ValidateRuntimeButton.IsEnabled = !isBusy;
         ResetPrefixButton.IsEnabled = !isBusy;
         RuntimeModeBox.IsEnabled = !isBusy;
@@ -2410,7 +2390,7 @@ public sealed partial class MainWindow : Window
 
     private void UpdateRuntimeUiState()
     {
-        bool isBusy = runtimeCancellation is not null;
+        bool isBusy = runtimeBusy;
         LaunchHelperModeBox.IsEnabled = !isBusy;
 
         if (!platform.RequiresCompatibilityRuntime)
@@ -2423,7 +2403,7 @@ public sealed partial class MainWindow : Window
         bool automatic = mode == RuntimeSelectionMode.AutomaticManaged;
         bool custom = mode == RuntimeSelectionMode.CustomRuntime;
 
-        InstallRuntimeButton.IsEnabled = !isBusy && automatic && selectedRuntimeArtifact is not null;
+        InstallRuntimeButton.IsEnabled = !isBusy && automatic;
         ValidateRuntimeButton.IsEnabled = !isBusy;
         ResetPrefixButton.IsEnabled = !isBusy;
         LaunchHelperModeBox.IsEnabled = !isBusy;
@@ -2434,8 +2414,12 @@ public sealed partial class MainWindow : Window
         RuntimeCommandBox.IsEnabled = !isBusy && custom;
         RuntimeValueBox.IsEnabled = !isBusy && custom;
 
-        if (automatic && selectedRuntimeArtifact is null)
-            RuntimeCatalogStatus.Text = "Approved runtime mode is waiting for a package.";
+        if (automatic)
+        {
+            RuntimeCatalogStatus.Text = selectedRuntimeArtifact is null
+                ? RuntimeSetupGuidance.ForCurrentPlatform().Summary
+                : $"Managed package: {FormatRuntimeArtifact(selectedRuntimeArtifact)}";
+        }
     }
 
     private void UpdateUmbraUiState()
@@ -2445,14 +2429,27 @@ public sealed partial class MainWindow : Window
         UmbraEnabledBox.IsEnabled = !isBusy;
     }
 
+    private static string FormatUmbraFrameworkArtifact(UmbraFrameworkArtifact artifact)
+    {
+        return $"{artifact.Name} {artifact.Version} ({artifact.PlatformRid}, {artifact.SizeBytes} bytes)";
+    }
+
     private static string FormatRuntimeArtifact(RuntimeArtifact artifact)
     {
         return $"{artifact.Name} {artifact.Version} ({artifact.PlatformRid}, {artifact.SizeBytes} bytes)";
     }
 
-    private static string FormatUmbraFrameworkArtifact(UmbraFrameworkArtifact artifact)
+    private string RuntimePrerequisiteStatusText(string action)
     {
-        return $"{artifact.Name} {artifact.Version} ({artifact.PlatformRid}, {artifact.SizeBytes} bytes)";
+        if (string.Equals(platform.RuntimeIdentifier, "osx-arm64", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{action}; checking Rosetta. If macOS asks to install it, complete the Apple prompt and the Launcher will continue.";
+        }
+
+        if (platform.OperatingSystem == LauncherOperatingSystem.Linux)
+            return $"{action}; checking required Linux host libraries before Wine starts.";
+
+        return $"{action}; validating Wine, prefix, and client helper.";
     }
 
     private static string FormatExecutableStatus(ClientInstallReport report)

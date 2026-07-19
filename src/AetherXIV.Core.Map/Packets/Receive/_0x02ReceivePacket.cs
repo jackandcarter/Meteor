@@ -5,7 +5,7 @@ namespace AetherXIV.Core.Map.packets.receive
 {
     class _0x02ReceivePacket
     {
-        bool invalidPacket = false;
+        public bool invalidPacket = false;
         uint unknown;
 
         public _0x02ReceivePacket(byte[] data)

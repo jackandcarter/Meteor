@@ -18,6 +18,7 @@ tooling, and the Umbra plugin framework in one workspace.
 - [AetherXIV Core guide](docs/AETHERXIV_CORE_GUIDE.md)
 - [Launcher guide](docs/LAUNCHER_GUIDE.md)
 - [Database setup and migration](docs/DATABASE_SETUP_AND_MIGRATION.md)
+- [Docker server deployment](docs/DOCKER_SERVER.md)
 - [Build and runtime dependencies](docs/BUILD_AND_RUNTIME_DEPENDENCIES.md)
 - [AetherXIV 2.0 release notes](docs/AETHERXIV_2.0_RELEASE_NOTES.md)
 

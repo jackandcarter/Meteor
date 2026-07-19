@@ -7,9 +7,6 @@ namespace AetherXIV.Core.World.Packets.WorldPackets.Receive.Group
     {
         public bool invalidPacket = false;
 
-        public string lsName;
-        public uint actorId;
-
         public LinkshellInviteCancelPacket(byte[] data)
         {
             using (MemoryStream mem = new MemoryStream(data))

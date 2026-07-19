@@ -59,8 +59,8 @@ the new release folder.
 
 ## Troubleshooting
 
-- Repair or install the x86 Visual C++ redistributable if an MSVC-built native
-  Umbra payload reports a missing runtime DLL.
+- AetherXIV's x86 native payloads statically link their compiler runtime; a
+  missing DLL at this stage normally indicates an incomplete release folder.
 - Confirm legacy game prerequisites separately if the original client fails
   before reaching AetherXIV services.
 - Check Windows Firewall when another computer cannot reach advertised ports.

@@ -5,7 +5,7 @@ namespace AetherXIV.Core.Map.packets.receive
 {
     class PingPacket
     {
-        bool invalidPacket = false;
+        public bool invalidPacket = false;
 
         public uint time;
 

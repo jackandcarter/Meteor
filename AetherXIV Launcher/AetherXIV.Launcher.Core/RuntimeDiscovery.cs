@@ -51,7 +51,6 @@ public static class RuntimeDiscovery
         ArgumentNullException.ThrowIfNull(whiskyBottleLister);
         ArgumentNullException.ThrowIfNull(homeWinePrefixLister);
 
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         List<RuntimeCandidate> candidates = new();
 
         AddIfFileExists(
@@ -60,10 +59,10 @@ public static class RuntimeDiscovery
             "Homebrew Wine Stable",
             WineRuntimeKind.WinePrefix,
             HomebrewWineStableCommand,
-            Path.Combine(home, ".wine"),
-            "Approved Wine Stable cask");
+            null,
+            "Recognized Wine Stable app");
 
-        AddWineCommandsFromPath(candidates, fileExists, Path.Combine(home, ".wine"), executableSearchPath);
+        AddWineCommandsFromPath(candidates, fileExists, executableSearchPath);
 
         return candidates;
     }
@@ -71,7 +70,6 @@ public static class RuntimeDiscovery
     private static void AddWineCommandsFromPath(
         List<RuntimeCandidate> candidates,
         Func<string, bool> fileExists,
-        string prefixPath,
         string? executableSearchPath)
     {
         AddIfCommandExists(
@@ -80,7 +78,7 @@ public static class RuntimeDiscovery
             "System Wine",
             WineRuntimeKind.WinePrefix,
             "wine",
-            prefixPath,
+            null,
             "PATH",
             executableSearchPath);
 
@@ -90,7 +88,7 @@ public static class RuntimeDiscovery
             "System Wine 64",
             WineRuntimeKind.WinePrefix,
             "wine64",
-            prefixPath,
+            null,
             "PATH",
             executableSearchPath);
     }

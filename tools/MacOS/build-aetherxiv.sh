@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOTNET_BIN="${DOTNET_BIN:-/usr/local/share/dotnet/dotnet}"
 if [[ ! -x "${DOTNET_BIN}" ]]; then
-  DOTNET_BIN="$(command -v dotnet)"
+  DOTNET_BIN="$(command -v dotnet 2>/dev/null || true)"
 fi
 
 CONFIGURATION="${AETHERXIV_BUILD_CONFIGURATION:-Release}"
@@ -88,6 +88,24 @@ require_mingw_x86() {
   if ! command -v i686-w64-mingw32-g++ >/dev/null 2>&1; then
     echo "i686-w64-mingw32-g++ is required to build the Windows x86 launcher/Umbra native payload." >&2
     exit 41
+  fi
+}
+
+check_build_prerequisites() {
+  local missing=()
+  if [[ -z "${DOTNET_BIN}" ]] \
+      || ! command -v "${DOTNET_BIN}" >/dev/null 2>&1 \
+      || ! "${DOTNET_BIN}" --list-sdks 2>/dev/null | awk '{print $1}' | grep -Fxq '10.0.203'; then
+    missing+=(".NET SDK 10.0.203 (dotnet)")
+  fi
+  command -v python3 >/dev/null 2>&1 || missing+=("Python 3 (python3)")
+  command -v i686-w64-mingw32-g++ >/dev/null 2>&1 || missing+=("MinGW-w64 (i686-w64-mingw32-g++)")
+
+  if ((${#missing[@]} > 0)); then
+    echo "AetherXIV macOS build prerequisites are missing:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    echo "See docs/build/MACOS.md before running this build again." >&2
+    exit 40
   fi
 }
 
@@ -251,6 +269,7 @@ write_build_manifest() {
   } > "${manifest_path}"
 }
 
+check_build_prerequisites
 reset_output_root
 
 echo "Publishing server hosts..."

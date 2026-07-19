@@ -22,9 +22,9 @@
       "originPath": "Common/Blowfish.cs",
       "originSha256": "27afbdfc46ddc74b066cb15ef7478afe8af248d6a514d73ebb85864131d84d23",
       "portPath": "src/AetherXIV.Core.Common/Blowfish.cs",
-      "portSha256": "27afbdfc46ddc74b066cb15ef7478afe8af248d6a514d73ebb85864131d84d23",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "5513fced07ab9821b1bded1160c789c0a2fab963b658efe4ff61f3dd9e2afc24",
+      "disposition": "compile-adaptation",
+      "reason": "The legacy signed-byte Blowfish key schedule is expressed with explicit unchecked integer conversions, preserving the client-compatible cipher result while avoiding a misleading signed bitwise warning."
     },
     {
       "originPath": "Common/DevDiagnostics.cs",
@@ -38,9 +38,9 @@
       "originPath": "Common/EfficientHashTables.cs",
       "originSha256": "19d3b030f1aae2905bccf91e5b5bdce6f3462cecf75636bc089276b7f8bc27ec",
       "portPath": "src/AetherXIV.Core.Common/EfficientHashTables.cs",
-      "portSha256": "19d3b030f1aae2905bccf91e5b5bdce6f3462cecf75636bc089276b7f8bc27ec",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "ead4248cc012f60972c87ad12fc1d2048edf83d5343063aebc8e069ae74a1700",
+      "disposition": "compile-adaptation",
+      "reason": "Private nested element types use conventional PascalCase names; hash calculation, bucket layout, and lookup behavior are unchanged."
     },
     {
       "originPath": "Common/PacketClassificationRegistry.cs",
@@ -126,17 +126,17 @@
       "originPath": "Lobby/ClientConnection.cs",
       "originSha256": "bdbfa7ffae5f7410d69abd78dc94e4e2e87fc6e611c2560f1a621a2dbe27d45e",
       "portPath": "src/AetherXIV.Core.Lobby/ClientConnection.cs",
-      "portSha256": "bdbfa7ffae5f7410d69abd78dc94e4e2e87fc6e611c2560f1a621a2dbe27d45e",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "108ff441f292b3cdb8bbdf08822b275e76d1f7e23caa66d45dd9ddc0101b6e57",
+      "disposition": "compile-adaptation",
+      "reason": "Never-assigned account and character-creation scratch fields are removed; the populated user, session, character ID, slot, and world fields remain unchanged."
     },
     {
       "originPath": "Lobby/ConfigConstants.cs",
       "originSha256": "d58b071106f5499a2b76b2aa8fe50b65671a862e32c46c393c5fa1e4ed635292",
       "portPath": "src/AetherXIV.Core.Lobby/ConfigConstants.cs",
-      "portSha256": "0a31f80ed79f411b3c89599951a341228f88a0a17facd1b573d73c6fba87ac14",
+      "portSha256": "026ae62c97a907bd97db03d5e18eec2de51a4d13607367e793b8282a984e3836",
       "disposition": "compile-adaptation",
-      "reason": "The existing legacy launch-argument adapter accepts the database port supplied by the modern operator."
+      "reason": "The legacy launch-argument adapter accepts the database port supplied by AetherXIV Core and preserves case-sensitive database values such as container secrets."
     },
     {
       "originPath": "Lobby/DataObjects/Account.cs",
@@ -158,17 +158,17 @@
       "originPath": "Lobby/DataObjects/CharaInfo.cs",
       "originSha256": "ee94ed0a4a10f927e317b55863c2ed10be6946ac2249ee8224a8adea744395b0",
       "portPath": "src/AetherXIV.Core.Lobby/DataObjects/CharaInfo.cs",
-      "portSha256": "ee94ed0a4a10f927e317b55863c2ed10be6946ac2249ee8224a8adea744395b0",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "e0968bbcff4131924119c3e26ef77bf040166a9f578eda13debd78d8b01983de",
+      "disposition": "compile-adaptation",
+      "reason": "The reserved face-info byte is initialized explicitly to its protocol value of zero."
     },
     {
       "originPath": "Lobby/DataObjects/Character.cs",
       "originSha256": "7d42810f2616a126f60d2e10d650fac6e8f6faca887e95d58624f0f2ccafc3ea",
       "portPath": "src/AetherXIV.Core.Lobby/DataObjects/Character.cs",
-      "portSha256": "7d42810f2616a126f60d2e10d650fac6e8f6faca887e95d58624f0f2ccafc3ea",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "50fabb75149404da2002732a1a46eeb0ec71085d6fcae09697a7fed1b02ae1e8",
+      "disposition": "compile-adaptation",
+      "reason": "An unassigned character-info string that was never serialized or consumed is removed."
     },
     {
       "originPath": "Lobby/DataObjects/Retainer.cs",
@@ -310,9 +310,9 @@
       "originPath": "Lobby/Program.cs",
       "originSha256": "cde25aae062155264e839ffa5f4d1675d0f12e9c9ab2df6248888eeb3b72e94c",
       "portPath": "src/AetherXIV.Core.Lobby/Program.cs",
-      "portSha256": "aed0c0f28e94d103ba6e17d1054a62adf70b959d99855fe333c605278b642977",
+      "portSha256": "adc7efd6660d4eb697c68165a0f8c6cdaa4679726b043c6b890486245db87bee",
       "disposition": "compile-adaptation",
-      "reason": "The modern host fixes the process working directory to AppContext.BaseDirectory so the legacy relative config paths resolve identically in centralized and published builds. The legacy DEBUG console listener is registered through Trace.Listeners, the supported .NET 10 equivalent of the removed Debug.Listeners API."
+      "reason": "The modern host fixes the process working directory to AppContext.BaseDirectory so the legacy relative config paths resolve identically in centralized and published builds. The legacy DEBUG console listener is registered through Trace.Listeners, the supported .NET 10 equivalent of the removed Debug.Listeners API. Non-interactive standard input also skips the legacy keypress prompt so containerized services can exit cleanly."
     },
     {
       "originPath": "Lobby/Properties/AssemblyInfo.cs",
@@ -326,9 +326,9 @@
       "originPath": "Lobby/Server.cs",
       "originSha256": "18bfa4597fae07c9e6188b65b96732061af4a2745817f806ad086420a9701d5c",
       "portPath": "src/AetherXIV.Core.Lobby/Server.cs",
-      "portSha256": "18bfa4597fae07c9e6188b65b96732061af4a2745817f806ad086420a9701d5c",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "c074a7f85304972f442cd8e71f7e8b72c62f12fdfd00093d3bd948130c45cee7",
+      "disposition": "compile-adaptation",
+      "reason": "The existing socket cleanup routine is restored as a stoppable background worker after listener startup. Connection-list access is synchronized, disconnected sockets are disposed through the normal path, and shutdown wakes and joins the worker."
     },
     {
       "originPath": "World/Actor/Group/Work/ContentWork.cs",
@@ -350,9 +350,9 @@
       "originPath": "World/Actor/Group/Work/GroupGlobalTemp.cs",
       "originSha256": "af3638e5994bff8af6a5b311b09331bf7ca2fa552e33a4f693ae05533ac21e44",
       "portPath": "src/AetherXIV.Core.World/Actor/Group/Work/GroupGlobalTemp.cs",
-      "portSha256": "af3638e5994bff8af6a5b311b09331bf7ca2fa552e33a4f693ae05533ac21e44",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "62c4e58eb790cf40e6c390f2b51e11f52c90afc2640601906e8e6ae1daeab876",
+      "disposition": "compile-adaptation",
+      "reason": "The unassigned director reference is removed from temporary group state; all populated group fields remain."
     },
     {
       "originPath": "World/Actor/Group/Work/GroupMemberSave.cs",
@@ -398,25 +398,25 @@
       "originPath": "World/ConfigConstants.cs",
       "originSha256": "4354582b2c334d7560c2553c29d75bfe50fc184b480b93cfe031433d5f58f360",
       "portPath": "src/AetherXIV.Core.World/ConfigConstants.cs",
-      "portSha256": "010ea344783fd5d815d945aca94bfd41d0c0be58774bedd1bd4020554b8bf5c4",
+      "portSha256": "62712945084a8c04beee63e9e671bc30466d1581b406472e4ee2ec10960d124d",
       "disposition": "compile-adaptation",
-      "reason": "The existing legacy launch-argument adapter accepts the database port supplied by the modern operator."
+      "reason": "The legacy launch-argument adapter accepts the database port supplied by AetherXIV Core and preserves case-sensitive database values such as container secrets."
     },
     {
       "originPath": "World/DataObjects/ClientConnection.cs",
       "originSha256": "f834025ca2d06310c7dabd1389a210bf52bf6a3e117a455727123c59941b137b",
       "portPath": "src/AetherXIV.Core.World/DataObjects/ClientConnection.cs",
-      "portSha256": "f834025ca2d06310c7dabd1389a210bf52bf6a3e117a455727123c59941b137b",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "76f287eb142285514d72ab5a3b934dfa9a69a271501bdf0619de7e69a9f6c395",
+      "disposition": "compile-adaptation",
+      "reason": "World connections use graceful socket shutdown followed by close, tolerating already-disposed sockets during idempotent service shutdown."
     },
     {
       "originPath": "World/DataObjects/DBWorld.cs",
       "originSha256": "d88bdbf8a14c2d72ac9659443bd4547b22ad4aa9271b91a3aa2d02bcff9b374a",
       "portPath": "src/AetherXIV.Core.World/DataObjects/DBWorld.cs",
-      "portSha256": "d88bdbf8a14c2d72ac9659443bd4547b22ad4aa9271b91a3aa2d02bcff9b374a",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "a79bdee1aca43bce9c4ca7aad96ea1b27b1333af878dac229927bbb1cb62a08d",
+      "disposition": "compile-adaptation",
+      "reason": "The unpopulated and unused message-of-the-day field is removed from the world record."
     },
     {
       "originPath": "World/DataObjects/Group/Group.cs",
@@ -502,25 +502,25 @@
       "originPath": "World/DataObjects/Session.cs",
       "originSha256": "b39d2a7fc8eb0f7c67172aa8a792513cd20194dbbe316e35628124034f857ec8",
       "portPath": "src/AetherXIV.Core.World/DataObjects/Session.cs",
-      "portSha256": "b39d2a7fc8eb0f7c67172aa8a792513cd20194dbbe316e35628124034f857ec8",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "dd16ed6f1f72be1e8cdd8e816f5d94f8da35de2105b2055718b4a81de92598ae",
+      "disposition": "compile-adaptation",
+      "reason": "The never-assigned secondary zone route is removed; each session retains its single authoritative zone route."
     },
     {
       "originPath": "World/DataObjects/ZoneServer.cs",
       "originSha256": "c505da45c43a2b2eb23fd8d4942e0568b33af1ce526f7355efd543f1da0d0a21",
       "portPath": "src/AetherXIV.Core.World/DataObjects/ZoneServer.cs",
-      "portSha256": "c505da45c43a2b2eb23fd8d4942e0568b33af1ce526f7355efd543f1da0d0a21",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "8c153bd37d5047a317451ed6ff2c8e731017eeea666b7b29c6baf372cd824f67",
+      "disposition": "compile-adaptation",
+      "reason": "Zone-server connections have an explicit disposal-safe disconnect path, and asynchronous receive handles shutdown races without logging expected socket-disposal failures."
     },
     {
       "originPath": "World/Database.cs",
       "originSha256": "bd20cbc72c917d78be35f0a3ef28688e398e8e1abb806a75c991d156478360b0",
       "portPath": "src/AetherXIV.Core.World/Database.cs",
-      "portSha256": "bd20cbc72c917d78be35f0a3ef28688e398e8e1abb806a75c991d156478360b0",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "e3301bacede2b5c96f109b39802cf7f3647fa5ff0a81fa4ce4998ac1acee595b",
+      "disposition": "compile-adaptation",
+      "reason": "World loading now populates list position, bounded population, and active status from the existing servers schema instead of leaving those values at defaults."
     },
     {
       "originPath": "World/LinkshellManager.cs",
@@ -534,9 +534,9 @@
       "originPath": "World/PacketProcessor.cs",
       "originSha256": "93133f1664aaaf04a0ae631dd2e569c7ce13ef460717bf2c733d937b9460cd34",
       "portPath": "src/AetherXIV.Core.World/PacketProcessor.cs",
-      "portSha256": "93133f1664aaaf04a0ae631dd2e569c7ce13ef460717bf2c733d937b9460cd34",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "3502540bcb58d878464d7e3c8ab8d89ec19cc12e0651977cae56038ba35af78d",
+      "disposition": "compile-adaptation",
+      "reason": "Forwarding uses the session's single authoritative zone route after removal of the unreachable secondary route."
     },
     {
       "originPath": "World/Packets/Receive/HelloPacket.cs",
@@ -766,9 +766,9 @@
       "originPath": "World/Packets/WorldPackets/Receive/Group/LinkshellInviteCancelPacket.cs",
       "originSha256": "d2f5e445b65b5186417e25a61d7f894423e820cb6c5892e6ef1d35ec7cd4fdd1",
       "portPath": "src/AetherXIV.Core.World/Packets/WorldPackets/Receive/Group/LinkshellInviteCancelPacket.cs",
-      "portSha256": "d2f5e445b65b5186417e25a61d7f894423e820cb6c5892e6ef1d35ec7cd4fdd1",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "f86d07f19a4f8ed9d23f33a049c35ee5cfe58809178f68d78dad869d959baccd",
+      "disposition": "compile-adaptation",
+      "reason": "Unparsed name and actor fields are removed because cancellation is keyed by the authenticated source session."
     },
     {
       "originPath": "World/Packets/WorldPackets/Receive/Group/LinkshellInvitePacket.cs",
@@ -902,9 +902,9 @@
       "originPath": "World/Program.cs",
       "originSha256": "e3e07ac5eb41d91e93d3f1ce5e8f18155de7802ed043dbbd4a889f73c96a18e0",
       "portPath": "src/AetherXIV.Core.World/Program.cs",
-      "portSha256": "8962c448c3d539ebf3f5ed9daa3526e13262332e7afcf0bf9f0d09efbebc7cc0",
+      "portSha256": "9361f29b6785f5ecba4d4391f31f41a8ba89828edb8f47223657031a8e548a49",
       "disposition": "compile-adaptation",
-      "reason": "The modern host fixes the process working directory to AppContext.BaseDirectory so the legacy relative config paths resolve identically in centralized and published builds. The legacy DEBUG console listener is registered through Trace.Listeners, the supported .NET 10 equivalent of the removed Debug.Listeners API."
+      "reason": "The modern host fixes the process working directory to AppContext.BaseDirectory so the legacy relative config paths resolve identically in centralized and published builds. The legacy DEBUG console listener is registered through Trace.Listeners, the supported .NET 10 equivalent of the removed Debug.Listeners API. Non-interactive standard input also skips the legacy keypress prompt so containerized services can exit cleanly."
     },
     {
       "originPath": "World/Properties/AssemblyInfo.cs",
@@ -934,33 +934,33 @@
       "originPath": "World/Server.cs",
       "originSha256": "a1c58f72125b8971e7a7d417f66e3287ebc39f698d8bddbe0d2d3f7db5e0145f",
       "portPath": "src/AetherXIV.Core.World/Server.cs",
-      "portSha256": "a1c58f72125b8971e7a7d417f66e3287ebc39f698d8bddbe0d2d3f7db5e0145f",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "9fcd27727d1926c2235c11f6e4889c626a6baded6c84ccbe4427647d1e110122",
+      "disposition": "compile-adaptation",
+      "reason": "The World host has an idempotent graceful-shutdown path that closes listeners and clients, disconnects zone servers, clears sessions, and makes asynchronous accept/receive callbacks safe during socket disposal."
     },
     {
       "originPath": "World/WorldMaster.cs",
       "originSha256": "dbd0b07a715d78e647eccc6b73c7d9eb2b47b1cecab564221d381b24588d7dc7",
       "portPath": "src/AetherXIV.Core.World/WorldMaster.cs",
-      "portSha256": "dbd0b07a715d78e647eccc6b73c7d9eb2b47b1cecab564221d381b24588d7dc7",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "470582c59e2fe3161895114c760c36baec14a62e83a7c9ebde9d53feeee01a86",
+      "disposition": "compile-adaptation",
+      "reason": "World shutdown can explicitly disconnect every registered zone-server connection."
     },
     {
       "originPath": "Map/Actors/Actor.cs",
       "originSha256": "83c97acdd103ff2cc22d940ccb1f853bbaa1b0b522b77913ab81efd0213fb732",
       "portPath": "src/AetherXIV.Core.Map/Actors/Actor.cs",
-      "portSha256": "83c97acdd103ff2cc22d940ccb1f853bbaa1b0b522b77913ab81efd0213fb732",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "5bd6f2d88d25de9d5db601f5d644ad3d9299ace1d1760561f149b17c265d94ad",
+      "disposition": "compile-adaptation",
+      "reason": "Event-status packets honor trace-derived per-condition enabled state instead of enabling every notice and push-circle condition unconditionally."
     },
     {
       "originPath": "Map/Actors/Area/Area.cs",
       "originSha256": "347b21b26a621707364b35a62582e34b256648d41c07a404b3c7e6a289153c1d",
       "portPath": "src/AetherXIV.Core.Map/Actors/Area/Area.cs",
-      "portSha256": "8c2475c9b8a81c8510f0b76c39e6fb800f01e28aacf7dccf388670646fe8b126",
+      "portSha256": "18403efe82d9dfe254b85aa36b14545f552c049f7765c7d11eecd7621d0f3c47",
       "disposition": "compile-adaptation",
-      "reason": "The actor-number allocator is shared by spawned actors and directors, matching the official unified zone actor sequence and preventing recycled or colliding IDs after dynamic despawns. The existing private-area range remains unchanged."
+      "reason": "The actor-number allocator is shared by spawned actors and directors, matching the official unified zone actor sequence and preventing recycled or colliding IDs after dynamic despawns. The existing private-area range remains unchanged. An unused area-script field is removed; runtime scripts continue through the existing Lua engine."
     },
     {
       "originPath": "Map/Actors/Area/PrivateArea.cs",
@@ -1006,9 +1006,9 @@
       "originPath": "Map/Actors/Chara/Ai/AIContainer.cs",
       "originSha256": "893f8d83b9d2ae2def3f67269376d887540f84732f9d8faf57e4b5061a21397d",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/AIContainer.cs",
-      "portSha256": "893f8d83b9d2ae2def3f67269376d887540f84732f9d8faf57e4b5061a21397d",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "8820112cdfc77b03d4c720535c1a3409bc8e54ecccede5a7716d6a8d3ca7b2cc",
+      "disposition": "compile-adaptation",
+      "reason": "Mounted players are prevented from using battle items, engaging, casting, using abilities, or using weapon skills, with the observed refusal messages for item and engage requests. The unimplemented item-use state also fails closed with diagnostics instead of silently completing without consuming or applying an item."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/BattleCommand.cs",
@@ -1038,9 +1038,9 @@
       "originPath": "Map/Actors/Chara/Ai/Controllers/BattleNpcController.cs",
       "originSha256": "cc1c896d8a58e9a0784949b8572951213db6c843d1aa7f4b65d789012dad3924",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/Controllers/BattleNpcController.cs",
-      "portSha256": "cc1c896d8a58e9a0784949b8572951213db6c843d1aa7f4b65d789012dad3924",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "c7ea7005d4b8f1b710d326bd36a7d75fdb240ceaebf95e345ef2d2e7af1e9639",
+      "disposition": "compile-adaptation",
+      "reason": "An assigned-but-unread first-spell flag is removed; the controller's spell-list and combat selection behavior are unchanged."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/Controllers/Controller.cs",
@@ -1078,33 +1078,33 @@
       "originPath": "Map/Actors/Chara/Ai/Helpers/ActionQueue.cs",
       "originSha256": "cc845a47dc1e45f515829cd3f2495cc3b905626e8f3f76c99c086a97bc73746c",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/Helpers/ActionQueue.cs",
-      "portSha256": "cc845a47dc1e45f515829cd3f2495cc3b905626e8f3f76c99c086a97bc73746c",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "34b4d3848ae264f0c0a43296f36cf565be01214c4af7f507ee8d7a8a6fc6ffb4",
+      "disposition": "compile-adaptation",
+      "reason": "The uninitialized Lua-script field and its stale import are removed from the dormant action-queue skeleton, and its empty-state property now reports the queue state with the correct polarity."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/Helpers/PathFind.cs",
       "originSha256": "d0a344428d2524ccd896f7ca97f033571bc7500219dbb66d12e27d77c95af47a",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/Helpers/PathFind.cs",
-      "portSha256": "d0a344428d2524ccd896f7ca97f033571bc7500219dbb66d12e27d77c95af47a",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "f0efa2480ada5de1cbe9dae27f6af98e96979fd5a9eb0b0faa960d86141797d2",
+      "disposition": "compile-adaptation",
+      "reason": "An unused path-following flag is removed; path calculation and movement behavior are unchanged."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/Helpers/TargetFind.cs",
       "originSha256": "e30564e872451506ca1aa07713dc65efb597acf85789f6589274c09f6a4523ca",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/Helpers/TargetFind.cs",
-      "portSha256": "e30564e872451506ca1aa07713dc65efb597acf85789f6589274c09f6a4523ca",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "db19366af5efa6c9285265c78af7bd8a66adbcc0756ee3e3d715a00ebdba6f01",
+      "disposition": "compile-adaptation",
+      "reason": "Unused target-category state and its unreferenced enum are removed; active target flags and AOE selection remain."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/State/AbilityState.cs",
       "originSha256": "9537ebfb7ec31f63ecd3e61221a9c7f41a868666e92079137b79312def8a9734",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/State/AbilityState.cs",
-      "portSha256": "9537ebfb7ec31f63ecd3e61221a9c7f41a868666e92079137b79312def8a9734",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "ca7c69c395bf1289e2f77fd3dd11c03651050c753a5ae5d076d9063328db8621",
+      "disposition": "compile-adaptation",
+      "reason": "An assigned-but-unread hit-target flag is removed; ability target finding remains authoritative."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/State/AttackState.cs",
@@ -1142,17 +1142,17 @@
       "originPath": "Map/Actors/Chara/Ai/State/ItemState.cs",
       "originSha256": "ec170d465f384f78c6c3d6b5f4616c4d71b40a5cec52679da32d0df12c4d9cff",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/State/ItemState.cs",
-      "portSha256": "ec170d465f384f78c6c3d6b5f4616c4d71b40a5cec52679da32d0df12c4d9cff",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "5f2989fa9704fb0737df3499cf7bd8c547a1700a8f1839ae0cda9c798f91347e",
+      "disposition": "compile-adaptation",
+      "reason": "Unassigned item and duplicate owner fields plus a stale import are removed from the dormant item-state skeleton."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/State/MagicState.cs",
       "originSha256": "c426403134ce4207c9c7a112d35796ae4243e3d29706c0d8fb88b4df8eb92c34",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/State/MagicState.cs",
-      "portSha256": "c426403134ce4207c9c7a112d35796ae4243e3d29706c0d8fb88b4df8eb92c34",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "77284874107da5c0aad96e7c278bec702ef9859f28e593a5fefd30c4751bf2b7",
+      "disposition": "compile-adaptation",
+      "reason": "Assigned-but-unread hit-target and hit-direction values are removed; spell target finding and command execution remain unchanged."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/State/State.cs",
@@ -1166,25 +1166,25 @@
       "originPath": "Map/Actors/Chara/Ai/State/WeaponSkillState.cs",
       "originSha256": "dd5ff5e10e138ba5496e97caa74e9aff1e5a16014bc07c914db526cf2a52b01d",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/State/WeaponSkillState.cs",
-      "portSha256": "dd5ff5e10e138ba5496e97caa74e9aff1e5a16014bc07c914db526cf2a52b01d",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "0580aad2bbc4b4ee23b138822a3a0e4c9887b5864ef948496938236b13245a66",
+      "disposition": "compile-adaptation",
+      "reason": "Weapon-skill cast presentation uses the trace-backed player/NPC cast-type mapping and emits structured diagnostics instead of a single hard-coded chant ID."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/StatusEffect.cs",
       "originSha256": "2b12090aa94a537e02d7dddf4b238f8f0f8476539611bee1dacf0a61479d8052",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/StatusEffect.cs",
-      "portSha256": "2b12090aa94a537e02d7dddf4b238f8f0f8476539611bee1dacf0a61479d8052",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "bd884038970e52ccedb59d4ed5033afe0d3fdd0e69a8e3d70e2766208e2a1d45",
+      "disposition": "compile-adaptation",
+      "reason": "Status-effect callbacks execute the script loaded and cached for that effect. This removes an unreachable fallback and avoids reloading the Lua file on each tick while preserving the missing-function sentinel."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/StatusEffectContainer.cs",
       "originSha256": "a578f2c06e1eed313088c8e38c5194cf6b47b0d9316fba0cd8a973f3d24e14d3",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/StatusEffectContainer.cs",
-      "portSha256": "a578f2c06e1eed313088c8e38c5194cf6b47b0d9316fba0cd8a973f3d24e14d3",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "212873865b97abed3f2801d9e354c703f0752d45163d4e1674a3889d17fb77fa",
+      "disposition": "compile-adaptation",
+      "reason": "An unused update flag is removed, and callback call sites use the effect's cached-script API directly; status-effect add, remove, tick, and packet flows remain unchanged."
     },
     {
       "originPath": "Map/Actors/Chara/Ai/Utils/AttackUtils.cs",
@@ -1254,9 +1254,9 @@
       "originPath": "Map/Actors/Chara/ItemPackage.cs",
       "originSha256": "ae910c8c8210111dd4c32376e61cf664df6fbcc43f7a688e5a31adb98ba26d02",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/ItemPackage.cs",
-      "portSha256": "ae910c8c8210111dd4c32376e61cf664df6fbcc43f7a688e5a31adb98ba26d02",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "0b6dc46207c0fee30c54fcb1d60684acfffba438da3b485e06f5da7150d59b70",
+      "disposition": "compile-adaptation",
+      "reason": "Inventory packages can apply already-committed service transactions in memory without duplicate database writes, including non-persisting slot realignment for committed removals."
     },
     {
       "originPath": "Map/Actors/Chara/Modifier.cs",
@@ -1358,7 +1358,7 @@
       "originPath": "Map/Actors/Chara/Player/Player.cs",
       "originSha256": "ece70a71fcbcc5a002031a722bf58b8fa0c038dad96c9cff65567dc8bb6b01e2",
       "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Player/Player.cs",
-      "portSha256": "9db7a7c6711d9341836189a81136b3f6434424513fa4d58b6cf2bd743845fac0",
+      "portSha256": "e2ecbaf80a7a9a2d36432520491b3f22bfdc391428bf5cc485d744a36b84ad02",
       "disposition": "compile-adaptation",
       "reason": "Player.SetEventStatus now queues the 0x0136 packet it constructs. Official server-to-client traces confirm 0x0136 as the actor event-status contract, and the legacy city scripts require this method for player-specific event-condition overrides. Structured diagnostics record each queued override. During persisted opening-content reconstruction, the active content director satisfies the unchanged player.lua OpeningDirector existence check so login cannot start a contradictory public director over the restored battle; structured diagnostics record that compatibility resolution. Logout and QuitGame now mark the Map session ending immediately after queuing the unchanged client transition packet, closing the observed post-cleanup client-update race while preserving their distinct confirmation flow. The legacy bonus-point stub is completed with the exact class-scoped allocation limits and values observed in the official add_str exchange; invalid client submissions are rejected before persistence or stat recalculation. The later experimental equipment-param summation is removed because it treated conditional item metadata as unconditional Modifier values and is contradicted by the official equip-change captures. The trace-confirmed weapon damage type, delay, and hit-count mapping remains unchanged while equipment scaling is reconstructed."
     },
@@ -1438,9 +1438,9 @@
       "originPath": "Map/Actors/EventList.cs",
       "originSha256": "c33399a206f96cafca7ea4d9052131ae91296ecacf2d011fda66b3eaf23f2f8e",
       "portPath": "src/AetherXIV.Core.Map/Actors/EventList.cs",
-      "portSha256": "c33399a206f96cafca7ea4d9052131ae91296ecacf2d011fda66b3eaf23f2f8e",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "2814a82bdd07b9c526667cf326932637bba50a9ca245a51a4fc4ebdfa1e8c379",
+      "disposition": "compile-adaptation",
+      "reason": "Event conditions carry trace-derived enablement and push-circle wire fields while retaining legacy defaults for captures that do not provide them."
     },
     {
       "originPath": "Map/Actors/Group/ContentGroup.cs",
@@ -1502,9 +1502,9 @@
       "originPath": "Map/Actors/Group/TradeGroup.cs",
       "originSha256": "29eee0478228be73b5bdb7be012880c1d482456de8aa93da5c54dd645033aff6",
       "portPath": "src/AetherXIV.Core.Map/Actors/Group/TradeGroup.cs",
-      "portSha256": "29eee0478228be73b5bdb7be012880c1d482456de8aa93da5c54dd645033aff6",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "24e843a6c397f952814e44bb036896d8815f3b205159299d004ca25a722f659b",
+      "disposition": "compile-adaptation",
+      "reason": "The never-assigned topic-group field and getter are removed; authenticated trade membership remains unchanged."
     },
     {
       "originPath": "Map/Actors/Group/Work/ContentGroupWork.cs",
@@ -1606,9 +1606,9 @@
       "originPath": "Map/ConfigConstants.cs",
       "originSha256": "0c58838edef9136145ec145d0b90e220feac4669a763450ac874349d4729e429",
       "portPath": "src/AetherXIV.Core.Map/ConfigConstants.cs",
-      "portSha256": "be36d2b85d421b9433250384f0e2ffa4b23083e04fc2b2d1e8e00a59dee2d799",
+      "portSha256": "ebaae504937bfa25aa058f0ceff5438a6bc415f8b7cef1f290940b78cc1c0c7c",
       "disposition": "compile-adaptation",
-      "reason": "The existing legacy launch-argument adapter accepts the database port supplied by the modern operator."
+      "reason": "The legacy launch-argument adapter accepts the database port supplied by AetherXIV Core and preserves case-sensitive database values such as container secrets."
     },
     {
       "originPath": "Map/DataObjects/GuildleveData.cs",
@@ -1694,9 +1694,9 @@
       "originPath": "Map/Database.cs",
       "originSha256": "3481bba9ccaaba3eca8389efefd9f3c97f923d365e71c7473399aa2b7b7c0874",
       "portPath": "src/AetherXIV.Core.Map/Database.cs",
-      "portSha256": "a6f3931ca4a819c71d858ebed80757c274e2b2f27a45a4c03e0e7fa7598a1259",
+      "portSha256": "f30211d4b6d869ec3aa1b97eab34931c1d640dd6ac03cb4eda53ea7df115481d",
       "disposition": "compile-adaptation",
-      "reason": "Attribute-point allocation is persisted atomically in the existing characters_class_attributes table before the in-memory player state is changed, completing the official bonus-point exchange without adding a parallel progression store or changing legacy stat formulas."
+      "reason": "Attribute-point allocation is persisted atomically in the existing characters_class_attributes table before the in-memory player state is changed, completing the official bonus-point exchange without adding a parallel progression store or changing legacy stat formulas. Unused ticket-state and status-effect query locals are removed."
     },
     {
       "originPath": "Map/Lua/LuaEngine.cs",
@@ -1734,9 +1734,9 @@
       "originPath": "Map/PacketProcessor.cs",
       "originSha256": "ba6b29b9cb14930027ff1c04a4a49e176a0a2cbe042b909acd58c17c02735483",
       "portPath": "src/AetherXIV.Core.Map/PacketProcessor.cs",
-      "portSha256": "ab300ceeb6ae59f0263c977e5d089c5b5b3a452bf0c3e19378a1f8cd6ed2f422",
+      "portSha256": "050d0c9838908ef5519c785e674af20f72d88190761c6c21518b07cd29b861ae",
       "disposition": "compile-adaptation",
-      "reason": "A locally completed logout or quit is not saved and removed a second time when World observes the socket close. The existing World session-end confirmation is still emitted."
+      "reason": "A locally completed logout or quit is not saved and removed a second time when World observes the socket close. The existing World session-end confirmation is still emitted. Truncated ping and position payloads are now rejected and diagnosed instead of producing zero-valued gameplay data."
     },
     {
       "originPath": "Map/Packets/Receive/AchievementProgressRequestPacket.cs",
@@ -1798,9 +1798,9 @@
       "originPath": "Map/Packets/Receive/HandshakePacket.cs",
       "originSha256": "7749737c1c7ba0b6f08b316699747e84fb6aa41a91caedf3262e0134c780bbb6",
       "portPath": "src/AetherXIV.Core.Map/Packets/Receive/HandshakePacket.cs",
-      "portSha256": "7749737c1c7ba0b6f08b316699747e84fb6aa41a91caedf3262e0134c780bbb6",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "3eafe50cde57d9b6227ccf66370c3af53306cb14ed39301cd777a8f1e7a6f097",
+      "disposition": "compile-adaptation",
+      "reason": "Packet validity is exposed consistently with the other receive parsers so malformed dormant handshake payloads can be rejected by a future dispatcher without changing the parsed actor ID."
     },
     {
       "originPath": "Map/Packets/Receive/LangaugeCodePacket.cs",
@@ -1830,9 +1830,9 @@
       "originPath": "Map/Packets/Receive/PingPacket.cs",
       "originSha256": "ffa7aa364924bb815262b4b6729c872c4448d88118d4750158c81ca86473b040",
       "portPath": "src/AetherXIV.Core.Map/Packets/Receive/PingPacket.cs",
-      "portSha256": "ffa7aa364924bb815262b4b6729c872c4448d88118d4750158c81ca86473b040",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "293cb4ff4875c04a595e38c0126540e8ecdd4cbdddb70af27d2f3d2689239307",
+      "disposition": "compile-adaptation",
+      "reason": "Packet validity is exposed to the dispatcher, which now rejects truncated ping payloads."
     },
     {
       "originPath": "Map/Packets/Receive/Recruitment/RecruitmentDetailsRequestPacket.cs",
@@ -1926,9 +1926,9 @@
       "originPath": "Map/Packets/Receive/UpdatePlayerPositionPacket.cs",
       "originSha256": "4dea5b319e4c22872440d62c66b69a7cc971fdb65e804affc8296e8bad2482ab",
       "portPath": "src/AetherXIV.Core.Map/Packets/Receive/UpdatePlayerPositionPacket.cs",
-      "portSha256": "4dea5b319e4c22872440d62c66b69a7cc971fdb65e804affc8296e8bad2482ab",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "d9a8ac02ef224b089b4b6c3614f7bbb9b5c2fcae41823fafa80c3879105e4137",
+      "disposition": "compile-adaptation",
+      "reason": "Packet validity is exposed to the dispatcher, which now rejects truncated movement payloads before position use."
     },
     {
       "originPath": "Map/Packets/Receive/ZoneInCompletePacket.cs",
@@ -1942,9 +1942,9 @@
       "originPath": "Map/Packets/Receive/_0x02ReceivePacket.cs",
       "originSha256": "40de692a2c3501ff7c14af8d15247a1a68e716badde886d6ba9436626ea505d9",
       "portPath": "src/AetherXIV.Core.Map/Packets/Receive/_0x02ReceivePacket.cs",
-      "portSha256": "40de692a2c3501ff7c14af8d15247a1a68e716badde886d6ba9436626ea505d9",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "48891dbae792131d17184455e44140ebdf391bcf346e9bf9a563e234892a9288",
+      "disposition": "compile-adaptation",
+      "reason": "Packet validity is exposed consistently with the other receive parsers for this dormant legacy opcode parser."
     },
     {
       "originPath": "Map/Packets/Send/Actor/ActorDoEmotePacket.cs",
@@ -2062,9 +2062,9 @@
       "originPath": "Map/Packets/Send/Actor/Events/EventConditionDiagnostics.cs",
       "originSha256": "cef11f9a70bbf50382546901baa1262179f53b050520b9c1f29d5b30ec482d3b",
       "portPath": "src/AetherXIV.Core.Map/Packets/Send/Actor/Events/EventConditionDiagnostics.cs",
-      "portSha256": "cef11f9a70bbf50382546901baa1262179f53b050520b9c1f29d5b30ec482d3b",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "efb150884085083cdc7953d1e3d8b5eb16c5bc272289efe50c172a94a646c547",
+      "disposition": "compile-adaptation",
+      "reason": "Push-circle diagnostics include every configurable wire field used to compare runtime packets with captures."
     },
     {
       "originPath": "Map/Packets/Send/Actor/Events/SetEmoteEventCondition.cs",
@@ -2094,9 +2094,9 @@
       "originPath": "Map/Packets/Send/Actor/Events/SetPushEventConditionWithCircle.cs",
       "originSha256": "db7f06c832965038fb14ad9f9bc8017d5b536b847de5984a38173403436d81aa",
       "portPath": "src/AetherXIV.Core.Map/Packets/Send/Actor/Events/SetPushEventConditionWithCircle.cs",
-      "portSha256": "db7f06c832965038fb14ad9f9bc8017d5b536b847de5984a38173403436d81aa",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "c07bdb072f0732ccf34f5b3eecd7c61f3a4ccd48945abccbef6152b66cfb2868",
+      "disposition": "compile-adaptation",
+      "reason": "Push-circle packets serialize the reviewed per-condition source, radii, flags, and reserved byte instead of hard-coded placeholders."
     },
     {
       "originPath": "Map/Packets/Send/Actor/Events/SetPushEventConditionWithFan.cs",
@@ -3278,17 +3278,17 @@
       "originPath": "Map/Program.cs",
       "originSha256": "44d3b789bb41b6d896216aba89095d4c801daef54f708ebbe73919c8f032712b",
       "portPath": "src/AetherXIV.Core.Map/Program.cs",
-      "portSha256": "60452ddbecca2d52f295e077b5d63a757999d762282022a95dbe52941ebef3b8",
+      "portSha256": "1ffbb865874f6b086f1e1b91e89e61f1e0a31ed6d09554440cca357dea7ccec3",
       "disposition": "compile-adaptation",
-      "reason": "The modern host fixes the process working directory to AppContext.BaseDirectory so the legacy relative config, static-actor, and Lua paths resolve identically in centralized and published builds. The legacy DEBUG console listener is registered through Trace.Listeners, the supported .NET 10 equivalent of the removed Debug.Listeners API."
+      "reason": "The modern host fixes the process working directory to AppContext.BaseDirectory so the legacy relative config, static-actor, and Lua paths resolve identically in centralized and published builds. The legacy DEBUG console listener is registered through Trace.Listeners, the supported .NET 10 equivalent of the removed Debug.Listeners API. Non-interactive standard input also skips the legacy keypress prompt so containerized services can exit cleanly."
     },
     {
       "originPath": "Map/Properties/AssemblyInfo.cs",
       "originSha256": "3b8f02104964834b30b952e737c0a4007d74c5920ff674de606629d6edabcacf",
       "portPath": "src/AetherXIV.Core.Map/Properties/AssemblyInfo.cs",
-      "portSha256": "3b8f02104964834b30b952e737c0a4007d74c5920ff674de606629d6edabcacf",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "a20337a9693a921710165d116fc257cccd539b3f90fb1407d7eadd99cecb384e",
+      "disposition": "compile-adaptation",
+      "reason": "Map internals are visible to the dedicated regression-test assembly."
     },
     {
       "originPath": "Map/Properties/Resources.Designer.cs",
@@ -3302,9 +3302,9 @@
       "originPath": "Map/Server.cs",
       "originSha256": "ad394515605fc9288e347dffd27dea231a05c05c195826c7035e0385b2df18ba",
       "portPath": "src/AetherXIV.Core.Map/Server.cs",
-      "portSha256": "ad394515605fc9288e347dffd27dea231a05c05c195826c7035e0385b2df18ba",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "6fa1026a68485e009a5dcfb188f480ff09cdaecc1bacc7dce6ed99bb72e356b0",
+      "disposition": "compile-adaptation",
+      "reason": "The Map host has an idempotent graceful-shutdown path that stops accepts, quiesces the zone loop, persists live sessions, closes World connectivity, and tolerates asynchronous socket-disposal races."
     },
     {
       "originPath": "Map/Utils/ActorPropertyPacketUtil.cs",
@@ -3326,25 +3326,97 @@
       "originPath": "Map/Utils/NavmeshUtils.cs",
       "originSha256": "43eabf3736aace389cb91b1a9e8fccb7eb79127c63966c86d7250b2eb8f9b29a",
       "portPath": "src/AetherXIV.Core.Map/Utils/NavmeshUtils.cs",
-      "portSha256": "53163eb6250770304d9f84ed613525e2b266b7b409b95eaf5902a30c8f153cf0",
+      "portSha256": "8255af89d29af02d7bb125024a966009ca7c9ff0264b352f29f2cf7c55b19ecf",
       "disposition": "compile-adaptation",
-      "reason": "The legacy navmesh file is loaded from the packaged application base directory instead of traversing the process working directory. The SharpNav serializer, file contents, and pathfinding behavior are unchanged."
+      "reason": "The legacy navmesh file is loaded from the packaged application base directory instead of traversing the process working directory. The SharpNav serializer, file contents, and pathfinding behavior are unchanged. An unused local polygon-limit constant is removed."
     },
     {
       "originPath": "Map/Utils/SQLGeneration.cs",
       "originSha256": "d0b5af8f7fc607ef973c679d457df1088f260edb2fc0d50cdb282284de096376",
       "portPath": "src/AetherXIV.Core.Map/Utils/SQLGeneration.cs",
-      "portSha256": "d0b5af8f7fc607ef973c679d457df1088f260edb2fc0d50cdb282284de096376",
-      "disposition": "exact-copy",
-      "reason": ""
+      "portSha256": "9ff8c4a2cbdd621fcc0cb6db21d789e1b156802281e43d9dcf4e015ff3039e82",
+      "disposition": "compile-adaptation",
+      "reason": "An unused secondary line buffer is removed from SQL generation; emitted SQL is unchanged."
     },
     {
       "originPath": "Map/WorldManager.cs",
       "originSha256": "ce790ce8d3fc8d09a85a1483756284c5c5ab607fbd935d5ea0c697d5084490cf",
       "portPath": "src/AetherXIV.Core.Map/WorldManager.cs",
-      "portSha256": "a88ee9c0283245442acc3af9be97d4e9287e6bd569380443d5f960c4feadb9f2",
+      "portSha256": "d1ce63d0cd8f4784ae91abf2c22f51b9eca8963335a0d87b7e7e0634cc3e950c",
       "disposition": "compile-adaptation",
-      "reason": "Database-backed battle NPC spawning uses the existing area allocator instead of bypassing it with the current actor count, preventing public event-owner IDs from being reused during private content entry. When a persisted opening SimpleContent area is absent after restart, the runtime now reconstructs it through the existing legacy CreateContentArea/content-script/director path instead of clearing the private-area boundary and projecting battle-side quest flags onto the public grounded-NPC scene. Phase 10 continues to the legacy post-battle area."
+      "reason": "Database-backed battle NPC spawning uses the existing area allocator instead of bypassing it with the current actor count, preventing public event-owner IDs from being reused during private content entry. When a persisted opening SimpleContent area is absent after restart, the runtime now reconstructs it through the existing legacy CreateContentArea/content-script/director path instead of clearing the private-area boundary and projecting battle-side quest flags onto the public grounded-NPC scene. Phase 10 continues to the legacy post-battle area. Trade offers are validated as an aggregate against destination package capacity, and the incomplete non-atomic transfer path now fails closed instead of falsely reporting success without moving items."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Ai/BattleCastPresentationPolicy.cs",
+      "portSha256": "7bf4ac55aaa4d3b94396893455b251000e26fdb388c86baba34580a2ca80adc3",
+      "disposition": "port-native",
+      "reason": "Trace-backed mapping of player and battle-NPC cast types to client chant presentation IDs."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/Actors/Chara/Player/EquipmentStatPolicy.cs",
+      "portSha256": "392bda069c5cb3c8eb0c5b47bc2ecdc6478b3b675f2ac52e8ce8c0d9e212f7f3",
+      "disposition": "port-native",
+      "reason": "Client-version-specific equipment scaling and bonus-pair policy reconstructed from reviewed runtime evidence."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/ChocoboService.cs",
+      "portSha256": "1937a11ea4020f0e9c5f5b0fb8e917d19014a9cc5e96ebffccdd349f98e423d1",
+      "disposition": "port-native",
+      "reason": "Server-owned chocobo rental, purchase, naming, issuance, and persistence orchestration."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/ChocoboStopPolicy.cs",
+      "portSha256": "e4a40bd312b51505c37880f2e8b757dea5aa9b99fd9e2ece7cdf266430013012",
+      "disposition": "port-native",
+      "reason": "Evidence-gated mounted interaction and destination policy for observed ChocoboStop boundaries."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/GrandCompanyShopService.cs",
+      "portSha256": "99554257f062b01b7c2df0592914729fdc7a7ecfb344aec63cc7ac13524e44e1",
+      "disposition": "port-native",
+      "reason": "Atomic Grand Company seal purchase flow for company-specific chocobo issuance items."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/PlayerSessionTransitionPolicy.cs",
+      "portSha256": "0b00f62a02889785fc8949ec01bd7256a5608f853bf6fd41bb95fd879f2eb22c",
+      "disposition": "port-native",
+      "reason": "Single-owner policy for logout and quit transitions across Map and World session cleanup."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/RepairService.cs",
+      "portSha256": "b96ece38c3fb4c9adef211ae950e8fcb22a8955e04e3af96c461b60eb51f2bec",
+      "disposition": "port-native",
+      "reason": "Server-owned validation and atomic persistence for NPC equipment repair."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/SeamlessBoundaryPolicy.cs",
+      "portSha256": "0f7809a676c94631842f8946d8ab1751a9810997dbc1959d3c121eee7c0943ec",
+      "disposition": "port-native",
+      "reason": "Reviewed movement-boundary policy for merge and destination crossings."
+    },
+    {
+      "originPath": "",
+      "originSha256": "",
+      "portPath": "src/AetherXIV.Core.Map/ZoneTransitionPositionPolicy.cs",
+      "portSha256": "270f301b7a88cc00379326d907b3f29a848b97f3456b5ec14a597ac38eea3f5b",
+      "disposition": "port-native",
+      "reason": "Validation policy for pending zone-transition arrival acknowledgements."
     }
   ],
   "runtimeAssets": [
@@ -3544,7 +3616,9 @@
       "originPath": "Data/sql/gamedata_actor_class.sql",
       "originSha256": "a1e5205bfb1c4f205dd1532622cd3c7796cc9062f3bb046274dfd0cad3efe4c1",
       "portPath": "Data/sql/gamedata_actor_class.sql",
-      "portSha256": "a1e5205bfb1c4f205dd1532622cd3c7796cc9062f3bb046274dfd0cad3efe4c1"
+      "portSha256": "ffa73d356b17a5ee0477579935900e6eb6ed270001a65373ccd82df88c3cbb6b",
+      "disposition": "data-adaptation",
+      "reason": "Trace-reviewed event conditions correct the market-entrance box metadata and restore the ChocoboStop notice and push-circle contracts while preserving the imported actor-class dataset."
     },
     {
       "originPath": "Data/sql/gamedata_actor_pushcommand.sql",

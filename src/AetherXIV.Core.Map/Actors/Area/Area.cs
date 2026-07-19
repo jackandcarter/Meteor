@@ -39,8 +39,6 @@ namespace AetherXIV.Core.Map.Actors
         private uint nextPublicAreaActorNumber = 1;
         private uint nextPrivateAreaActorNumber = PrivateAreaActorNumberStart;
 
-        LuaScript areaScript;
-
         public Area(uint id, string zoneName, ushort regionId, string classPath, ushort bgmDay, ushort bgmNight, ushort bgmBattle, bool isIsolated, bool isInn, bool canRideChocobo, bool canStealth, bool isInstanceRaid)
             : base(id)
         {

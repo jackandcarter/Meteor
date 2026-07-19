@@ -11,7 +11,9 @@ Install:
 - the [.NET 10 ASP.NET Core Runtime](https://dotnet.microsoft.com/download/dotnet/10.0);
 - Avalonia desktop libraries documented by
   [Avalonia](https://docs.avaloniaui.net/docs/deployment/linux);
-- an approved Wine-compatible runtime and working 32-bit graphics/userspace;
+- working X11/XWayland and graphics-driver support;
+- internet access so **Install Runtime** can retrieve the pinned portable Wine
+  package;
 - a user-owned Final Fantasy XIV 1.23b client.
 
 On Ubuntu, the common Avalonia packages include `libx11-6`, `libice6`, `libsm6`,
@@ -54,8 +56,13 @@ desktop menu or a graphical file manager must not open a terminal window.
 1. Open **AetherXIV Launcher**.
 2. Save the **Localhost** server preset.
 3. Locate and validate the Final Fantasy XIV 1.23b client.
-4. On **Runtime**, install or choose an approved Wine runtime and validate it.
-5. Confirm 32-bit graphics support if Wine starts but the game does not render.
+4. On **Runtime**, select **Install Runtime** if Wine is not detected. The
+   Launcher downloads its pinned portable Linux x64 package, verifies it, and
+   validates the executable, required host libraries, isolated prefix, and
+   client helper. If a shared library is missing, install the named library
+   with the distribution's graphical software manager and select **Validate
+   Runtime** again.
+5. Confirm graphics-driver support if Wine starts but the game does not render.
 6. Enable Umbra if desired, then log in from **Home**.
 
 An X11 session or XWayland compatibility layer is required.

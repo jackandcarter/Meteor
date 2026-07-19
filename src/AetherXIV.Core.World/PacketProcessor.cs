@@ -155,8 +155,6 @@ namespace AetherXIV.Core.World
                             target.sessionId,
                             target.currentZoneId);
 
-                    if (target.routing2 != null)
-                        target.routing2.SendPacket(subpacket);
                 }
                 //World Server Type
                 else if (subpacket.header.type >= 0x1000)

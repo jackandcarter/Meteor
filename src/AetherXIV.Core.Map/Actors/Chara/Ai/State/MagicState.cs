@@ -133,10 +133,6 @@ namespace AetherXIV.Core.Map.actors.chara.ai.state
 
         public override void OnComplete()
         {
-            //How do combos/hitdirs work for aoe abilities or does that not matter for aoe?
-            HitDirection hitDir = owner.GetHitDirection(target);
-            bool hitTarget = false;
-
             spell.targetFind.FindWithinArea(target, spell.validTarget, spell.aoeTarget);
             isCompleted = true;
             var targets = spell.targetFind.GetTargets();

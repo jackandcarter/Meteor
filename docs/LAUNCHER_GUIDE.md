@@ -126,21 +126,54 @@ read the [Umbra SDK](UMBRA_SDK.md).
 Windows launches the game natively. macOS, Linux, and SteamOS use this tab to
 manage a Wine-compatible runtime.
 
-### Approved Runtime
+### Automatic Wine
 
-This is the recommended mode. The Launcher uses its verified runtime catalog
-and managed prefix, or an approved detected fallback. Use:
+This is the recommended mode. The game server is not a runtime package host.
+The Launcher selects a built-in package definition for its operating system
+and architecture. Each definition pins the upstream URL, byte length, SHA-256,
+archive layout, and Wine executable path. Use:
 
-- **Install Runtime** to download, verify, and install a catalog runtime;
-- **Validate Runtime** to test the runtime, prefix, and helper;
-- **Scan Runtimes** to refresh recognized local fallbacks.
+- **Install Runtime** to download, verify, extract, and validate the pinned
+  managed Wine package;
+- **Scan Runtimes** after installation to detect recognized local Wine paths;
+- **Validate Runtime** to test the runtime, prefix, and helper.
+
+The managed install is stored in Launcher application data and does not run
+Homebrew, `apt`, `pacman`, or another privileged package manager. A checksum,
+size, extraction, or validation failure stops the install. A runtime is not
+considered ready until validation confirms its version, creates or checks the
+managed prefix, and successfully runs the bundled client helper.
+
+Validation also checks host prerequisites before Wine starts. On Apple silicon,
+the Launcher runs an Intel-process probe that causes macOS to offer its normal
+Rosetta installation prompt when Rosetta is absent. The Launcher waits up to ten
+minutes for that Apple-managed installation before continuing. It never accepts
+the Rosetta license silently. On Linux, validation checks the managed Wine
+executable, Wine server, and its X11, audio, GStreamer, and Vulkan drivers with
+`ldd`. Missing library names and distribution-family guidance are shown in the
+Runtime status and Launch Log.
+
+Automatic detection recognizes Wine Stable at its standard macOS application
+path and `wine` or `wine64` executables available on `PATH`. Detected Wine uses
+the isolated AetherXIV FFXIV prefix under Launcher application data, not the
+user's global `~/.wine` prefix. If a valid runtime lives elsewhere, use Custom
+Runtime and select its exact executable.
+
+The 2.0 managed definitions use Wine 11.0 builds for macOS arm64/x64 and Linux
+x64. SteamOS uses the Linux x64 package in persistent Launcher storage. On
+Apple silicon, the macOS package contains Intel components and requires
+Rosetta. GStreamer is optional on macOS: Wine and the game can launch without
+it, but some movies or media may not play. The Launcher reports that warning
+without downloading the upstream unsigned installer. Platform setup guidance
+remains the fallback when a prerequisite is missing or no managed artifact is
+defined for the detected RID.
 
 ### Custom Runtime
 
 Custom mode accepts a Wine command or executable and an optional prefix. It is
 for advanced users who can identify the exact runtime and take responsibility
-for its compatibility. A random prefix is not automatically treated as an
-approved runtime.
+for its compatibility. A random prefix is not automatically treated as a
+validated runtime.
 
 ### Reset Prefix
 

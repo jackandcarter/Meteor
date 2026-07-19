@@ -17,7 +17,7 @@ namespace AetherXIV.Core.World
                 try
                 {
                     conn.Open();
-                    MySqlCommand cmd = new MySqlCommand("SELECT name, address, port FROM servers WHERE id = @serverId", conn);
+                    MySqlCommand cmd = new MySqlCommand("SELECT name, address, port, listPosition, numchars, isActive FROM servers WHERE id = @serverId", conn);
                     cmd.Parameters.AddWithValue("@serverId", serverId);
                     using (MySqlDataReader Reader = cmd.ExecuteReader())
                     {
@@ -27,7 +27,10 @@ namespace AetherXIV.Core.World
                             world.id = serverId;
                             world.name = Reader.GetString("name");
                             world.address = Reader.GetString("address");
-                            world.port = Reader.GetUInt16("port");                           
+                            world.port = Reader.GetUInt16("port");
+                            world.listPosition = Reader.GetUInt16("listPosition");
+                            world.population = (ushort)Math.Min(Reader.GetUInt32("numchars"), UInt16.MaxValue);
+                            world.isActive = Reader.GetBoolean("isActive");
                         }
                     }
                 }

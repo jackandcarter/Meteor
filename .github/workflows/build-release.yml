@@ -1,4 +1,4 @@
-name: AetherXIV 2.0
+name: AetherXIV 2.0 Release
 
 on:
   workflow_dispatch:
@@ -72,10 +72,29 @@ jobs:
       - name: Install the Windows x86 cross-compiler
         run: |
           sudo apt-get update
-          sudo apt-get install --yes g++-mingw-w64-i686
+          sudo apt-get install --yes g++-mingw-w64-i686 xz-utils xvfb
 
       - name: Build the Linux release
         run: ./tools/Linux/build-aetherxiv.sh "${BUILD_CONFIGURATION}"
+
+      - name: Smoke-test the pinned Linux Wine runtime
+        run: |
+          runtime_root="${RUNNER_TEMP}/aetherxiv-linux-wine"
+          archive="${runtime_root}/wine.tar.xz"
+          mkdir -p "${runtime_root}/extract"
+          curl --fail --location --retry 3 \
+            --output "${archive}" \
+            https://github.com/Kron4ek/Wine-Builds/releases/download/11.0/wine-11.0-amd64-wow64.tar.xz
+          echo "39574efa1132c3ca0d5c77dd2eddbe4a49cca0d6cc2c290ff4924493a1c40314  ${archive}" | sha256sum --check
+          tar -xJf "${archive}" -C "${runtime_root}/extract"
+          wine="${runtime_root}/extract/wine-11.0-amd64-wow64/bin/wine"
+          helper="bin/build/Release/Linux/launcher/app/Helpers/win-x86/AetherXIV.Launcher.ClientLauncher.exe"
+          "${wine}" --version
+          timeout 180s xvfb-run -a env \
+            WINEDEBUG=-all \
+            WINEPREFIX="${runtime_root}/prefix" \
+            "${wine}" "${helper}" --probe | tee "${runtime_root}/probe.log"
+          grep -Fq "AETHERXIV_CLIENT_HELPER_OK" "${runtime_root}/probe.log"
 
       - name: Package the Linux release
         run: |
@@ -148,10 +167,32 @@ jobs:
           python-version: "3.13"
 
       - name: Install the Windows x86 cross-compiler
-        run: brew install mingw-w64
+        run: |
+          # GitHub's macOS image may carry an untrusted, unrelated AWS tap.
+          # Remove it quietly before invoking Homebrew so it cannot annotate this build.
+          brew untap aws/tap >/dev/null 2>&1 || true
+          brew install mingw-w64
 
       - name: Build the macOS release
         run: ./tools/MacOS/build-aetherxiv.sh "${BUILD_CONFIGURATION}"
+
+      - name: Smoke-test the pinned macOS Wine runtime
+        run: |
+          runtime_root="${RUNNER_TEMP}/aetherxiv-macos-wine"
+          archive="${runtime_root}/wine.tar.xz"
+          mkdir -p "${runtime_root}/extract"
+          curl --fail --location --retry 3 \
+            --output "${archive}" \
+            https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.0_1/wine-stable-11.0_1-osx64.tar.xz
+          echo "b50dc50ec7f41d58b115a6b685d4d1315ba3c797bd3aa0f49213f2703cb82388  ${archive}" | shasum -a 256 --check
+          tar -xJf "${archive}" -C "${runtime_root}/extract"
+          wine="${runtime_root}/extract/Wine Stable.app/Contents/Resources/wine/bin/wine"
+          helper="bin/build/Release/MacOS/AetherXIV Launcher.app/Contents/MacOS/Helpers/win-x86/AetherXIV.Launcher.ClientLauncher.exe"
+          "${wine}" --version
+          WINEDEBUG=-all \
+            WINEPREFIX="${runtime_root}/prefix" \
+            "${wine}" "${helper}" --probe | tee "${runtime_root}/probe.log"
+          grep -Fq "AETHERXIV_CLIENT_HELPER_OK" "${runtime_root}/probe.log"
 
       - name: Package the macOS release
         run: |
@@ -203,15 +244,70 @@ jobs:
           path: artifacts/*
           if-no-files-found: error
 
+  build-docker:
+    name: Validate Docker server (amd64 + arm64)
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      AETHERXIV_DB_ROOT_PASSWORD: ci-root-password
+      AETHERXIV_DB_PASSWORD: ci-server-password
+      AETHERXIV_PUBLIC_HOST: 127.0.0.1
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate the Compose model
+        run: docker compose config --quiet
+
+      - name: Build both server architectures
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.server
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha,scope=aetherxiv-server
+          cache-to: type=gha,mode=max,scope=aetherxiv-server
+
+      - name: Start the complete Compose stack
+        run: docker compose up --build --detach --wait --wait-timeout 240
+
+      - name: Verify MariaDB and Launcher Services
+        run: |
+          docker compose ps
+          docker compose exec -T mariadb mariadb \
+            --user=root \
+            --password="${AETHERXIV_DB_ROOT_PASSWORD}" \
+            --execute="USE ffxiv_server; SELECT COUNT(*) AS server_count FROM servers;"
+          curl --fail --show-error --silent \
+            --retry 12 --retry-delay 2 --retry-all-errors \
+            http://127.0.0.1:8080/launcher/status
+
+      - name: Capture Docker logs after a failure
+        if: ${{ failure() }}
+        run: docker compose logs --no-color
+
+      - name: Stop the Compose stack
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans
+
   publish-release:
     name: Publish AetherXIV 2.0
-    if: ${{ always() && !cancelled() && needs.verify.result == 'success' && needs.build-linux.result == 'success' && needs.build-steamos.result == 'success' && needs.build-macos.result == 'success' && needs.build-windows.result == 'success' && (startsWith(github.ref, 'refs/tags/') || inputs.publish_release) }}
+    if: ${{ always() && !cancelled() && needs.verify.result == 'success' && needs.build-linux.result == 'success' && needs.build-steamos.result == 'success' && needs.build-macos.result == 'success' && needs.build-windows.result == 'success' && needs.build-docker.result == 'success' && (startsWith(github.ref, 'refs/tags/') || inputs.publish_release) }}
     needs:
       - verify
       - build-linux
       - build-steamos
       - build-macos
       - build-windows
+      - build-docker
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -239,6 +335,8 @@ jobs:
           release_tag="${GITHUB_REF_NAME}"
           if [[ "${GITHUB_EVENT_NAME}" != "push" ]]; then
             release_tag="${INPUT_RELEASE_TAG:-release-v2.0}"
+            git tag --force "${release_tag}" "${GITHUB_SHA}"
+            git push origin "refs/tags/${release_tag}" --force
           fi
 
           mapfile -t assets < <(find release-assets -maxdepth 1 -type f | sort)

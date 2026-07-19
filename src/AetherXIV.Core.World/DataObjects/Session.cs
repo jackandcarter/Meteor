@@ -14,7 +14,7 @@ namespace AetherXIV.Core.World.DataObjects
 
         public readonly ClientConnection clientConnection;
         public readonly Channel type;
-        public ZoneServer routing1, routing2;
+        public ZoneServer routing1;
 
         public Session(uint sessionId, ClientConnection connection, Channel type)
         {

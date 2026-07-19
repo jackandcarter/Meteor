@@ -26,7 +26,6 @@ else {
         }
     }
 }
-if (-not $python) { throw "Python 3 is required to package the canonical direct-core database." }
 $launcherRoot = Join-Path $rootDir "AetherXIV Launcher"
 $umbraVersion = if ($env:AETHERXIV_UMBRA_VERSION) { $env:AETHERXIV_UMBRA_VERSION } else { "2.0.0" }
 $releaseWorkRoot = Join-Path $rootDir "bin\build\.work\$Configuration\Windows"
@@ -85,6 +84,28 @@ function Resolve-MSBuild {
     }
 
     return $null
+}
+
+function Assert-BuildPrerequisites {
+    $missing = @()
+    $dotnetCommand = Get-Command $dotnet -ErrorAction SilentlyContinue
+    $hasPinnedSdk = $false
+    if ($dotnetCommand) {
+        $hasPinnedSdk = @(& $dotnet --list-sdks 2>$null) -match '^10\.0\.203\s'
+    }
+    if (-not $hasPinnedSdk) {
+        $missing += ".NET SDK 10.0.203 (dotnet)"
+    }
+    if (-not $python) {
+        $missing += "Python 3"
+    }
+    if (-not (Resolve-MSBuild) -and -not (Get-Command "i686-w64-mingw32-g++" -ErrorAction SilentlyContinue)) {
+        $missing += "Visual Studio C++ Build Tools or MinGW-w64"
+    }
+
+    if ($missing.Count -gt 0) {
+        throw "AetherXIV Windows build prerequisites are missing:`n  - $($missing -join "`n  - ")`nSee docs/build/WINDOWS.md before running this build again."
+    }
 }
 
 function Build-NativeUmbraWithMinGw {
@@ -147,6 +168,7 @@ function Copy-NativeUmbraPayloads {
     Set-Content -Path (Join-Path $frameworkRoot "version.txt") -Value $umbraVersion
 }
 
+Assert-BuildPrerequisites
 Reset-OutputRoot
 
 Write-Host "Publishing server hosts..."
