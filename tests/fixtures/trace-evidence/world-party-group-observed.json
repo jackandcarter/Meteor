@@ -1,0 +1,50 @@
+{
+  "schema": "aetherxiv.trace.world-group.v1",
+  "captureName": "invite_join_party.pcapng",
+  "service": "World",
+  "serverPort": 54992,
+  "tcpStream": 0,
+  "evidenceStatus": "TraceConfirmed",
+  "tool": "tools/Universal/analyze-legacy-tcp-stream.py",
+  "observations": [
+    {
+      "direction": "server-to-client",
+      "decodedFrameIndex": 17,
+      "streamOffset": 1966,
+      "sequence": ["0x017C", "0x017D", "0x017F", "0x017E"],
+      "subPacketLengths": [152, 64, 440, 56],
+      "sourceActorId": 43723073,
+      "targetActorId": 43723073,
+      "groupType": 50001,
+      "listId": 3,
+      "firstGroupId": 9223372036862619984,
+      "groupId": 9223372036862619984,
+      "memberCount": 1
+    },
+    {
+      "direction": "server-to-client",
+      "decodedFrameIndex": 92,
+      "streamOffset": 10584,
+      "sequence": ["0x017C", "0x017D", "0x017F", "0x017E"],
+      "subPacketLengths": [152, 64, 440, 56],
+      "sourceActorId": 43723073,
+      "targetActorId": 43723073,
+      "groupType": 10001,
+      "listId": 0,
+      "firstGroupId": 0,
+      "groupId": 9223372036862634412,
+      "memberCount": 2
+    },
+    {
+      "direction": "client-to-server",
+      "decodedFrameIndex": 26,
+      "streamOffset": 4560,
+      "opcode": "0x0133",
+      "subPacketLength": 72,
+      "sourceActorId": 43723073,
+      "targetActorId": 43723073,
+      "groupId": 9223372036862619984,
+      "workTarget": "/_init"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": "202.67.51.120",
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "from_gridania_to_blackshroud.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "from_gridania_to_blackshroud.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 606,
+          "timestamp": "1356917358.601081000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x00CA","messageLength":40},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x016B","messageLength":72},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x016F","messageLength":88},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x016F","messageLength":88},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x00D0","messageLength":168},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x00CE","messageLength":72},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x00CF","messageLength":80},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x00D6","messageLength":296},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x013D","messageLength":72},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0134","messageLength":40},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0144","messageLength":40},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0179","messageLength":72},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0145","messageLength":40},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x017B","messageLength":40},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x00CC","messageLength":296},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0137","messageLength":168},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0136","messageLength":72},
+            {"messageType":"0x0003","category":"0x0014","subcode":"0x0136","messageLength":72}
+          ],
+          "payloadLength": 528,
+          "payloadHex": "01010000b60110005fc093ee3b010000789cd3606066d063b8e1e2a8399b89e1c1a57f220ca7184020efd5830010cdc100011e18eab21991d53130e6e5976426a7ba96a5e69530e0061118e6e4a39ac370c061c7dac57e201acc656628282dce70494d4b2ccdc163306173151ced926a38413484cf18af08323928b5b034b518a7c92b30ccbd80123e48c0016c21c30207263cfea7366086d298f1730e2c8eec4e90bc66cc7ce775ee8d0e31fa15478276e839a09b178061ce790c734080903930a0c1886ede3514f3be6b41d481c20c147e8c2c020cb0f083f98d054ab342693628cd0ea5616994134a7341696e28cd03a579a186f141f9fc505a004a0b426921282d0ca545a0b428941683d2e2505a024a4b426929282dcd4018c84069ccf8b3454bbfc4010d0c734cb09a83a9ce05ab3a4c775552c95dae44baab1abb3a8c7475860155dd01b5e48cfce4fca4fce092fc82f8b4e2128390f23c03c378032f07034b270303060667843c563733e93b67241625eafb1524ebfb2765a52697e8236b61010160ea59bc808505ae879129c43538049eb4061c60965fe628e1c9cbb882c7fb2163877e7c665e26be829bc60000c1c7ceaa010100005a00020073c093ee3b010000789cf3606066d063b8e1e2a8399b89e1c1a57f220c668c0c4090f7ea410003143015941667b8a4a62596e694306003a1a1761ec49813af08322928b5b034b5189b497f4dcc018ac51c41",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

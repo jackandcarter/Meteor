@@ -1,0 +1,91 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": "202.67.51.120",
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "combat_autoattack.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "combat_autoattack.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 65,
+          "timestamp": "1356917648.738412000",
+          "connectionType": 0,
+          "opcodeKey": "0x0187",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0187",
+              "messageLength": 96
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0187",
+              "messageLength": 96
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00DB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0139",
+              "messageLength": 88
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            }
+          ],
+          "payloadLength": 284,
+          "payloadHex": "01010000600003001d2d98ee3b010000789c4b60606670d49ccd04c20c0f2efd1361686764008209af1f0480e86faa20b2414d489d0105fc07020622400289e6af79590e1620d67c0da0f9174c2fb820ccbfcd806c3e589ca1c11e0020fd2aa4010100005f000200252d98ee3b010000789c7360606670d49ccd04c20c0f2efd13616064008109af1f0480e80f95fd5cbe1021ac200243bf2523b27eb0b800832476dd0df620c51161021c174c2fb84430c496b1b03170b00005010a5a1835010100005d0001008f2d98ee3b010000789c5bc1c0cce0a8399b0984191e5cfa27c260cec80004135e3f0800d16a4c652766722f615c909c915894189e5f94ad5f5c925892ea5812589a999c9d53e9965fe49893c3406b0000e3a71779",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "combat_autoattack.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 155,
+          "timestamp": "1356917661.327692000",
+          "connectionType": 0,
+          "opcodeKey": "0x0139",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0139",
+              "messageLength": 88
+            }
+          ],
+          "payloadLength": 81,
+          "payloadHex": "0101000051000100675f98ee3b010000789c8b60606670d49ccd04c20c0f2efd1361b064640082b9af1f048068b0b80083240356d0600f521c1126c071c1f4824b24436c190b1b030723501000d9ad0e2f",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "aetherxiv.trace.client-control-sequence.v1",
+  "capture": "combat_autoattack.pcapng",
+  "service": "World",
+  "serverPort": 54992,
+  "tcpStream": 0,
+  "direction": "client-to-server",
+  "tool": "tshark plus tools/Universal/analyze-legacy-tcp-stream.py",
+  "evidenceStatus": "TraceConfirmed",
+  "packets": [
+    {
+      "decodedFrameIndex": 13,
+      "opcodeKey": "0x00CC",
+      "payloadHex": "D035D044A4E66604"
+    },
+    {
+      "decodedFrameIndex": 96,
+      "opcodeKey": "0x00CC",
+      "payloadHex": "000000C0AA97CF00"
+    }
+  ]
+}

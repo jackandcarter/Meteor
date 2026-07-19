@@ -42,12 +42,14 @@ public sealed class FixedIntervalServerLoop : IAsyncServerLoop
     private readonly IIntervalTickSource tickSource;
     private readonly Func<CancellationToken, ValueTask> onTick;
     private readonly IDiagnosticSink diagnostics;
+    private readonly bool traceSuccessfulTicks;
 
     public FixedIntervalServerLoop(
         string loopName,
         IIntervalTickSource tickSource,
         Func<CancellationToken, ValueTask> onTick,
-        IDiagnosticSink? diagnostics = null)
+        IDiagnosticSink? diagnostics = null,
+        bool traceSuccessfulTicks = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(loopName);
 
@@ -55,6 +57,7 @@ public sealed class FixedIntervalServerLoop : IAsyncServerLoop
         this.tickSource = tickSource;
         this.onTick = onTick;
         this.diagnostics = diagnostics ?? NullDiagnosticSink.Instance;
+        this.traceSuccessfulTicks = traceSuccessfulTicks;
     }
 
     public async ValueTask RunAsync(CancellationToken cancellationToken = default)
@@ -71,10 +74,13 @@ public sealed class FixedIntervalServerLoop : IAsyncServerLoop
                 try
                 {
                     await onTick(cancellationToken).ConfigureAwait(false);
-                    diagnostics.Trace("server.loop.tick", new Dictionary<string, object?>
+                    if (traceSuccessfulTicks)
                     {
-                        ["loop"] = loopName
-                    });
+                        diagnostics.Trace("server.loop.tick", new Dictionary<string, object?>
+                        {
+                            ["loop"] = loopName
+                        });
+                    }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {

@@ -1,0 +1,41 @@
+{
+  "schema": "aetherxiv.trace.lifecycle-fixture.v1",
+  "captureName": "party_battle_leve.pcapng",
+  "service": "World",
+  "direction": "server-to-client",
+  "connectionType": 0,
+  "evidenceStatus": "TraceConfirmed",
+  "interpretation": "The capture proves repeated 3/3 actor-state transitions followed by removal for battle actors. Exact lifecycle timing remains configuration-driven.",
+  "observations": [
+    {
+      "actorId": "0x45100D51",
+      "stateStreamFrameIndex": 730,
+      "stateTimestampMilliseconds": 1356929993946,
+      "stateOpcode": "0x0134",
+      "statePayloadHex": "0303000000000000",
+      "removeStreamFrameIndex": 848,
+      "removeTimestampMilliseconds": 1356930017113,
+      "removeOpcode": "0x00CB",
+      "removePayloadHex": "0000000000000000"
+    },
+    {
+      "actorId": "0x45100D5A",
+      "stateStreamFrameIndex": 3329,
+      "stateTimestampMilliseconds": 1356930503005,
+      "stateOpcode": "0x0134",
+      "statePayloadHex": "0303000000000000",
+      "removeStreamFrameIndex": 3369,
+      "removeTimestampMilliseconds": 1356930511544,
+      "removeOpcode": "0x00CB",
+      "removePayloadHex": "0000000000000000"
+    }
+  ],
+  "runtimeTimingEvidence": {
+    "evidenceStatus": "TraceConfirmed",
+    "source": "working-server trace and repository lifecycle",
+    "deathToDespawnSeconds": 10,
+    "despawnToRespawnSource": "battle_npc_spawns.respawn_seconds",
+    "sameActorIdReused": true,
+    "restoresMaximumPools": true
+  }
+}

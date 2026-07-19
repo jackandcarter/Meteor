@@ -1,0 +1,16 @@
+{
+  "id": "dev.aetherxiv.umbra.sample",
+  "name": "Umbra SDK Sample",
+  "version": "0.1.0",
+  "api_version": "2.0",
+  "entry": "Aether.Umbra.SamplePlugin.dll",
+  "entry_type": "Aether.Umbra.SamplePlugin.SamplePlugin",
+  "minimum_framework_version": "0.1.0",
+  "enabled": true,
+  "capabilities": [
+    "ui.draw",
+    "configuration",
+    "commands.register",
+    "chat.print"
+  ]
+}

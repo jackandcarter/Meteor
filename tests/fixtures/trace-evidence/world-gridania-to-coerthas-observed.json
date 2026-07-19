@@ -1,0 +1,96 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": "202.67.51.120",
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "gridania_to_coerthas.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "gridania_to_coerthas.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 1,
+          "timestamp": "1356919499.460928000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200c46ab4ee3b0100004000030041299b0241299b02102700001400ca0000000000cbf2e05000000000cbf2e050000000002640e7429f429c40746395c4a6e4e53f0000180041da53004000030041299b0241299b02d0e692031400ca0000000000cbf2e05000000000cbf2e050000000002640e7429f429c40746395c4a6e4e53f0000180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "gridania_to_coerthas.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 4,
+          "timestamp": "1356919499.657016000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 58,
+          "payloadHex": "010100003a000100286bb4ee3b010000789c7360606670d49ccd04c20c0f2efd136160640081d39f1e0480e8cc1dabb97c2142580100c21c0a28",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "gridania_to_coerthas.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 5,
+          "timestamp": "1356919499.828311000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200336cb4ee3b0100004000030041299b0241299b02102700001400ca0000000000cbf2e05000000000cbf2e050000000002640e7429f429c40746395c4a6e4e53f0000180041da53004000030041299b0241299b02d0e692031400ca0000000000cbf2e05000000000cbf2e050000000002640e7429f429c40746395c4a6e4e53f0000180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

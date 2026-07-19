@@ -1,0 +1,146 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": null,
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "party_battle_leve.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "party_battle_leve.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 5444,
+          "timestamp": "1356930536.080479000",
+          "connectionType": 0,
+          "opcodeKey": "0x000C",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x000C",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00DE",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0143",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0143",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0131",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00E2",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x018B",
+              "messageLength": 88
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            }
+          ],
+          "payloadLength": 1460,
+          "payloadHex": "010100005c0004005fd25cef3b010000789cd360606670d49ccd04c20c0f2efd1361e061008117b20f0340b409030b98af015417cd2be08a50770f451d0c386098e7cc88ac8e1daa4e890344366830a0f109e96721a01f0090d821b0010100006a00030078d25cef3b010000789c5bc1c0cce0a8399b0984191e5cfa27c260cec800042f641f0680687596ce873f7941acf9c919894589e1f945d9fac9a54545a97925cef9792540cabd28bfb48081c64003e8ce685e0157843b4f3320bb935475004c4d264a01010000380002007dd25cef3b010000789cd360606670e1157075d49ccdc4f0e0d23f1186d30c20f042f661000312d020521d009d520f3b01010000990004008bd25cef3b010000789c0b60606670d49ccd04c20c0f2efd1361306464008217b20f034034489c1548339624e664bba4a62596e6943060039fae7036e4bee3d4c030ef1103b2794c50e51118eaba51ec5df3b21c443580e4ff03812e489631bc28352fb34221bc283f2f1dab2b183c30cc3d87623f0c3c3db4fbd03af746077137ce23df34eeec439603b911003e173e0c010100004a00060046d35cef3b010000789cd3606066e062107075d49ccdc4f0e0d23f1186d30c20f042f661000312d000aa8be0254e9d1491e66911699e3e91ea0c89500700b6f92d0301010000ec032b0062d35cef3b010000789ccd574b681341189ed9ac4d1ba3a6b63eab9862c5e8c1c44489074337a6f50936d252a22261ad1b1b9ba4b5264a2962eba9820711df0f10542882a2a88742b4b5b4548a1a5154440f56113c88d64b158aad99ddd990d9d96d2246f4bf7cb3996fbffde7f5fd190bd001233055ba979c67c0bb6763c56010a0f8347fc88b301f48b19ee22d83e93c1644f950438510e063a128d00e5aa741a1d314db57ef690c87f9c8ae3fd00130d2180dd60995fb85c844f9f8289d465207701cea07c0ec1665014c4b70432457ba85846e554c2be74e4af729207553c1891f0497386682f1e73a7418e9f57922fe9e9e27ea7fb530de0b401be71ad4f7a9e979299d04a58322938e1c16a8d47b49e8dddb22f1d09ca1f983ac09c8f3278f8dc53809631e463d46f9cc146034609c9c1ab71453b0d854fc3c0da3096321c6e9188b3016639c817126c6591867639c83712ec6129039e661a4d7cf45ecdf053657166ac9f9a6745628ce8116af429547e7d5a2cafbfdbc2ab3ccab559d47edab4780e4b55978215a2f34b744058f3fb02f6a5b1bda655bcefb6d3b399bdb6eb301e04ef5d707432ae6c7583df57c336fdddc5467addab947a88b5a53af58152fb328925ba6c3c3b22901c8d45456d7a4f6d9bf08dabf9cc47c9a61a771d310847b7fae2a858c6f7b4237773164abdf73f91d567f30129cc8cb731968dd9f2f3ecf64aa8b9d142f5b3fbec4e9c0df0f79f1d75379d27e8c2270a4abf7c6ba76ee9baba06fd8f2f6be520fed735287f44f795ed077d178cbcd433a71bc7a3b44e335144b7d680f22ff34b03d2cf24f681a86bfe39fbc59f2cf52a3e49f872d92267a366114fdf33394fc335fc33fdfea25ff4ca2e89f65d83ff3ffdc3fc97922fd733c19b57c28f9e7241811cc6b42312120f0e804a769a11756513ad2e9cde477f4fe55f86eb7168ff25da3fa7848dfeddeb1755b16d3a3f23da5efb21abc37ca71f7a8f334fc99e285b3e445b2e49d2078cca19243eabc8b046fa94e4bef8a669d2179749df137d5ad7038ed76a7cda9ba06de10df426c3445c87546e261f01f686c6e90ca8aee5f16902c83f665b2ce1c84dd57ef4e3130f34f9c89fb20fb3d3cd273eeec6b2ebdfac0a2eaddad10de4a8c8e42e65adcbee60bc304471fb726c174fa47d149c8f4bf38b93a09fb1f9e9dfc2e0f963db1c774f043a2ca67603a56e69d2a016cc3c78aa3c74b87bcece5b0e3e878f2d3016511cb94a78bed72d486915bb01b17f5bf101bfd15efa1d8b87273dc2b36aeb7fbdc62632cdccea346ce8b25da9f0359de130772702feba474fedf7bce40867b0eea777dbdd06b38ad7f30122fecbb73cc",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

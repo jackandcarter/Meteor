@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=AetherXIV Launcher
+Comment=Configure and launch AetherXIV
+Exec=/opt/aetherxiv/launcher/app/AetherXIV.Launcher.App
+TryExec=/opt/aetherxiv/launcher/app/AetherXIV.Launcher.App
+Icon=/opt/aetherxiv/share/icons/hicolor/512x512/apps/org.aetherxiv.launcher.png
+Terminal=false
+Categories=Game;
+StartupNotify=true

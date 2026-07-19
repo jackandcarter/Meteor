@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AvaloniaVersion>12.0.4</AvaloniaVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AetherXIV.Launcher.Core\AetherXIV.Launcher.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\Image\back.jpg" Link="Image\back.jpg" />
+    <AvaloniaResource Include="..\..\assets\icons\aetherxiv-launcher-master.png" Link="Image\icon.png" />
+    <AvaloniaResource Include="..\Image\Reels\*.jpg" Link="Image\Reels\%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Image\Reels\*.jpeg" Link="Image\Reels\%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Image\Reels\*.png" Link="Image\Reels\%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Image\Reels\*.webp" Link="Image\Reels\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Title>AetherXIV Launcher</Title>
+    <Product>AetherXIV Launcher</Product>
+    <ApplicationTitle>AetherXIV Launcher</ApplicationTitle>
+    <Version>2.0.0</Version>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseAppHost>true</UseAppHost>
+    <ApplicationIcon Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86'">..\..\assets\icons\aetherxiv-launcher.ico</ApplicationIcon>
+  </PropertyGroup>
+
+</Project>

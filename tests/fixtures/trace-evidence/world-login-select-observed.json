@@ -1,0 +1,153 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": "202.67.51.120",
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "login.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "login.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 913,
+          "timestamp": "1356916784.655654000",
+          "connectionType": 2,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0001",
+              "category": "0x0000",
+              "subcode": "0x0001",
+              "messageLength": 56
+            }
+          ],
+          "payloadLength": 72,
+          "payloadHex": "0100020048000100000000000000000038000100000000000000000038f1e50000000000343337323330373300000000000000000000000000000000000000000000000000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36167",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "login.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 915,
+          "timestamp": "1356916785.034276000",
+          "connectionType": 0,
+          "opcodeKey": "0x0007",
+          "messageKeys": [
+            {
+              "messageType": "0x0007",
+              "category": "0x0000",
+              "subcode": "0x0007",
+              "messageLength": 24
+            }
+          ],
+          "payloadLength": 40,
+          "payloadHex": "010000002800010000000000000000001800070000000000000000007ffdffff961600e031e8e050",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36167"
+        },
+        {
+          "captureName": "login.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 917,
+          "timestamp": "1356916785.430666000",
+          "connectionType": 0,
+          "opcodeKey": "0x0002",
+          "messageKeys": [
+            {
+              "messageType": "0x0002",
+              "category": "0x0000",
+              "subcode": "0x0002",
+              "messageLength": 56
+            }
+          ],
+          "payloadLength": 72,
+          "payloadHex": "000000004800010000000000000000003800020000000000000000000000000041299b027ffdffffebe5590000000000208d620000000000108d620041299b02108d620000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36167"
+        },
+        {
+          "captureName": "login.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 923,
+          "timestamp": "1356916789.032765000",
+          "connectionType": 1,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0001",
+              "category": "0x0000",
+              "subcode": "0x0001",
+              "messageLength": 56
+            }
+          ],
+          "payloadLength": 72,
+          "payloadHex": "0100010048000100000000000000000038000100000000000000000038f1e50000000000343337323330373300000000000000000000000000000000000000000000000000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "login.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 925,
+          "timestamp": "1356916789.433446000",
+          "connectionType": 0,
+          "opcodeKey": "0x0007",
+          "messageKeys": [
+            {
+              "messageType": "0x0007",
+              "category": "0x0000",
+              "subcode": "0x0007",
+              "messageLength": 24
+            }
+          ],
+          "payloadLength": 42,
+          "payloadHex": "010100002a0001000000000000000000789c936060678081883b616aabc5173c377df120000029100666",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "login.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 927,
+          "timestamp": "1356916789.831410000",
+          "connectionType": 0,
+          "opcodeKey": "0x0002",
+          "messageKeys": [
+            {
+              "messageType": "0x0002",
+              "category": "0x0000",
+              "subcode": "0x0002",
+              "messageLength": 56
+            }
+          ],
+          "payloadLength": 67,
+          "payloadHex": "00010000430001000000000000000000789cb3606062808100ed783547cdd94c27aeadd7b600b277f47ed03ef1b7f5df8a9a684e101f240e12eb581fa70600b4f0144d",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

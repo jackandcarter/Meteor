@@ -1,0 +1,10 @@
+{
+  "schema": "aetherxiv.npc-service-seed.v1",
+  "catalogId": "zone-service-npcs-1.23b",
+  "version": "2026.07.19.1",
+  "clientBuild": "2012.09.19.0001",
+  "recordCount": 23,
+  "files": {
+    "spawn-evidence.json": "f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de"
+  }
+}

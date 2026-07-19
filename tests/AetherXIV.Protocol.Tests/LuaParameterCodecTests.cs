@@ -28,4 +28,20 @@ public sealed class LuaParameterCodecTests
         Assert.Equal(true, decoded[3].Value);
         Assert.Equal((byte)7, decoded[4].Value);
     }
+
+    [Fact]
+    public void StructuredLegacyParameterTypesRoundTrip()
+    {
+        LuaParameter[] parameters =
+        [
+            new(LuaParameterType.ItemReference, new LuaItemReference(0x11223344, 5, 6, 7)),
+            new(LuaParameterType.ItemOffer, new LuaItemOffer(0x55667788, 9, 10, 11, 12, 13, 14)),
+            new(LuaParameterType.PairOfUInt64, new LuaUInt64Pair(15, 16)),
+            new(LuaParameterType.UInt16LittleEndian, (ushort)0x1234)
+        ];
+
+        IReadOnlyList<LuaParameter> decoded = LuaParameterCodec.Decode(LuaParameterCodec.Encode(parameters));
+
+        Assert.Equal(parameters, decoded);
+    }
 }

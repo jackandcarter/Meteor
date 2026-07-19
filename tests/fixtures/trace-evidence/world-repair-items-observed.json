@@ -1,0 +1,51 @@
+{
+  "schema": "aetherxiv.trace.repair-sequence.v1",
+  "capture": "repair_items.pcapng",
+  "captureSha256": "bbd829cbd3f42b2cbfb3aa8a74a1cc35d4e2c16c99e5a4a20ca76573f02dd90f",
+  "captureDate": "2012-12-31T02:27:37Z",
+  "tcpStream": 0,
+  "clientBuild": "2012.09.19.0001",
+  "evidenceStatus": "TraceConfirmed",
+  "economicInterpretation": "The reopening-era one-gil debit is sequence evidence only; authoritative 1.23b fees come from the official 1.19 and 1.20 patch notes.",
+  "serverCallSequence": [
+    "talkWelcome",
+    "selectItem",
+    "selectItem",
+    "selectItem",
+    "selectItem",
+    "confirmRepairItem",
+    "confirmRepairItem",
+    "confirmRepairItem",
+    "confirmRepairItem",
+    "confirmRepairItem",
+    "confirmRepairItem",
+    "talkWelcome",
+    "finishTalkTurn"
+  ],
+  "selectionComplete": {
+    "frameNumber": 126,
+    "slot": -1,
+    "page": 1,
+    "listIndex": 2,
+    "interpretation": "confirm the selected repair batch"
+  },
+  "transactionCount": 6,
+  "transactionPacketOrder": ["0x0148", "0x0169"],
+  "repairResultMessage": {
+    "opcode": "0x0169",
+    "payloadHex": "0100F85FBD9C200000003D7E3D000000000100000000140F00000000000000000000000000000000",
+    "textOwnerActorId": 1610088449,
+    "textId": 40125,
+    "logType": 32,
+    "itemId": 4030013,
+    "quality": 1,
+    "restoredPercent": 20
+  },
+  "authoritative123bFeePolicy": [
+    {"minimumLevel": 1, "maximumLevel": 10, "gil": 100},
+    {"minimumLevel": 11, "maximumLevel": 20, "gil": 500},
+    {"minimumLevel": 21, "maximumLevel": 30, "gil": 1000},
+    {"minimumLevel": 31, "maximumLevel": 40, "gil": 2100},
+    {"minimumLevel": 41, "maximumLevel": 50, "gil": 5000}
+  ]
+}

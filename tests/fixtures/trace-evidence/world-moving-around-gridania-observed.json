@@ -1,0 +1,1427 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": "202.67.51.120",
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "moving_around_gridania.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 2,
+          "timestamp": "1356918984.801638000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002006190acee3b0100004000030041299b0241299b02102700001400ca0000000000c8f0e05000000000c8f0e0500000000031ad684200008040412b97c442752ac00000180041da53004000030041299b0241299b02d0e692031400ca0000000000c8f0e05000000000c8f0e0500000000031ad684200008040412b97c442752ac00000180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 4,
+          "timestamp": "1356918985.134648000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c8000300ae91acee3b0100004000030041299b0241299b02102700001400ca0000000000c8f0e05000000000c8f0e0500000000031ad684200008040412b97c442752ac00000180041da53003800030041299b0241299b02d0e692031400010000000000c9f0e050000000007ce0a30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000c9f0e05000000000c9f0e0500000000031ad684200008040412b97c442752ac00000180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 6,
+          "timestamp": "1356918985.420103000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 58,
+          "payloadHex": "010100003a000100af93acee3b010000789c7360606670d49ccd04c20c0f2efd136160640081931f1e0480e89a078bb97c2142580100c7c60a57",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 7,
+          "timestamp": "1356918985.499907000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002001c93acee3b0100004000030041299b0241299b02102700001400ca0000000000c9f0e05000000000c9f0e0500000000031ad684200008040412b97c442752ac00000180041da53004000030041299b0241299b02d0e692031400ca0000000000c9f0e05000000000c9f0e0500000000031ad684200008040412b97c442752ac00000180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 10,
+          "timestamp": "1356918985.740860000",
+          "connectionType": 0,
+          "opcodeKey": "0x018D",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x018D",
+              "messageLength": 696
+            }
+          ],
+          "payloadLength": 94,
+          "payloadHex": "010100005e000100ef94acee3b010000789cdbc1c4cce0a8399b0984191e5cfa27c2d0cbc80004273f3c0800d16b5e9683a8064175063000ab0302ceca830c3060b836c309a8c4c1517bfa11a752ad030ca36014d00830426900abaa13c6",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 11,
+          "timestamp": "1356918985.865248000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002006a94acee3b0100004000030041299b0241299b02102700001400ca0000000000c9f0e05000000000c9f0e0500000000031ad684200008040412b97c442752ac00000180041da53004000030041299b0241299b02d0e692031400ca0000000000c9f0e05000000000c9f0e0500000000031ad684200008040412b97c442752ac00000930010f61800",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 12,
+          "timestamp": "1356918986.072908000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CF",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            }
+          ],
+          "payloadLength": 246,
+          "payloadHex": "01010000f6000a00c195acee3b010000789c0b6060666061b8e1e2a8399b89e1c1a57f220ce71940e0d48707010c2820cb8981e1c101068769478c8d3fef67c0010280e6b11361ded9337560f3ceea4c3bc2c0d0608fcf3c4e22ccd38c49029ad7e020b26eda915933251df099c745847987bf2683cdb36d9a76649d7b235ef7711361de3af778b07931edd38f3cacfa82d73c1e62c2cfa7c9292dadcdc1b668c6118f875278fdcb4b84796f02db21e67d9a01749f08def8e520c2bcfe4310ff8af44d3dd27fe82a5efff211615eb54803d83ccd33d38f1cfeea81d7bffc449827b2ae0d6c5e3fd7f4236f02350ee0320f001d399df1",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 13,
+          "timestamp": "1356918986.230416000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c8000300d695acee3b0100004000030041299b0241299b02102700001400ca0000000000c9f0e05000000000c9f0e0500000000031ad684200008040412b97c442752ac000005bc4000000003800030041299b0241299b02d0e692031400010000000000caf0e0500000000081e4a30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000caf0e05000000000caf0e0500000000031ad684200008040412b97c442752ac00000ed0000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 15,
+          "timestamp": "1356918986.490892000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 58,
+          "payloadHex": "010100003a000100dd97acee3b010000789c7360606670d49ccd04c20c0f2efd136160640081531f1e0480e8c6278bb97c2142580100c90a0a61",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 16,
+          "timestamp": "1356918986.564514000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002004497acee3b0100004000030041299b0241299b02102700001400ca0000000000caf0e05000000000caf0e0500000000031ad684200008040412b97c442752ac00000ed00000000004000030041299b0241299b02d0e692031400ca0000000000caf0e05000000000caf0e0500000000031ad684200008040412b97c442752ac000004dc400000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 18,
+          "timestamp": "1356918986.927702000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200af98acee3b0100004000030041299b0241299b02102700001400ca0000000000caf0e05000000000caf0e0500000000031ad684200008040412b97c442752ac000004dc4000000004000030041299b0241299b02d0e692031400ca0000000000caf0e05000000000caf0e05000000000cff86942000080401b1c97c4889bfe3f02004ec400000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 20,
+          "timestamp": "1356918987.293038000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c8000300fe99acee3b0100004000030041299b0241299b02102700001400ca0000000000caf0e05000000000caf0e05000000000a2326a4200008040771997c47d6ae73f0200180041da53003800030041299b0241299b02d0e692031400010000000000cbf0e0500000000065e8a30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000cbf0e05000000000cbf0e0500000000044136e42000080401fec96c4789c193f02004bc400000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 22,
+          "timestamp": "1356918987.550501000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 58,
+          "payloadHex": "010100003a000100019cacee3b010000789c7360606670d49ccd04c20c0f2efd136160640081d31f1e0480e8d4178bb97c2142580100c62e0a4a",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 24,
+          "timestamp": "1356918987.658179000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002008a9bacee3b0100004000030041299b0241299b02102700001400ca0000000000cbf0e05000000000cbf0e05000000000ba566e42000080400ae996c4789c193f02004ac4000000004000030041299b0241299b02d0e692031400ca0000000000cbf0e05000000000cbf0e05000000000182472420000804093bc96c4209c193f0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 26,
+          "timestamp": "1356918987.970045000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CF",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            }
+          ],
+          "payloadLength": 246,
+          "payloadHex": "01010000f6000a009b9dacee3b010000789c0b6060666061b8e1e2a8399b89e1c1a57f220ce71940e0cc8707010c2820cb8981e1c101068769478c8d3fef67c0010280e6b11361ded9337560f3ceea4c3bc2c0d0608fcf3c4e22ccd38c49029ad7e020b26eda915933251df099c745847987bf2683cdb36d9a76649d7b235ef7711361de3af778b07931edd38f3cacfa82d73c1e62c2cfa7c9292dadcdc1b668c6118f875278fdcb4b84796f02db21e67d9a01749f08def8e520c2bcfe4310ff8af44d3dd27fe82a5efff211615eb54803d83ccd33d38f1cfeea81d7bffc449827b2ae0d6c5e3fd7f4236f02350ee0320f003db99e05",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 28,
+          "timestamp": "1356918988.024459000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200da9cacee3b0100004000030041299b0241299b02102700001400ca0000000000cbf0e05000000000cbf0e050000000008e677242000080407eb996c4209c193f0200180041da53004000030041299b0241299b02d0e692031400ca0000000000cbf0e05000000000cbf0e05000000000ec34764200008040078d96c4209c193f02009603c8c14842",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 30,
+          "timestamp": "1356918988.358464000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c8000300469eacee3b0100003800030041299b0241299b02102700001400010000000000ccf0e050000000004aeca30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000ccf0e05000000000ccf0e0500000000035b27642000080404e8796c4209c193f0200ed00608996034000030041299b0241299b02d0e692031400ca0000000000ccf0e05000000000ccf0e050000000002c197c4200008040567d96c40e16ce3f0200ed0000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 31,
+          "timestamp": "1356918988.390374000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CB",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            }
+          ],
+          "payloadLength": 53,
+          "payloadHex": "0101000035000100499facee3b010000789cd3606066e065b8e1e2a8399b89e1c1a57f220ca71940e0cc8707010c480000d1d108d7",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 35,
+          "timestamp": "1356918988.692440000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200949facee3b0100004000030041299b0241299b02102700001400ca0000000000ccf0e05000000000ccf0e0500000000086f67c4200008040c77d96c4f7f8d33f0200ed00000000004000030041299b0241299b02d0e692031400ca0000000000ccf0e05000000000ccf0e05000000000bc5a8142000080401a8496c4e6a0da3f0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 37,
+          "timestamp": "1356918988.794781000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x012E",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D6",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0145",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CC",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            }
+          ],
+          "payloadLength": 546,
+          "payloadHex": "010100009f010f00a39facee3b010000789cd36060663061b8e1e2a8399b89e1c1a57f220ca71840e0cc870701209a8301023c30d4e93122ab63612849ccc976494d4b2ccd2961c00d30cdc946318781312fbf243339d5b52c350f9f392b30ccb980e26e24e000b680618103131ef3a80d98a134a67fcf81c591dd09923f5c3add89816183c375ed6947b099178061ce790c734080903930a0c1886ede3514f3be6b41d481c20c147e8c2c020cb0f083f98d054ab342693628cd0ea5616987134a7341696e28cd03a579a186f141f9fc505a004a0b426921282d0ca545a0b428941683d2e2505a024a4b426929282dcd4018c84069ccf8b34549af51dcb64498060c6f0c734c50d33d4e752e58d561baab12ab3ad2dde54aa4bbaab1abc34857671850d51d502b492cce76ca4f2c4a894f2b2e310829cf33308c37087030b074323000a90881c9e3703393be73466251a2be5f41b2be7f52566a72893e420b0b0800d34a80330b0b5c072353886b70083c610d0280597e99a384a724e30a1eef878c8c857f2d141919379efffd9bb1433f3e332f135fa1480300007efec144010100004900010007a0acee3b010000789cf36060663061b8e1e2a8399b89e1c1a57f220c668c0c4070e6c38300100de2309624e664bba4a62596e694306003937e9a01006a050ebe010100003a0001001aa0acee3b010000789c7360606670d49ccd04c20c0f2efd136160640081331f1e048068af378bb97c2142580100c3720a34",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 41,
+          "timestamp": "1356918989.057679000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c8000300e1a0acee3b0100004000030041299b0241299b02102700001400ca0000000000ccf0e05000000000ccf0e050000000002cc0814200008040fa8496c4e6a0da3f0200180041da53003800030041299b0241299b02d0e692031400010000000000cdf0e0500000000032f0a30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000cdf0e05000000000cdf0e0500000000094fc844200008040208c96c4e6a0da3f0200ed0000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 44,
+          "timestamp": "1356918989.330836000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 58,
+          "payloadHex": "010100003a000100f5a2acee3b010000789c7360606670d49ccd04c20c0f2efd136160640081b31f1e048068a30f8bb97c2142580100c1160a21",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 45,
+          "timestamp": "1356918989.390688000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002004ea2acee3b0100004000030041299b0241299b02102700001400ca0000000000cdf0e05000000000cdf0e050000000003c62854200008040e38c96c4f004d63f0200ed00000000004000030041299b0241299b02d0e692031400ca0000000000cdf0e05000000000cdf0e050000000007a288842000080409b7c96c45ecf4c3f0200ed0000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 46,
+          "timestamp": "1356918989.610352000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CB",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            }
+          ],
+          "payloadLength": 791,
+          "payloadHex": "010100003b00020063a3acee3b010000789cd36060665066b8e1e2a8399b89e1c1a57f220ca71940e0ec8707010c484003a84e890875000f0311da010100007c000400bda3acee3b010000789cd36060669065b8e1e2a8399b89e1c1a57f220ca71840e0ec870701209a8301023c30d4e93122ab63612849ccc976494d4b2ccd2961c00d30cdc946318781312fbf243339d5b52c350f9f392b30ccb980e26e24e000b680618103139466c6632eb5000b940600dfeb2e720101000060021a00bea3acee3b010000789cf36060669065b8e1e2a8399b89e1c1a57f220ce71840e0ec8707010c5000923f7b669a535a5a9b8366cb8c23b65cdbf733a081000c73ce639803e6133007063418d1cdbb86621e0b541d1310330231afcd06309b813194951944f320d4b0023133c7076d36289f1d4a7340694e28cd05a5b9a134d008068f58a0d940da0168081f903ee8c0c0c00fa4933518180480748202038320d43021a83e61282d02a545a1b418941687d212505a124a4b4169695c81820464a0b40746b8db8282031e4e0baf09e33403196860986382620e6e752e58d409b260baab12ab79a4bbcb15c51c469ceaaab1bb1f235d9d6140557740ada02027b824253eadb8c420a43ccfc030dea0d8c1c0d2c9c0006a46407e41694e62726a7049625e4a62510aba9b99f49d33128b12f5fd0a92f5616af53134b180003031b97f6661816b05bb99919f9410a20d5881119ee628e129c9b882c7fb212363e15f0b4546c68de77fff66ecd08fcfcccb2ca1af3b41f1ce8be2ce530cc8ee84e5710f0c757a28fe61612849ccc976494d4b2ccdc1e7054c73b251d319635e7e496672aa6b596a1e3e735660987301c5dd48c00192c617383041696622c38612004b9298fec5ac1f40f26f02dbc1e5baeda719471e568960ad1f7889a81f08990303a07ccc8ba77e8095f1b0fa81476402a47e605d26020e3f0ed4fa8187e7020739f5438a02a47e786803a91f189421f543b322a47e480985d60f11cc03563ff0e2a91f0e6449e034031960e633dcf5032fc1fae10733a6bbc8af1f7889ac1f7889ac1f7849ae1f9269583f38bf19acf503ef10a81f00ecdb72ac",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 47,
+          "timestamp": "1356918989.725685000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "01000000900002009da3acee3b0100004000030041299b0241299b02102700001400ca0000000000cdf0e05000000000cdf0e05000000000294a884200008040327a96c491d0373f0200ed00000000004000030041299b0241299b02d0e692031400ca0000000000cdf0e05000000000cdf0e05000000000e47f8942000080409a4e96c40606ab3e0200ed0000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 48,
+          "timestamp": "1356918989.922058000",
+          "connectionType": 0,
+          "opcodeKey": "0x0136",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0136",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0136",
+              "messageLength": 72
+            }
+          ],
+          "payloadLength": 82,
+          "payloadHex": "010100005200020020a4acee3b010000789cf36060669065b8e1e2a8399b89e1c1a57f220c668c0c4070f6c38300100de2309624e664bba4a62596e694306003950c161e4073782935e79a91390093aa1bad",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 49,
+          "timestamp": "1356918990.090944000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c8000300eba4acee3b0100004000030041299b0241299b02102700001400ca0000000000cdf0e05000000000cdf0e0500000000076a18942000080408e4896c40606ab3e0200ed00000000003800030041299b0241299b02d0e692031400010000000000cef0e050000000001af4a30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000cef0e05000000000cef0e050000000001c2e894200008040821596c4d85f10bf0200ed0000000000",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 50,
+          "timestamp": "1356918990.288165000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CF",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            }
+          ],
+          "payloadLength": 325,
+          "payloadHex": "01010000f6000a00bba5acee3b010000789c0b6060666061b8e1e2a8399b89e1c1a57f220ce71940e0dc8707010c2820cb8981e1c101068769478c8d3fef67c0010280e6b11361ded9337560f3ceea4c3bc2c0d0608fcf3c4e22ccd38c49029ad7e020b26eda915933251df099c745847987bf2683cdb36d9a76649d7b235ef7711361de3af778b07931edd38f3cacfa82d73c1e62c2cfa7c9292dadcdc1b668c6118f875278fdcb4b84796f02db21e67d9a01749f08def8e520c2bcfe4310ff8af44d3dd27fe82a5efff211615eb54803d83ccd33d38f1cfeea81d7bffc449827b2ae0d6c5e3fd7f4236f02350ee0320f005e399e19010100004f000100c5a5acee3b010000789c8b60606670d49ccd04c20c0f2efd1361e866640082731f1e0480e8352fcb41540348fe3f1078836419c38b52f3322b14c28bf2f3d219b00200635e152e",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 51,
+          "timestamp": "1356918990.423971000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "010000009000020057a6acee3b0100004000030041299b0241299b02102700001400ca0000000000cef0e05000000000cef0e05000000000e40b894200008040731296c4e8261cbf0200ed00000000004000030041299b0241299b02d0e692031400ca0000000000cef0e05000000000cef0e05000000000a10e8742000080400cf095c4882e48bf0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 52,
+          "timestamp": "1356918990.625083000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 605,
+          "payloadHex": "010100003a00010013a7acee3b010000789c7360606670d49ccd04c20c0f2efd136160640081731f1e048068a92f8bb97c2142580100beba0a0e01010000350001007da7acee3b010000789cd3606066e065b8e1e2a8399b89e1c1a57f220ca71940e0dc8707010c480000d1f108d901010000ee011100cda7acee3b010000789cd36060669064b8e1e2a8399b89e1c1a57f220ca71840e0dc870701209a8301023c30d4e93122ab63612849ccc976494d4b2ccd2961c00d30cdc946318781312fbf243339d5b52c350f9f392b30ccb980e26e24e000b680618103139466c6632eb5000b94c6f4ef390c7782e4df046638191b173bf4bf9a7c44bed5da01ddbc000c73ce6398030284cc81010d4674f3aea198c7045507a241e1c79f5100113be424060e3f09841f59a1341b946687d2b0b4c309a5b9a0343794e60162351d06065e207d508381810f483f00ba981f2429cac02000a41c80b42054bd10941686d222505a144a8b416971282d01a525a1b4149496c6080d4c2003a531e3cf1625bd969c1220c2346078639863829aee71aa73c1aa0ed35d9558d591ee2e5722dd554da4ba5c22d5e5615787914ecf30a0aa3ba0565090135c92129f565c6210529e6760186f90ef6060e9646000352320bfa03427313935b824312f25b128053d0c98f49d33128b12f5fd0a92f5616af53134b1800030317d58c80c4ef85c70fd8ccc2c2c5059208729c43538049286e90830cb437394f0b4665cc1e3fd9091b1f0af8522236375c6fa6646c68de77fff66645ab5c7c8a99b9929f3f7d96a202530fd87302303d3d1ab536d18193af4e333f332f115c3240300a250ec06",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 53,
+          "timestamp": "1356918990.758028000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200a5a7acee3b0100004000030041299b0241299b02102700001400ca0000000000cef0e05000000000cef0e0500000000075c086420000804021eb95c4882e48bf0200180041da53004000030041299b0241299b02d0e692031400ca0000000000cef0e05000000000cef0e0500000000051b584420000804038ca95c4882e48bf0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 55,
+          "timestamp": "1356918990.962731000",
+          "connectionType": 0,
+          "opcodeKey": "0x0136",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0136",
+              "messageLength": 72
+            }
+          ],
+          "payloadLength": 166,
+          "payloadHex": "010100004800010031a8acee3b010000789cf36060669064b8e1e2a8399b89e1c1a57f220c668c0c4070eec38300100de2309624e664bba4a62596e694306003465bcc0161900e01010100005e000100a9a8acee3b010000789cdbc1c4cce0a8399b0984191e5cfa27c2d0cbc80004e73f3c0800d16b5e9683a8064175063000ab0302ceca830c30b090afdd09a8c481e7c3d4231d7a1efb1946c128a0116084d2002f3e1466",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 56,
+          "timestamp": "1356918991.123151000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c800030013a9acee3b0100004000030041299b0241299b02102700001400ca0000000000cef0e05000000000cef0e050000000008155844200008040f0c795c4407567bf0200180041da53003800030041299b0241299b02d0e692031400010000000000cff0e0500000000001f8a30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000cff0e05000000000cff0e050000000003d11814200008040c2c795c4309fc8bf0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 58,
+          "timestamp": "1356918991.440139000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 58,
+          "payloadHex": "010100003a00010029abacee3b010000789c7360606670d49ccd04c20c0f2efd136160640081f31f1e048068c61f8bb97c2142580100bc3e09fa",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 59,
+          "timestamp": "1356918991.457151000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "010000009000020061aaacee3b0100004000030041299b0241299b02102700001400ca0000000000cff0e05000000000cff0e05000000000d7aa804200008040bcc795c4309fc8bf0200180041da53004000030041299b0241299b02d0e692031400ca0000000000cff0e05000000000cff0e0500000000024257c4200008040e7bb95c4085e83bf0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 61,
+          "timestamp": "1356918991.656117000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CB",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            }
+          ],
+          "payloadLength": 505,
+          "payloadHex": "010100003500010097abacee3b010000789cd36060669065b8e1e2a8399b89e1c1a57f220ca71940e0fc8707010c480000d44108ea01010000c4010f00f1abacee3b010000789cd36060665066b8e1e2a8399b89e1c1a57f220ca71840e0fc870701209a8301023c30d4e93122ab63612849ccc976494d4b2ccd2961c00d30cdc946318781312fbf243339d5b52c350f9f392b30ccb980e26e24e000b680618103139466c6632eb5000b94c6f4ef390c7782e48d8dc39c18181e1cf0109c71a45ae49c3dba790118e69cc7300704089903031a8ce8e65d43318f09aa0e4483c28fbdc1012206e480c38f03e1475690b0cc0116361047e103233b541c967638a1341794e686d23c509a17889b6a1818f8406121c0c0c00fa413751818804c062513060641a83a21282d0ca545a0b428941683d2e2505a024a4b426929282d8d3d4850800c94c68c3f5b94f4aa79528008d380e18d618e096abac7a9ce058bba7a164c775562358f7477b9a298c388535d3576f763a4ab330ca8ea0ea81514e40497a4c4a71597188494e71918c61b543a18583a191840cd08c82f28cd494c4e0d2e49cc4b492c4a41773393be73466251a2be5f41b23e4cad3e862616100026268fb72c2c70ad603733f2931242b40198e597394a784a32aee0f17ec8c858f8d742919171e3f9dfbf193bf4e333f332f1158a3400004799cc0e",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 63,
+          "timestamp": "1356918991.821424000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 144,
+          "payloadHex": "0100000090000200cdabacee3b0100004000030041299b0241299b02102700001400ca0000000000cff0e05000000000cff0e05000000000d2947b42000080405db795c4401e51bf0200180041da53004000030041299b0241299b02d0e692031400ca0000000000cff0e05000000000cff0e0500000000043127742000080400d9395c4882e48bf0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 65,
+          "timestamp": "1356918992.018357000",
+          "connectionType": 0,
+          "opcodeKey": "0x0136",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0136",
+              "messageLength": 72
+            }
+          ],
+          "payloadLength": 72,
+          "payloadHex": "010100004800010055acacee3b010000789cf36060665066b8e1e2a8399b89e1c1a57f220c668c0c4070fec38300100de2309624e664bba4a62596e6943060032617cc0164a60e2a",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "client-to-server",
+          "frameIndex": 66,
+          "timestamp": "1356918992.186715000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 200,
+          "payloadHex": "01000000c80003003aadacee3b0100004000030041299b0241299b02102700001400ca0000000000cff0e05000000000cff0e05000000000e469764200008040c18d95c4882e48bf0200180041da53003800030041299b0241299b02d0e692031400010000000000d0f0e05000000000e7fba30a00000000000000000000000000000000000000004000030041299b0241299b02d0e692031400ca0000000000d0f0e05000000000d0f0e0500000000049cf714200008040af6895c4882e48bf0200180041da5300",
+          "compressionState": "not-compressed",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "192.168.1.101:36166",
+          "destination": "202.67.51.120:54992"
+        },
+        {
+          "captureName": "moving_around_gridania.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 67,
+          "timestamp": "1356918992.386613000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CF",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            }
+          ],
+          "payloadLength": 246,
+          "payloadHex": "01010000f6000a0095adacee3b010000789c0b6060666061b8e1e2a8399b89e1c1a57f220ce71940e0c28707010c2820cb8981e1c101068769478c8d3fef67c0010280e6b11361ded9337560f3ceea4c3bc2c0d0608fcf3c4e22ccd38c49029ad7e020b26eda915933251df099c745847987bf2683cdb36d9a76649d7b235ef7711361de3af778b07931edd38f3cacfa82d73c1e62c2cfa7c9292dadcdc1b668c6118f875278fdcb418479fd8720ee13e99b7aa4ffd055bceee323c2bc6a9106b0799a67a61f39fcd503affbf889304f645d1bd8bc7eaee947de046a1cc0679e0011e6b5be6e019b77dd1a14bf0b71a66700e3dd9d96",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

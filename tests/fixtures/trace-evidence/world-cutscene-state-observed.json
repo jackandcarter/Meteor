@@ -1,0 +1,25 @@
+{
+  "schema": "aetherxiv.trace.cutscene-state.v1",
+  "capture": "cutscene_book.pcapng",
+  "tcpStream": 0,
+  "service": "World",
+  "direction": "client-to-server",
+  "tool": "tshark+legacy-frame-decoder",
+  "evidenceStatus": "trace-confirmed",
+  "packets": [
+    {
+      "streamOffset": 8616,
+      "opcode": "0x00CE",
+      "sourceActorId": 43723073,
+      "targetActorId": 43723073,
+      "payloadHex": "00000000636F6D306731303500000000000000000000000000000000000000000000000001010004"
+    },
+    {
+      "streamOffset": 31912,
+      "opcode": "0x00CE",
+      "sourceActorId": 43723073,
+      "targetActorId": 43723073,
+      "payloadHex": "02000000636F6D3067313035000000000000000000000000000000000000000000000000D0EB1800"
+    }
+  ]
+}

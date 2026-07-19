@@ -1,0 +1,342 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": "202.67.51.120",
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "gridania_to_coerthas.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "gridania_to_coerthas.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 3962,
+          "timestamp": "1356919954.556771000",
+          "connectionType": 0,
+          "opcodeKey": "0x0001",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0193",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00E2",
+              "messageLength": 40
+            }
+          ],
+          "payloadLength": 78,
+          "payloadHex": "010100004e000300465dbbee3b010000789c7360606670d49ccd04c20c0f2efd136160640081495f1e0480e8e52b3771f94284b0020d0cfd931991f58b00313f56758f50ece1879a0700d1181b35",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "gridania_to_coerthas.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 3972,
+          "timestamp": "1356919956.186987000",
+          "connectionType": 0,
+          "opcodeKey": "0x0007",
+          "messageKeys": [
+            {
+              "messageType": "0x0007",
+              "category": "0x0000",
+              "subcode": "0x0007",
+              "messageLength": 24
+            }
+          ],
+          "payloadLength": 42,
+          "payloadHex": "010100002a0001000000000000000000789c936060678081883b616abf183a9e4cf9f22000002be806ee",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "gridania_to_coerthas.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 4025,
+          "timestamp": "1356919961.803785000",
+          "connectionType": 0,
+          "opcodeKey": "0x00D0",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D6",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017C",
+              "messageLength": 152
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017D",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0183",
+              "messageLength": 152
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017E",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0145",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CC",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D6",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017C",
+              "messageLength": 152
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017D",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0183",
+              "messageLength": 152
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017E",
+              "messageLength": 56
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0145",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CC",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0006",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0008",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0008",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0007",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0187",
+              "messageLength": 96
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            }
+          ],
+          "payloadLength": 1019,
+          "payloadHex": "01010000020326003879bbee3b010000789c5bc1c0cc10cdd0e1e2a8399b89e1c1a57f220c17184060e69707010ca8c081114c2d706062a01f6086d21e18ee3c0716477627483ef7d80b975b7912ce1e2c375d4e054cb743372f00c39cf318e680c0d42f2f5cae1f13737e321b620e230ef76930a29b770dc53c1175845a90198c2c020cb0f083f98d054ab342693628cd0ea539a0342794e682d2dc509a074af3420de383f2f9a1b400941684d242505a184a8b406951282d06a5c5a1b404949684d252505a9a81309081d298f1670b0e525838f5fae913611a03c30ca039203310e6d4a0983311aaeefc674e1953519cc630a88103dd4145481d55fc3f1010e510240072800386bb6af1ba0b663f2c5d61faab19af7e50589e86da4d0b0033d702c35d7544f94b0323be4d50f4c1123fa63a1754755080997e2ab1aa230430ed73c56a0ea6ba6aecea30f2ff190654750e2ac5a945f9e56ea9b98939a9f145f9c9066e392906c6f186c50e06968606060c0cc108f9e092c4bc94c4a214143733e93b67241625eafb1524ebfbe6e71597a416e983f5e863d3c902020c0c0a3cbecce030e6829bc3c8ccc202956540940ef4012b30c2d31c253c6359bee77e3bf03a708703e30a1eef878c8c857f2d1419198583d3ab1919379efffd9b9169d51e23275326a6ccdf67ab8194c0f41fc2114c4c47af4eb589606254396754caccf8f8bc7f0433538729db344906c67dac73fa183bf4e333f3324b88772728de27a0b8f31403b23b6165b10786ba6cd4f4c198975f92999cea5a969a87cffa1518e60cdefa770281fa17246fbbe5a58bea7b11e72bc9b75d3434f2b0d6bf1388a87f09990303a0fc3761b4fec50990ebdf0974ac7f2bbee2af7fa307a8fe85b92b9accfa17a67fc220ab7fd1fd85598ee1ae7f271059ff4ea052fd3b81c8fa770291f5ef04b2ea5fa3ac9156ff4e2058ff568becc35fff4643eadf6848fddb00a97f1b30eb5f294aea5fd4f40e298dd1e33d00431d078a3a100f24c704f43313c38f7846207601b21981f80d1083c28214f34081158da687347fb063f50700fe702b1601010000f90004004f79bbee3b010000789c5bc1c0cce0a8399b0984191e5cfa27c260cec8000433bf3c0800d1ba4cabf61839fd60661298fe43588569417246625162787e51b67e71496249aa634960696672764ea55b7e91634e0e03cdc00a02ee6c608ad99f744e8e81e97fb1b85b0503d39d8bef33a2189898b96db28182ccf70aab6d80829abbf40318989ef9f7397331309d9db7204e8711c947c9f9b9b98979292ea925899939400f05a7e6a431663e38bd919171e3ade53f9819ed6bff2930cfc0d0e05a589a5900756702863bdb51dcb9e66539d8b982eaa8fefb0f04c484830386f960e3e1e6731cddc4e5cb885b3f001d146ae1",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

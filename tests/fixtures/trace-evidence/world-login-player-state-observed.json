@@ -1,0 +1,58 @@
+{
+  "schema": "aetherxiv.trace.player-state.v1",
+  "capture": "login.pcapng",
+  "service": "World",
+  "serverPort": 54992,
+  "tcpStream": 17,
+  "direction": "server-to-client",
+  "decodedFrameIndex": 17,
+  "connectionType": 0,
+  "authenticated": true,
+  "compressionState": "zlib-body",
+  "tool": "tools/Universal/analyze-legacy-tcp-stream.py",
+  "evidenceStatus": "TraceConfirmed",
+  "messages": [
+    {
+      "opcodeKey": "0x0194",
+      "subPacketLength": 40,
+      "payloadLength": 8,
+      "payloadHex": "027F0B7F00000000"
+    },
+    {
+      "opcodeKey": "0x019D",
+      "subPacketLength": 40,
+      "payloadLength": 8,
+      "payloadHex": "0000000000000000"
+    },
+    {
+      "opcodeKey": "0x01A4",
+      "subPacketLength": 40,
+      "payloadLength": 8,
+      "payloadHex": "0000000000000000"
+    },
+    {
+      "opcodeKey": "0x0196",
+      "subPacketLength": 56,
+      "payloadLength": 24,
+      "payloadHex": "000000000000000000000000000001000000000000000000"
+    },
+    {
+      "opcodeKey": "0x019A",
+      "subPacketLength": 160,
+      "payloadLength": 128,
+      "payloadHex": "F800000000003CE621C7B80000000000000000000000000000F9000000000020000000000000000000000000000000000000800000000000000100000000000000000000000000000000000003C0008000008DE280000800000000000002C0000000000080000A00000000000000080000000000004000000000000000000000"
+    },
+    {
+      "opcodeKey": "0x019B",
+      "subPacketLength": 64,
+      "payloadLength": 32,
+      "payloadHex": "D4000000D0000000D8000000CF000000D3000000CE000000EA000000E9000000"
+    },
+    {
+      "opcodeKey": "0x019C",
+      "subPacketLength": 40,
+      "payloadLength": 8,
+      "payloadHex": "AF00000000000000"
+    }
+  ]
+}

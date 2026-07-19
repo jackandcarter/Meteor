@@ -1,0 +1,50 @@
+{
+  "schema": "aetherxiv.trace.friend-status.v1",
+  "service": "World",
+  "evidenceStatus": "TraceConfirmed",
+  "sources": [
+    {
+      "capture": "friendlist_search.pcapng",
+      "sha256": "3b9a35689fb923d9520bbfed8a3886dc2b461c9516492e3d8e68eec093eb7b0e"
+    },
+    {
+      "capture": "invite_join_party.pcapng",
+      "sha256": "34c946c3f93744d2bbd841e75f983ef12b9bbcb59afcba31414d6d3f41e7de58"
+    }
+  ],
+  "request": {
+    "capture": "friendlist_search.pcapng",
+    "frameIndex": 60,
+    "direction": "client-to-server",
+    "opcodeKey": "0x01CF",
+    "subPacketLength": 40,
+    "payloadLength": 8,
+    "payloadHex": "000000007EEA1800"
+  },
+  "offlineResponse": {
+    "capture": "friendlist_search.pcapng",
+    "frameIndex": 64,
+    "direction": "server-to-client",
+    "opcodeKey": "0x01CF",
+    "subPacketLength": 1640,
+    "payloadLength": 1608,
+    "pageIndex": 0,
+    "entryCount": 1,
+    "firstEntryCharacterId": 12679064,
+    "firstEntryOnline": false,
+    "payloadPrefixHex": "00000000010000009877C100000000000000000000000000"
+  },
+  "onlineResponse": {
+    "capture": "invite_join_party.pcapng",
+    "frameIndex": 46,
+    "direction": "server-to-client",
+    "opcodeKey": "0x01CF",
+    "subPacketLength": 1640,
+    "payloadLength": 1608,
+    "pageIndex": 0,
+    "entryCount": 1,
+    "firstEntryCharacterId": 12679064,
+    "firstEntryOnline": true,
+    "payloadPrefixHex": "00000000010000009877C100000000000100000000000000"
+  }
+}

@@ -1,0 +1,384 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AetherXIV.UI.App.MainWindow"
+        Title="AetherXIV Core"
+        Icon="avares://AetherXIV.Core.App/Icons/Core.png"
+        Width="1220"
+        Height="780"
+        MinWidth="1080"
+        MinHeight="680"
+        Background="#101418"
+        Foreground="#E8EDF2">
+  <Window.Resources>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#101418" />
+    <SolidColorBrush x:Key="BandBrush" Color="#171D23" />
+    <SolidColorBrush x:Key="PanelBrush" Color="#1D242B" />
+    <SolidColorBrush x:Key="ControlBrush" Color="#242C34" />
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#43505D" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#4CA3FF" />
+    <SolidColorBrush x:Key="TextBrush" Color="#E8EDF2" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#AAB5C0" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="{StaticResource ControlBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+      <Setter Property="CaretBrush" Value="{StaticResource TextBrush}" />
+      <Setter Property="SelectionBrush" Value="#365F8D" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="9,5" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="{StaticResource ControlBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="MinHeight" Value="30" />
+    </Style>
+    <Style Selector="NumericUpDown">
+      <Setter Property="Background" Value="{StaticResource ControlBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="MinHeight" Value="30" />
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="Background" Value="#303842" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="BorderBrush" Value="#4A5663" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="12,6" />
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="#3B4652" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#256BAF" />
+      <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="#7E2B32" />
+      <Setter Property="BorderBrush" Value="#D75B67" />
+    </Style>
+    <Style Selector="Button.swatch">
+      <Setter Property="MinWidth" Value="108" />
+      <Setter Property="FontFamily" Value="Menlo,Consolas,monospace" />
+    </Style>
+    <Style Selector="TabItem">
+      <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="TabItem:selected">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Border Background="{StaticResource BandBrush}" Padding="18,12">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="2">
+          <TextBlock Text="AetherXIV Core" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock x:Name="HeaderStatusText" Text="Services stopped" Foreground="{StaticResource MutedTextBrush}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button x:Name="StartStackButton" Classes="primary" Content="Start Stack" Click="StartStack_Click" />
+          <Button x:Name="StopStackButton" Content="Stop Stack" Click="StopStack_Click" />
+          <Button Content="Save Config" Click="SaveConfig_Click" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <TabControl Grid.Row="1">
+      <TabItem Header="Services">
+        <Grid Margin="14" RowDefinitions="Auto,*" RowSpacing="10">
+          <Grid ColumnDefinitions="120,90,90,*,96,96" ColumnSpacing="8" Margin="10,0">
+            <TextBlock Text="Service" Foreground="{StaticResource MutedTextBrush}" />
+            <TextBlock Grid.Column="1" Text="State" Foreground="{StaticResource MutedTextBrush}" />
+            <TextBlock Grid.Column="2" Text="PID" Foreground="{StaticResource MutedTextBrush}" />
+            <TextBlock Grid.Column="3" Text="Endpoint" Foreground="{StaticResource MutedTextBrush}" />
+          </Grid>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ServicesPanel" Spacing="8" />
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Logs">
+        <TabControl x:Name="ServiceLogTabs" Margin="14" />
+      </TabItem>
+
+      <TabItem Header="Launcher Services">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="18" Spacing="16">
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="#34404A" BorderThickness="1" CornerRadius="8" Padding="18">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Launcher Content" FontSize="22" FontWeight="SemiBold" />
+                  <TextBlock Text="Create news posts and add optional captions to launcher reel images. Changes are stored in this server's configured database."
+                             Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                  <TextBlock x:Name="LauncherContentStatusText" Text="Select Refresh Content to connect." Foreground="#8FC9FF" TextWrapping="Wrap" Margin="0,5,0,0" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="primary" Content="Refresh Content" Click="RefreshLauncherContent_Click" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+
+            <Grid ColumnDefinitions="330,*" ColumnSpacing="16">
+              <Border Background="{StaticResource PanelBrush}" BorderBrush="#34404A" BorderThickness="1" CornerRadius="8" Padding="16">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Existing Posts" FontSize="17" FontWeight="SemiBold" />
+                      <TextBlock Text="Choose a post to edit it." Foreground="{StaticResource MutedTextBrush}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="New" Click="NewNewsPost_Click" />
+                  </Grid>
+                  <TextBlock x:Name="NewsPostCountText" Grid.Row="1" Text="0 posts" Foreground="{StaticResource MutedTextBrush}" />
+                  <ScrollViewer Grid.Row="2" Height="520" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="NewsPostsPanel" Spacing="8" />
+                  </ScrollViewer>
+                </Grid>
+              </Border>
+
+              <Border Grid.Column="1" Background="{StaticResource PanelBrush}" BorderBrush="#34404A" BorderThickness="1" CornerRadius="8" Padding="18">
+                <StackPanel Spacing="12">
+                  <StackPanel Spacing="2">
+                    <TextBlock x:Name="NewsEditorHeadingText" Text="Create News Post" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="Title and summary are required. Published posts appear after their scheduled UTC time."
+                               Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="Title" FontWeight="SemiBold" />
+                      <TextBox x:Name="NewsTitleBox" MaxLength="160" PlaceholderText="A short, clear headline" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="Title color" FontWeight="SemiBold" />
+                      <Button x:Name="NewsTitleColorButton" Classes="swatch" Content="#F2F4FA" Click="ColorSwatch_Click" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="Summary" FontWeight="SemiBold" />
+                      <TextBox x:Name="NewsSummaryBox" MaxLength="500" Height="72" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="The key detail readers should see first" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="Summary color" FontWeight="SemiBold" />
+                      <Button x:Name="NewsSummaryColorButton" Classes="swatch" Content="#D6DCE3" Click="ColorSwatch_Click" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="Body (optional)" FontWeight="SemiBold" />
+                      <TextBox x:Name="NewsBodyBox" Height="110" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="More context, instructions, or update notes" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="Body color" FontWeight="SemiBold" />
+                      <Button x:Name="NewsBodyColorButton" Classes="swatch" Content="#AEB7C2" Click="ColorSwatch_Click" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="Banner URL (optional)" FontWeight="SemiBold" />
+                      <TextBox x:Name="NewsBannerUrlBox" PlaceholderText="https://…" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="Link URL (optional)" FontWeight="SemiBold" />
+                      <TextBox x:Name="NewsLinkUrlBox" PlaceholderText="https://…" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Grid ColumnDefinitions="1.2*,1.1*,0.8*" ColumnSpacing="12">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="Publish date (UTC)" FontWeight="SemiBold" />
+                      <DatePicker x:Name="NewsPublishDatePicker" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5">
+                      <TextBlock Text="Publish time (UTC)" FontWeight="SemiBold" />
+                      <TimePicker x:Name="NewsPublishTimePicker" ClockIdentifier="24HourClock" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="5">
+                      <TextBlock Text="Sort order" FontWeight="SemiBold" />
+                      <NumericUpDown x:Name="NewsSortOrderBox" Minimum="-9999" Maximum="9999" Value="0" />
+                    </StackPanel>
+                  </Grid>
+
+                  <CheckBox x:Name="NewsPublishedBox" Content="Published — show this post in the launcher once its scheduled time arrives" IsChecked="True" />
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock x:Name="NewsFormHintText" Text="Ready for a new post." Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button x:Name="DeleteNewsPostButton" Grid.Column="1" Classes="danger" Content="Delete Post" Click="DeleteNewsPost_Click" IsEnabled="False" />
+                    <Button Grid.Column="2" Classes="primary" Content="Save Post" Click="SaveNewsPost_Click" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <Border Background="{StaticResource PanelBrush}" BorderBrush="#34404A" BorderThickness="1" CornerRadius="8" Padding="18">
+              <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Reel Image Text" FontSize="19" FontWeight="SemiBold" />
+                    <TextBlock Text="Add a top-left header and subtext to individual images found in AetherXIV Launcher/Image/Reels."
+                               Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <CheckBox x:Name="ReelTextEnabledBox" Grid.Column="1" Content="Enable Reel Image Text" VerticalAlignment="Center" Click="ReelTextEnabled_Click" />
+                </Grid>
+
+                <Grid x:Name="ReelTextEditorPanel" IsEnabled="False" ColumnDefinitions="260,*" ColumnSpacing="18">
+                  <StackPanel Spacing="7">
+                    <TextBlock Text="Reel image" FontWeight="SemiBold" />
+                    <ComboBox x:Name="ReelImageBox" SelectionChanged="ReelImage_SelectionChanged" PlaceholderText="Choose an image" />
+                    <TextBlock x:Name="ReelFolderHintText" Text="Images are detected from the Reels folder." Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                    <CheckBox x:Name="ReelImageEnabledBox" Content="Show text on this image" IsChecked="True" />
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Spacing="12">
+                    <Grid ColumnDefinitions="*,130,Auto" ColumnSpacing="10">
+                      <StackPanel Spacing="5">
+                        <TextBlock Text="Header text" FontWeight="SemiBold" />
+                        <TextBox x:Name="ReelHeaderBox" MaxLength="160" PlaceholderText="Welcome to AetherXIV" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="5">
+                        <TextBlock Text="Size (pt)" FontWeight="SemiBold" />
+                        <NumericUpDown x:Name="ReelHeaderSizeBox" Minimum="12" Maximum="72" Increment="1" Value="32" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="5">
+                        <TextBlock Text="Color" FontWeight="SemiBold" />
+                        <Button x:Name="ReelHeaderColorButton" Classes="swatch" Content="#FFFFFFFF" Click="ColorSwatch_Click" />
+                      </StackPanel>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,130,Auto" ColumnSpacing="10">
+                      <StackPanel Spacing="5">
+                        <TextBlock Text="Subtext" FontWeight="SemiBold" />
+                        <TextBox x:Name="ReelSubTextBox" MaxLength="300" Height="64" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="A short supporting message" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="5">
+                        <TextBlock Text="Size (pt)" FontWeight="SemiBold" />
+                        <NumericUpDown x:Name="ReelSubTextSizeBox" Minimum="10" Maximum="48" Increment="1" Value="18" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="5">
+                        <TextBlock Text="Color" FontWeight="SemiBold" />
+                        <Button x:Name="ReelSubTextColorButton" Classes="swatch" Content="#FFD7E0EE" Click="ColorSwatch_Click" />
+                      </StackPanel>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                      <TextBlock x:Name="ReelFormHintText" Text="Choose an image to begin." Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                      <Button Grid.Column="1" Classes="danger" Content="Remove Text" Click="DeleteReelText_Click" />
+                      <Button Grid.Column="2" Classes="primary" Content="Save Image Text" Click="SaveReelText_Click" />
+                    </Grid>
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Config">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <Grid Margin="18" ColumnDefinitions="180,*,180,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+            <TextBlock Text="Workspace root" VerticalAlignment="Center" />
+            <TextBox x:Name="WorkspaceRootBox" Grid.Column="1" Grid.ColumnSpan="3" />
+
+            <TextBlock Grid.Row="1" Text=".NET path" VerticalAlignment="Center" />
+            <TextBox x:Name="DotnetPathBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" />
+
+            <TextBlock Grid.Row="2" Text="Data root" VerticalAlignment="Center" />
+            <TextBox x:Name="DataRootBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" />
+
+            <TextBlock Grid.Row="3" Text="Scripts root" VerticalAlignment="Center" />
+            <TextBox x:Name="ScriptsRootBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" />
+
+            <TextBlock Grid.Row="4" Text="Diagnostics dir" VerticalAlignment="Center" />
+            <TextBox x:Name="DiagnosticsDirectoryBox" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" />
+
+            <TextBlock Grid.Row="5" Text="Tracing" VerticalAlignment="Center" />
+            <CheckBox x:Name="TraceEnabledBox" Grid.Row="5" Grid.Column="1" Content="Trace enabled" />
+            <CheckBox x:Name="DevLoggingEnabledBox" Grid.Row="5" Grid.Column="2" Grid.ColumnSpan="2" Content="Dev logging" />
+
+            <TextBlock Grid.Row="6" Text="Dev level" VerticalAlignment="Center" />
+            <ComboBox x:Name="DevLogLevelBox" Grid.Row="6" Grid.Column="1" SelectedIndex="1">
+              <ComboBoxItem>Off</ComboBoxItem>
+              <ComboBoxItem>Basic</ComboBoxItem>
+              <ComboBoxItem>Verbose</ComboBoxItem>
+            </ComboBox>
+            <CheckBox x:Name="NetworkTraceBox" Grid.Row="6" Grid.Column="2" Content="Network" />
+            <CheckBox x:Name="ServerTraceBox" Grid.Row="6" Grid.Column="3" Content="Server" />
+
+            <TextBlock Grid.Row="7" Text="Database host" VerticalAlignment="Center" />
+            <Grid Grid.Row="7" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBox x:Name="DatabaseHostBox" />
+              <CheckBox x:Name="AutoRepairDatabaseBox" Grid.Column="1" Content="Auto setup/repair" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Grid.Row="7" Grid.Column="2" Text="Database port" VerticalAlignment="Center" />
+            <TextBox x:Name="DatabasePortBox" Grid.Row="7" Grid.Column="3" />
+
+            <TextBlock Grid.Row="8" Text="Database name" VerticalAlignment="Center" />
+            <TextBox x:Name="DatabaseNameBox" Grid.Row="8" Grid.Column="1" />
+            <TextBlock Grid.Row="8" Grid.Column="2" Text="Database user" VerticalAlignment="Center" />
+            <TextBox x:Name="DatabaseUserBox" Grid.Row="8" Grid.Column="3" />
+
+            <TextBlock Grid.Row="9" Text="Database password" VerticalAlignment="Center" />
+            <TextBox x:Name="DatabasePasswordBox" Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" />
+
+            <TextBlock Grid.Row="10" Text="Map endpoint" VerticalAlignment="Center" />
+            <TextBox x:Name="MapBindBox" Grid.Row="10" Grid.Column="1" />
+            <TextBlock Grid.Row="10" Grid.Column="2" Text="Advertise" VerticalAlignment="Center" />
+            <TextBox x:Name="MapAdvertiseBox" Grid.Row="10" Grid.Column="3" />
+
+            <TextBlock Grid.Row="11" Text="World endpoint" VerticalAlignment="Center" />
+            <TextBox x:Name="WorldBindBox" Grid.Row="11" Grid.Column="1" />
+            <TextBlock Grid.Row="11" Grid.Column="2" Text="Advertise" VerticalAlignment="Center" />
+            <TextBox x:Name="WorldAdvertiseBox" Grid.Row="11" Grid.Column="3" />
+
+            <TextBlock Grid.Row="12" Text="Lobby endpoint" VerticalAlignment="Center" />
+            <TextBox x:Name="LobbyBindBox" Grid.Row="12" Grid.Column="1" />
+            <TextBlock Grid.Row="12" Grid.Column="2" Text="Advertise" VerticalAlignment="Center" />
+            <TextBox x:Name="LobbyAdvertiseBox" Grid.Row="12" Grid.Column="3" />
+
+            <TextBlock Grid.Row="13" Text="Launcher service" VerticalAlignment="Center" />
+            <TextBox x:Name="LauncherBindBox" Grid.Row="13" Grid.Column="1" />
+            <TextBlock Grid.Row="13" Grid.Column="2" Text="Advertise" VerticalAlignment="Center" />
+            <TextBox x:Name="LauncherAdvertiseBox" Grid.Row="13" Grid.Column="3" />
+
+            <TextBlock Grid.Row="14" Text="World map route" VerticalAlignment="Center" />
+            <TextBox x:Name="WorldMapRouteBox" Grid.Row="14" Grid.Column="1" />
+            <TextBlock Grid.Row="14" Grid.Column="2" Text="Route zone" VerticalAlignment="Center" />
+            <TextBox x:Name="WorldMapRouteZoneBox" Grid.Row="14" Grid.Column="3" />
+
+            <TextBlock Grid.Row="15" Text="Dependencies" VerticalAlignment="Center" />
+            <Button x:Name="VerifyDependenciesButton"
+                    Grid.Row="15"
+                    Grid.Column="1"
+                    Content="Verify Dependencies"
+                    Click="VerifyDependencies_Click"
+                    HorizontalAlignment="Left" />
+
+            <TextBox x:Name="PreflightStatusBox"
+                     Grid.Row="16"
+                     Grid.ColumnSpan="4"
+                     Height="170"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     FontFamily="Menlo,Consolas,monospace" />
+          </Grid>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</Window>

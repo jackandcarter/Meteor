@@ -1,0 +1,55 @@
+{
+  "schema": "aetherxiv.trace.player-init.v1",
+  "capture": "login.pcapng",
+  "service": "World",
+  "serverPort": 54992,
+  "tcpStream": 17,
+  "direction": "server-to-client",
+  "connectionType": 0,
+  "authenticated": true,
+  "compressionState": "zlib-body",
+  "tool": "tools/Universal/analyze-legacy-tcp-stream.py + tools/Universal/inspect-actor-properties.py",
+  "evidenceStatus": "TraceConfirmed",
+  "playerInstantiate": {
+    "opcodeKey": "0x00CC",
+    "objectName": "_pc43723073",
+    "className": "Player",
+    "scriptPath": "/Chara/Player/Player_work",
+    "leadingBooleanTypes": [
+      "BooleanFalse",
+      "BooleanFalse",
+      "BooleanFalse",
+      "BooleanTrue"
+    ],
+    "timerValueType": "Int32"
+  },
+  "playerState": {
+    "opcodeKey": "0x0134",
+    "payloadHex": "00BF000000000000",
+    "mainState": 0,
+    "subState": 191
+  },
+  "statusShownTimes": [
+    { "propertyName": "charaWork.statusShownTime[0]", "propertyId": "8C44E56B", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[1]", "propertyId": "8C336DA3", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[2]", "propertyId": "6D5633B9", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[3]", "propertyId": "D5C5254A", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[4]", "propertyId": "01E244C5", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[5]", "propertyId": "50FFB0A4", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[6]", "propertyId": "415881AD", "size": 4, "valueHex": "FFFFFFFF" },
+    { "propertyName": "charaWork.statusShownTime[7]", "propertyId": "61816DFE", "size": 4, "valueHex": "FFFFFFFF" }
+  ],
+  "depictionJudge": {
+    "propertyName": "charaWork.depictionJudge",
+    "propertyId": "002C1CD3",
+    "size": 4,
+    "valueHex": "1109F5A0",
+    "valueUInt32": 2700413201
+  },
+  "ordering": {
+    "after": "charaWork.parameterSave.state_mainSkillLevel",
+    "before": "charaWork.battleTemp.generalParameter[3]",
+    "depictionBefore": "playerWork.restBonusExpRate",
+    "restBonusBefore": "playerWork.questScenario[0]"
+  }
+}

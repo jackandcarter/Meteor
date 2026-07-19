@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aether.Umbra.PluginApi\Aether.Umbra.PluginApi.csproj" />
+    <None Include="umbra-plugin.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Aether.Umbra.SamplePlugin</AssemblyName>
+  </PropertyGroup>
+
+</Project>

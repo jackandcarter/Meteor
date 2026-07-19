@@ -68,6 +68,64 @@ public sealed class HostingFoundationTests
         Assert.Single(diagnostics.Events, item => item.EventName == "server.loop.tick");
     }
 
+    [Fact]
+    public async Task FixedIntervalServerLoopCanSuppressSuccessfulTickTrace()
+    {
+        FakeTickSource tickSource = new(2);
+        TestDiagnosticSink diagnostics = new();
+        int ticks = 0;
+        FixedIntervalServerLoop loop = new(
+            "quiet.loop",
+            tickSource,
+            _ =>
+            {
+                ticks++;
+                return ValueTask.CompletedTask;
+            },
+            diagnostics,
+            traceSuccessfulTicks: false);
+
+        await loop.RunAsync();
+
+        Assert.Equal(2, ticks);
+        Assert.Contains(diagnostics.Events, item => item.EventName == "server.loop.start");
+        Assert.DoesNotContain(diagnostics.Events, item => item.EventName == "server.loop.tick");
+        Assert.Contains(diagnostics.Events, item => item.EventName == "server.loop.stop");
+    }
+
+    [Fact]
+    public void ServiceOptionsParseBindAdvertiseDatabaseAndTraceArgs()
+    {
+        AetherXivServiceOptions options = AetherXivServiceOptions.FromArgs(
+            "AetherXIV.Launcher.Host",
+            new AetherXIV.Core.ServerEndpoint("127.0.0.1", 54993),
+            new AetherXIV.Core.ServerEndpoint("127.0.0.1", 54993),
+            [
+                "--bind", "0.0.0.0:54993",
+                "--advertise=game.example.test:54993",
+                "--db-host", "db.local",
+                "--db-port", "3307",
+                "--db-name", "ffxiv_server_live",
+                "--db-user", "aether",
+                "--db-password", "secret",
+                "--diagnostics-dir", "/tmp/aetherxiv-traces",
+                "--trace", "true",
+                "--data-root", "/srv/aetherxiv"
+            ]);
+
+        Assert.Equal("AetherXIV.Launcher.Host", options.ServiceName);
+        Assert.Equal(new AetherXIV.Core.ServerEndpoint("0.0.0.0", 54993), options.BindEndpoint);
+        Assert.Equal(new AetherXIV.Core.ServerEndpoint("game.example.test", 54993), options.AdvertisedEndpoint);
+        Assert.Equal("db.local", options.Database.Host);
+        Assert.Equal((ushort)3307, options.Database.Port);
+        Assert.Equal("ffxiv_server_live", options.Database.Database);
+        Assert.Equal("aether", options.Database.User);
+        Assert.Equal("secret", options.Database.Password);
+        Assert.True(options.TraceEnabled);
+        Assert.Equal("/tmp/aetherxiv-traces", options.DiagnosticsDirectory);
+        Assert.Equal("/srv/aetherxiv", options.DataRoot);
+    }
+
     private sealed class TestSession
     {
     }

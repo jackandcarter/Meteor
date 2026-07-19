@@ -1,0 +1,151 @@
+{
+  "schema": "aetherxiv.native-actor-approved-overrides.v1",
+  "actorClasses": [
+    {
+      "ActorClassId": 1090264,
+      "ClassPath": "/Chara/Npc/Object/MarketEntrance",
+      "DisplayNameId": 0,
+      "EventConditions": "{\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"pushWithCircleEventConditions\":[{\"conditionName\":\"pushDefault\",\"radius\":4.0,\"secondaryRadius\":10.0,\"outwards\":false,\"silent\":false,\"isDisabled\":false,\"flags\":1,\"unknown2\":0,\"useSourceActorId\":true}]}",
+      "PropertyFlags": 1,
+      "Provenance": {
+        "Notes": "The Hall exit is an actor-centered four-unit push circle named pushDefault. The reviewed upstream runtime defines the exact 0x016F payload fields and the xE9 layout supplies the actor transform; direct client testing disproved both reused trigger-box pairs.",
+        "SourceRef": "The-Primal-Launcher@49169ae25b034ed65bcec9e4abdc68a6fb229f52:PrimalLauncher/Actors/Npc/Object/MarketEntrance.cs; PrimalLauncher/Resources/xml/zones/xE9/npc.xml; 2026-07-19 direct-core runtime observations",
+        "SourceType": "reviewed-1x-zone-layout-and-runtime-implementation",
+        "Status": "RepoConfirmed"
+      },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1090265,
+      "ClassPath": "/Chara/Npc/Object/MarketEntrance",
+      "DisplayNameId": 0,
+      "EventConditions": "{\"noticeEventConditions\":[{\"unknown1\":1,\"unknown2\":0,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[],\"pushWithBoxEventConditions\":[{\"bgObj\":4143,\"layout\":421,\"conditionName\":\"in\",\"reactName\":\"dtwi\",\"silent\":false,\"outwards\":false}]}",
+      "PropertyFlags": 1,
+      "Provenance": {
+        "Notes": "Ul'dah market/company-office entrance trigger metadata restored from the reviewed 1.x script notes; official Gridania frame 93 confirms the 0x0175 field layout.",
+        "SourceRef": "gamedata_actor_class:1090265; MarketEntrance.lua; ffxiv_traces/moving_around_gridania.pcapng:frame:93",
+        "SourceType": "client-reviewed-seed-and-official-trigger-packet",
+        "Status": "RepoConfirmed"
+      },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1500201,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceCompanyShop",
+      "DisplayNameId": 1900184,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": {
+        "Notes": "2012.09.19.0001 company-shop actor promoted with reviewed Hall of Flames placement evidence.",
+        "SourceRef": "gamedata_actor_class:1500201",
+        "SourceType": "client-and-reviewed-1x-zone-layout",
+        "Status": "RepoConfirmed"
+      },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    }
+  ],
+  "actorAppearances": [
+    {
+      "ActorClassId": 1500201,
+      "Base": 8,
+      "Body": 46082,
+      "Characteristics": 0,
+      "CharacteristicsColor": 0,
+      "Ears": 0,
+      "EyeColor": 5,
+      "FaceEyeShape": 0,
+      "FaceEyebrows": 0,
+      "FaceFeatures": 0,
+      "FaceIrisSize": 0,
+      "FaceMouth": 0,
+      "FaceNose": 0,
+      "FaceType": 3,
+      "Feet": 46082,
+      "HairColor": 13,
+      "HairHighlightColor": 0,
+      "HairStyle": 5,
+      "HairVariation": 0,
+      "Hands": 46082,
+      "Head": 46144,
+      "LeftEar": 0,
+      "LeftFinger": 0,
+      "LeftIndex": 0,
+      "Legs": 1024,
+      "MainHand": 0,
+      "Neck": 0,
+      "OffHand": 0,
+      "Pack": 0,
+      "Pouch": 0,
+      "Provenance": {
+        "Notes": "Canonical 2012.09.19.0001 actor appearance.",
+        "SourceRef": "gamedata_actor_appearance:1500201",
+        "SourceType": "v1-sql",
+        "Status": "RepoConfirmed"
+      },
+      "RightEar": 0,
+      "RightFinger": 0,
+      "RightIndex": 0,
+      "Size": 2,
+      "SkinColor": 13,
+      "SpMainHand": 0,
+      "SpOffHand": 0,
+      "Throwing": 0,
+      "Voice": 0,
+      "Waist": 0
+    }
+  ],
+  "staticActorSpawns": [
+    {
+      "ActorClassId": 1500201,
+      "ActorState": 0,
+      "AnimationId": 0,
+      "CustomDisplayName": null,
+      "MapObjectInstanceId": null,
+      "MapObjectLayoutId": null,
+      "PositionX": 169.0,
+      "PositionY": 0.0,
+      "PositionZ": -177.5,
+      "PrivateAreaLevel": 0,
+      "PrivateAreaName": "",
+      "Provenance": {
+        "Notes": "Reviewed Hall of Flames company-shop placement from the 1.x xE9 zone layout.",
+        "SourceRef": "The-Primal-Launcher@49169ae25b034ed65bcec9e4abdc68a6fb229f52:PrimalLauncher/Resources/xml/zones/xE9/npc.xml",
+        "SourceType": "client-and-reviewed-1x-zone-layout",
+        "Status": "RepoConfirmed"
+      },
+      "Rotation": -1.5,
+      "SpawnId": 1019,
+      "UniqueId": "flame_company_shop",
+      "ZoneId": { "Value": 233 }
+    },
+    {
+      "ActorClassId": 1090264,
+      "ActorState": 0,
+      "AnimationId": 0,
+      "CustomDisplayName": null,
+      "MapObjectInstanceId": null,
+      "MapObjectLayoutId": null,
+      "PositionX": 160.0,
+      "PositionY": 0.0,
+      "PositionZ": -142.76,
+      "PrivateAreaLevel": 0,
+      "PrivateAreaName": "",
+      "Provenance": {
+        "Notes": "Reviewed shared company-office exit placement from the 1.x xE9 zone layout.",
+        "SourceRef": "The-Primal-Launcher@49169ae25b034ed65bcec9e4abdc68a6fb229f52:PrimalLauncher/Resources/xml/zones/xE9/npc.xml",
+        "SourceType": "client-and-reviewed-1x-zone-layout",
+        "Status": "RepoConfirmed"
+      },
+      "Rotation": 0.0,
+      "SpawnId": 1020,
+      "UniqueId": "hall_of_flames_exit",
+      "ZoneId": { "Value": 233 }
+    }
+  ]
+}

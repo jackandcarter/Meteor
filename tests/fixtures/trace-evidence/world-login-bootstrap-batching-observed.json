@@ -1,0 +1,35 @@
+{
+  "schema": "aetherxiv.trace.bootstrap-batching.v1",
+  "capture": "login.pcapng",
+  "service": "World",
+  "direction": "server-to-client",
+  "evidenceStatus": "TraceConfirmed",
+  "tool": "tshark plus bounded base-frame decode",
+  "maxUncompressedFrameBytes": 4096,
+  "frames": [
+    {
+      "frameIndex": 973,
+      "authenticated": true,
+      "compressionState": "zlib-body",
+      "compressedPayloadBytes": 818,
+      "subPacketCount": 43,
+      "uncompressedSubPacketBytes": 4048
+    },
+    {
+      "frameIndex": 974,
+      "authenticated": true,
+      "compressionState": "zlib-body",
+      "compressedPayloadBytes": 689,
+      "subPacketCount": 41,
+      "uncompressedSubPacketBytes": 4000
+    },
+    {
+      "frameIndex": 977,
+      "authenticated": true,
+      "compressionState": "zlib-body",
+      "compressedPayloadBytes": 1098,
+      "subPacketCount": 38,
+      "uncompressedSubPacketBytes": 4040
+    }
+  ]
+}

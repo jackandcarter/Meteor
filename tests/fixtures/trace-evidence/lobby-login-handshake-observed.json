@@ -1,0 +1,37 @@
+{
+  "source": "ffxiv_traces/login.pcapng",
+  "verified_by": "offline pcapng/tcp parser during Pass 1D patch creation",
+  "trace_confirmed": {
+    "secure_start_candidates": 2,
+    "lobby_port": 54994,
+    "secure_start_frame": {
+      "packet_size_hex": "0x0288",
+      "connection_type_hex": "0x0003",
+      "subpacket_count": 1,
+      "first_subpacket_size_hex": "0x0278",
+      "first_subpacket_type_hex": "0x0009",
+      "test_ticket_ascii_frame_offset_hex": "0x44",
+      "ticket_phrase": "Test Ticket Data",
+      "ticket_phrase_length": 16,
+      "client_number_frame_offset_hex": "0x84",
+      "observed_client_numbers_hex": ["0x50E0E812", "0x50E0E81B"]
+    },
+    "post_handshake_c2s_frame": {
+      "packet_size_hex": "0x00C0",
+      "decrypted_subpacket_type_hex": "0x0003",
+      "decrypted_game_marker_hex": "0x0014",
+      "decrypted_game_opcode_hex": "0x0005",
+      "decrypted_payload_contains_client_version": "2012.09.19.0001"
+    }
+  },
+  "v1_behavior_confirmed": {
+    "key_derivation": "MD5(0x12345678 LE prefix + clientNumber LE + 0x000003E8 LE + ticket phrase padded/truncated to 0x20 bytes)",
+    "test_ticket_data_0x50E0E812_key_hex": "B4EE3F6C016F5BD971500DB185A2AB43",
+    "encrypted_region": "each subpacket body beginning at subpacketOffset + 0x10, length subpacketSize - 0x10 rounded down to 8 bytes"
+  },
+  "not_promoted_yet": [
+    "typed secure acknowledgement composer; Pass 1D uses a recovered plaintext fixture from the login trace",
+    "compressed encrypted-frame coverage outside the lobby secure path",
+    "full Map/World encrypted-session behavior"
+  ]
+}

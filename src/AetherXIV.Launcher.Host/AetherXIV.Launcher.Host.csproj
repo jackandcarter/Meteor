@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AetherXIV.Core\AetherXIV.Core.csproj" />
+    <ProjectReference Include="..\AetherXIV.Data\AetherXIV.Data.csproj" />
+    <ProjectReference Include="..\AetherXIV.Launcher.Contracts\AetherXIV.Launcher.Contracts.csproj" />
+    <ProjectReference Include="..\AetherXIV.Server.Hosting\AetherXIV.Server.Hosting.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

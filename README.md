@@ -1,101 +1,41 @@
 # AetherXIV 2.0
 
-AetherXIV 2.0 is a modern server-core and launcher foundation for FFXIV 1.23b Client.
-The workspace is designed for long-term cross-platform development, clean service boundaries, testable packet and scripting behavior,
-and a database foundation that can grow into a fully seeded asset.
+AetherXIV 2.0 is a modern, cross-platform server and launcher stack for a
+user-owned Final Fantasy XIV 1.23b client. It combines the Lobby, World, Map,
+Launcher Services, AetherXIV Core management app, AetherXIV Launcher, database
+tooling, and the Umbra plugin framework in one workspace.
 
-## Supported Platforms
+## Supported release targets
 
-The 2.0 target platforms are:
+- macOS 14 or later on Apple silicon
+- Windows 11 x64
+- Ubuntu 22.04/24.04 x64
+- SteamOS in Desktop Mode
 
-- macOS
-- Linux
-- Steam Deck / SteamOS
-- Windows
+## Getting started
 
-Platform-specific developer and operator tooling will live under:
+- [Documentation index](docs/README.md)
+- [AetherXIV Core guide](docs/AETHERXIV_CORE_GUIDE.md)
+- [Launcher guide](docs/LAUNCHER_GUIDE.md)
+- [Database setup and migration](docs/DATABASE_SETUP_AND_MIGRATION.md)
+- [Build and runtime dependencies](docs/BUILD_AND_RUNTIME_DEPENDENCIES.md)
+- [AetherXIV 2.0 release notes](docs/AETHERXIV_2.0_RELEASE_NOTES.md)
 
-- `tools/MacOS`
-- `tools/Linux`
-- `tools/SteamDeck`
-- `tools/Windows`
-- `tools/Universal`
+## Build and test
 
-Those tool folders are intentionally early placeholders. The core server and
-backend foundations come first; platform tooling will be filled in as the 2.0
-runtime becomes stable enough to support real setup, diagnostics, packaging,
-and operation workflows.
-
-## Languages And Runtime
-
-- C# on .NET 10 LTS for server cores, shared services, protocol code, data
-  access, hosting, and EchoGate.Next foundations.
-- Lua for gameplay and event scripting.
-- SQL for MariaDB/MySQL schema and migration work.
-
-The pinned SDK is declared in `global.json`:
+The repository pins .NET SDK `10.0.203` in `global.json`. Run the complete
+managed verification suite from the repository root:
 
 ```sh
-/usr/local/share/dotnet/dotnet --version
+./tools/Development/verify-aetherxiv.sh
 ```
 
-Expected SDK:
+Platform release builds use the dedicated scripts under `tools/MacOS`,
+`tools/Linux`, `tools/SteamOS`, and `tools/Windows`. Generated release output is
+written beneath the ignored `bin/build/Release` directory.
 
-```text
-10.0.203
-```
+## Client ownership
 
-## Primary Dependencies
-
-- .NET 10 SDK
-- MariaDB or MySQL
-- MoonSharp for Lua hosting
-- xUnit for automated tests
-- `MySqlConnector` for async database access
-- `Microsoft.Extensions.*` libraries for hosting, logging, configuration, and
-  dependency injection
-
-## Workspace Layout
-
-- `src/AetherXIV.Protocol` - packet primitives, codecs, opcodes, binary helpers
-- `src/AetherXIV.Core` - shared identifiers and core contracts
-- `src/AetherXIV.Data` - database models, migrations, repository contracts
-- `src/AetherXIV.Scripting` - Lua host, script contracts, coroutine scheduler
-- `src/AetherXIV.Server.Hosting` - server loop and hosting primitives
-- `src/AetherXIV.Lobby` - lobby service foundation
-- `src/AetherXIV.World` - world service foundation
-- `src/AetherXIV.Map` - map service, event dispatch, actor/script boundaries
-- `src/AetherXIV.Compatibility` - compatibility fixtures and provenance rules
-- `src/EchoGate.Next.Core` - launcher/profile/client validation foundation
-- `db/migrations` - database schema migrations
-- `tests` - focused unit and compatibility tests
-
-## Build And Test
-
-From the repository root:
-
-```sh
-/usr/local/share/dotnet/dotnet test AetherXIV.sln
-```
-
-The solution should resolve SDK `10.0.203` through `global.json`.
-
-Some Lua compatibility tests can also run against an external script fixture
-tree. Set `AETHERXIV_SCRIPT_FIXTURE_ROOT` to the absolute path of a
-`Data/scripts` directory before running tests when that fixture tree is
-available.
-
-## Development Direction
-
-The first development goal is a correct, testable foundation:
-
-- byte-exact protocol codecs
-- async service boundaries
-- typed database access
-- Lua scripting compatibility
-- explicit diagnostics
-- platform-aware tooling
-- provenance-backed data migration
-
-2.0 is not ready to replace any live stack yet. It is the foundation branch for
-building that future cleanly.
+AetherXIV does not distribute the Final Fantasy XIV client, patches, or Square
+Enix assets. Each user must provide a legally obtained Final Fantasy XIV 1.23b
+client and any required patch library.

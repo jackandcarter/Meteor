@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Umbra">
+  <defs>
+    <radialGradient id="crystal" cx="50%" cy="38%" r="55%">
+      <stop offset="0" stop-color="#f7efd1"/>
+      <stop offset="0.38" stop-color="#78d6d2"/>
+      <stop offset="0.72" stop-color="#245f78"/>
+      <stop offset="1" stop-color="#142538"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="12" y1="10" x2="52" y2="54">
+      <stop offset="0" stop-color="#f5d890"/>
+      <stop offset="0.45" stop-color="#a87d38"/>
+      <stop offset="1" stop-color="#4c3218"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="#10151e" opacity="0.92"/>
+  <circle cx="32" cy="32" r="25" fill="none" stroke="url(#rim)" stroke-width="3"/>
+  <path d="M32 9 43 31 32 55 21 31Z" fill="url(#crystal)" stroke="#f2d99a" stroke-width="1.5"/>
+  <path d="M32 9v46M21 31h22" fill="none" stroke="#f9f0c9" stroke-width="1" opacity="0.55"/>
+  <path d="M13 39c9-5 22-7 38-4-9 7-22 10-38 4Z" fill="#d8b15e" opacity="0.28"/>
+  <path d="M47 14c-5 0-10 3-12 7 7-2 13-1 17 3-1-5-2-8-5-10Z" fill="#f0c96d" opacity="0.55"/>
+</svg>

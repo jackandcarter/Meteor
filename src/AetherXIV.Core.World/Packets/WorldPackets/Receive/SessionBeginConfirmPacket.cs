@@ -1,0 +1,32 @@
+﻿using System;
+using System.IO;
+
+namespace AetherXIV.Core.World.Packets.WorldPackets.Receive
+{
+    class SessionBeginConfirmPacket
+    {
+        public bool invalidPacket = false;
+        public uint sessionId;
+        public ushort errorCode;        
+
+        public SessionBeginConfirmPacket(byte[] data)
+        {
+            using (MemoryStream mem = new MemoryStream(data))
+            {
+                using (BinaryReader binReader = new BinaryReader(mem))
+                {
+                    try
+                    {
+                        sessionId = binReader.ReadUInt32();
+                        errorCode = binReader.ReadUInt16();
+                    }
+                    catch (Exception)
+                    {
+                        invalidPacket = true;
+                    }
+                }
+            }
+        }
+
+    }
+}

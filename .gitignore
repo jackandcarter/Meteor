@@ -1,5 +1,47 @@
+# Local legacy/reference material
+/Legacy Meteor:Aether/
+/ffxiv_traces/
+
+# Generated build and test output
+/bin/
 **/bin/
 **/obj/
 TestResults/
+**/TestResults/
+
+# Local database backups and dumps
+/.local-backups/
+dump-*.sql
+*.sql.gz
+*.sql.bz2
+
+# Personal environment files and credentials
+.env
+.env.*
+!.env.example
+!.env.defaults
+.secrets/
+secrets.json
+credentials.json
+credentials.*.json
+appsettings.Local.json
+appsettings.*.local.json
+*.local.ini
+*.local.json
+*.local.php
+*.pfx
+*.p12
+*.pem
+*.key
+*.keystore
+*.user
+*.suo
+.vs/
+
+# OS and editor metadata
 .DS_Store
 **/.DS_Store
+
+# Python caches
+**/__pycache__/
+*.py[cod]

@@ -1,0 +1,47 @@
+using System;
+using System.IO;
+
+using AetherXIV.Core.Common;
+
+namespace AetherXIV.Core.Map.packets.receive.recruitment
+{
+    class RecruitmentSearchRequestPacket
+    {
+        public bool invalidPacket = false;
+
+        public uint purposeId;
+        public uint locationId;
+
+        public uint discipleId;
+        public uint classjobId;
+
+        public byte unknown1;
+        public byte unknown2;
+        
+        public string text;
+
+        public RecruitmentSearchRequestPacket(byte[] data)
+        {
+            using (MemoryStream mem = new MemoryStream(data))
+            {
+                using (BinaryReader binReader = new BinaryReader(mem))
+                {
+                    try{
+                        purposeId = binReader.ReadUInt32();
+                        locationId = binReader.ReadUInt32();                       
+                        discipleId = binReader.ReadUInt32();
+                        classjobId = binReader.ReadUInt32();
+
+                        unknown1 = binReader.ReadByte();
+                        unknown2 = binReader.ReadByte();
+
+                        text = Utils.ReadNullTermString(binReader);
+                    }
+                    catch (Exception){
+                        invalidPacket = true;
+                    }
+                }
+            }
+        }
+    }
+}

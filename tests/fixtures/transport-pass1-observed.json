@@ -1,0 +1,38 @@
+{
+  "source": "ffxiv_traces.zip retail server-online captures",
+  "parsed_app_frames": 19776,
+  "parsed_inner_messages": 65884,
+  "transport_shape": {
+    "outer_frame_header_size": 16,
+    "outer_frame_packet_size_offset": 4,
+    "outer_frame_subpacket_count_offset": 6,
+    "outer_frame_timestamp_offset": 8,
+    "server_compression": "zlib body when header byte 0x01 is non-zero",
+    "gameplay_message_type": 3,
+    "type3_category_marker": "0x0014 at inner offset 0x10",
+    "opcode_like_subcode_offset": "0x12"
+  },
+  "top_observed_keys": [
+    { "direction": "C2S", "message_type": 3, "category": "0x0014", "subcode": "0x00CA", "length": 64, "count": 16867 },
+    { "direction": "S2C", "message_type": 3, "category": "0x0014", "subcode": "0x00CF", "length": 80, "count": 15100 },
+    { "direction": "S2C", "message_type": 3, "category": "0x0014", "subcode": "0x0190", "length": 136, "count": 5569 },
+    { "direction": "S2C", "message_type": 3, "category": "0x0014", "subcode": "0x0001", "length": 64, "count": 3458 },
+    { "direction": "C2S", "message_type": 3, "category": "0x0014", "subcode": "0x0001", "length": 56, "count": 3371 }
+  ],
+  "pass1_scope": {
+    "implemented": [
+      "socket listener shell",
+      "16-byte frame reader/writer",
+      "zlib-compatible BasePacketFrameCodec decode path already present",
+      "type-3/category-0x0014 subpacket dispatch into LobbyPacketEntryService",
+      "per-connection LobbyClientState",
+      "cipher seam for later Blowfish/session handshake port"
+    ],
+    "not_claimed": [
+      "live Blowfish key schedule",
+      "retail encrypted handshake",
+      "world/map live socket integration",
+      "full opcode naming"
+    ]
+  }
+}

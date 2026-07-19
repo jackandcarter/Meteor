@@ -5,6 +5,27 @@ namespace AetherXIV.Protocol.Tests;
 public sealed class EnvironmentPacketCodecTests
 {
     [Fact]
+    public void SetMapCodecMatchesLegacyPayloadShape()
+    {
+        SetMapPacketCodec codec = new();
+
+        SubPacket packet = codec.Encode(0x10001, new SetMapPacket(RegionId: 102, ZoneId: 209));
+
+        Assert.Equal(PacketOpcode.MapSetMap, packet.Header.Opcode);
+        Assert.Equal(0x10001u, packet.Header.SourceActorId);
+        Assert.Equal(
+            new byte[]
+            {
+                0x66, 0x00, 0x00, 0x00,
+                0xD1, 0x00, 0x00, 0x00,
+                0x28, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00
+            },
+            packet.Payload.ToArray());
+        Assert.Equal(new SetMapPacket(102, 209), codec.Decode(packet));
+    }
+
+    [Fact]
     public void SetWeatherCodecMatchesLegacyPayloadShape()
     {
         SetWeatherPacketCodec codec = new();

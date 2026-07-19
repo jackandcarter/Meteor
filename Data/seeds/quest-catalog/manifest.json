@@ -1,0 +1,11 @@
+{
+  "schema": "aetherxiv.quest-actor-seed.v1",
+  "seedId": "aetherxiv-legacy-quest-actors",
+  "version": "2026-07-14.1",
+  "questCount": 734,
+  "sourceHash": "bb7306461b1728493242016a16d9dd5257d7512c60e423b017de5ec7aced3d14",
+  "files": {
+    "quest-actors.json": "18d0874934a9116eaf2070c22fa0e07a47a5c432d12f50180234621cfb97e5b3"
+  },
+  "notes": "Generated from legacy staticactors.bin; runtime has no legacy-tree dependency."
+}

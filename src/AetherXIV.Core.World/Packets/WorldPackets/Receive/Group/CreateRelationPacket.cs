@@ -1,0 +1,34 @@
+﻿using System;
+using System.IO;
+
+namespace AetherXIV.Core.World.Packets.WorldPackets.Receive.Group
+{
+    class CreateRelationPacket
+    {
+        public bool invalidPacket = false;
+
+        public uint host;
+        public uint guest;
+        public uint command;
+        
+        public CreateRelationPacket(byte[] data)
+        {
+            using (MemoryStream mem = new MemoryStream(data))
+            {
+                using (BinaryReader binReader = new BinaryReader(mem))
+                {
+                    try
+                    {
+                        host = binReader.ReadUInt32();
+                        guest = binReader.ReadUInt32();
+                        command = binReader.ReadUInt32();
+                    }
+                    catch (Exception)
+                    {
+                        invalidPacket = true;
+                    }
+                }
+            }
+        }
+    }
+}

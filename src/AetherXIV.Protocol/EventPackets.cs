@@ -9,11 +9,29 @@ public readonly record struct EventStartPacket(
     uint Unknown,
     byte EventType,
     string EventName,
-    IReadOnlyList<LuaParameter> Parameters);
+    IReadOnlyList<LuaParameter> Parameters)
+{
+    public const uint ClientScriptErrorServerCode = 0x39800010;
+
+    public const byte ClientScriptErrorEventType = 0x7F;
+
+    public ReadOnlyMemory<byte> RawParameterPayload { get; init; }
+
+    public string? ClientScriptErrorText { get; init; }
+
+    public bool IsClientScriptError =>
+        ServerCodes == ClientScriptErrorServerCode || EventType == ClientScriptErrorEventType;
+
+    public uint ClientScriptErrorIndex => TriggerActorId;
+
+    public uint ClientScriptErrorCount => OwnerActorId;
+}
 
 public sealed class EventStartPacketCodec : IPacketCodec<EventStartPacket>
 {
     public const int PayloadSize = 0xD8 - 0x20;
+    public const int FixedHeaderSize = 0x11;
+    public const int MaximumEventNameBytes = 0x20;
 
     public PacketOpcode Opcode => PacketOpcode.EventStart;
 
@@ -25,17 +43,44 @@ public sealed class EventStartPacketCodec : IPacketCodec<EventStartPacket>
             throw new ArgumentException($"Expected opcode {Opcode} but received {packet.Header.Opcode}.", nameof(packet));
 
         ReadOnlySpan<byte> payload = packet.Payload.Span;
-        Require(payload, 0x25);
+        Require(payload, FixedHeaderSize + 1);
 
         uint triggerActorId = PacketBinary.ReadUInt32LittleEndian(payload);
         uint ownerActorId = PacketBinary.ReadUInt32LittleEndian(payload[4..]);
         uint serverCodes = PacketBinary.ReadUInt32LittleEndian(payload[8..]);
         uint unknown = PacketBinary.ReadUInt32LittleEndian(payload[12..]);
         byte eventType = payload[16];
-        string eventName = ReadFixedString(payload[17..], 0x20);
-        IReadOnlyList<LuaParameter> parameters = LuaParameterCodec.Decode(payload[0x25..]);
+        ReadOnlySpan<byte> eventPayload = payload[FixedHeaderSize..];
+        if (serverCodes == EventStartPacket.ClientScriptErrorServerCode
+            || eventType == EventStartPacket.ClientScriptErrorEventType)
+        {
+            int errorOffset = eventType == EventStartPacket.ClientScriptErrorEventType
+                ? 0x31
+                : FixedHeaderSize;
+            ReadOnlySpan<byte> errorPayload = payload[errorOffset..];
+            int errorTerminator = errorPayload.IndexOf((byte)0);
+            if (errorTerminator >= 0)
+                errorPayload = errorPayload[..errorTerminator];
 
-        return new EventStartPacket(triggerActorId, ownerActorId, serverCodes, unknown, eventType, eventName, parameters);
+            return new EventStartPacket(triggerActorId, ownerActorId, serverCodes, unknown, eventType, string.Empty, [])
+            {
+                RawParameterPayload = eventPayload.ToArray(),
+                ClientScriptErrorText = Encoding.ASCII.GetString(errorPayload)
+            };
+        }
+
+        int terminator = eventPayload.IndexOf((byte)0);
+        if (terminator < 0 || terminator > MaximumEventNameBytes)
+            throw new InvalidDataException("Event start name is missing its bounded null terminator.");
+
+        string eventName = Encoding.ASCII.GetString(eventPayload[..terminator]);
+        ReadOnlySpan<byte> parameterPayload = eventPayload[(terminator + 1)..];
+        IReadOnlyList<LuaParameter> parameters = DecodeKnownLuaParametersOrEmpty(parameterPayload);
+
+        return new EventStartPacket(triggerActorId, ownerActorId, serverCodes, unknown, eventType, eventName, parameters)
+        {
+            RawParameterPayload = parameterPayload.ToArray()
+        };
     }
 
     public SubPacket Encode(uint sourceActorId, EventStartPacket packet)
@@ -46,8 +91,16 @@ public sealed class EventStartPacketCodec : IPacketCodec<EventStartPacket>
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(8), packet.ServerCodes);
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(12), packet.Unknown);
         payload[16] = packet.EventType;
-        WriteFixedString(payload.AsSpan(17), 0x20, packet.EventName);
-        LuaParameterCodec.Encode(packet.Parameters).CopyTo(payload.AsSpan(0x25));
+        int eventNameLength = Encoding.ASCII.GetByteCount(packet.EventName);
+        if (eventNameLength > MaximumEventNameBytes)
+            throw new InvalidDataException($"Event start name exceeds {MaximumEventNameBytes} bytes.");
+
+        Encoding.ASCII.GetBytes(packet.EventName, payload.AsSpan(FixedHeaderSize, eventNameLength));
+        int parameterOffset = FixedHeaderSize + eventNameLength + 1;
+        byte[] parameterPayload = EncodeParameterPayload(packet.Parameters, packet.RawParameterPayload);
+        if (parameterPayload.Length > payload.Length - parameterOffset)
+            throw new InvalidDataException("Event start parameter payload exceeds the packet boundary.");
+        parameterPayload.CopyTo(payload.AsSpan(parameterOffset));
         return SubPacket.Create(Opcode, sourceActorId, payload);
     }
 
@@ -78,6 +131,31 @@ public sealed class EventStartPacketCodec : IPacketCodec<EventStartPacket>
         int count = Math.Min(Encoding.ASCII.GetByteCount(value), length);
         Encoding.ASCII.GetBytes(value, payload[..count]);
     }
+
+    internal static IReadOnlyList<LuaParameter> DecodeKnownLuaParametersOrEmpty(ReadOnlySpan<byte> payload)
+    {
+        try
+        {
+            return LuaParameterCodec.Decode(payload);
+        }
+        catch (NotSupportedException)
+        {
+            return [];
+        }
+        catch (InvalidDataException)
+        {
+            return [];
+        }
+    }
+
+    internal static byte[] EncodeParameterPayload(
+        IReadOnlyList<LuaParameter> parameters,
+        ReadOnlyMemory<byte> rawParameterPayload)
+    {
+        return rawParameterPayload.Length > 0 && parameters.Count == 0
+            ? rawParameterPayload.ToArray()
+            : LuaParameterCodec.Encode(parameters);
+    }
 }
 
 public readonly record struct EventUpdatePacket(
@@ -86,7 +164,10 @@ public readonly record struct EventUpdatePacket(
     uint Unknown1,
     uint Unknown2,
     byte EventType,
-    IReadOnlyList<LuaParameter> Parameters);
+    IReadOnlyList<LuaParameter> Parameters)
+{
+    public ReadOnlyMemory<byte> RawParameterPayload { get; init; }
+}
 
 public sealed class EventUpdatePacketCodec : IPacketCodec<EventUpdatePacket>
 {
@@ -105,13 +186,17 @@ public sealed class EventUpdatePacketCodec : IPacketCodec<EventUpdatePacket>
         if (payload.Length < 0x11)
             throw new InvalidDataException("Event update payload ended before the fixed header.");
 
+        ReadOnlySpan<byte> parameterPayload = payload[17..];
         return new EventUpdatePacket(
             PacketBinary.ReadUInt32LittleEndian(payload),
             PacketBinary.ReadUInt32LittleEndian(payload[4..]),
             PacketBinary.ReadUInt32LittleEndian(payload[8..]),
             PacketBinary.ReadUInt32LittleEndian(payload[12..]),
             payload[16],
-            LuaParameterCodec.Decode(payload[17..]));
+            EventStartPacketCodec.DecodeKnownLuaParametersOrEmpty(parameterPayload))
+        {
+            RawParameterPayload = parameterPayload.ToArray()
+        };
     }
 
     public SubPacket Encode(uint sourceActorId, EventUpdatePacket packet)
@@ -122,7 +207,7 @@ public sealed class EventUpdatePacketCodec : IPacketCodec<EventUpdatePacket>
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(8), packet.Unknown1);
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(12), packet.Unknown2);
         payload[16] = packet.EventType;
-        LuaParameterCodec.Encode(packet.Parameters).CopyTo(payload.AsSpan(17));
+        EventStartPacketCodec.EncodeParameterPayload(packet.Parameters, packet.RawParameterPayload).CopyTo(payload.AsSpan(17));
         return SubPacket.Create(Opcode, sourceActorId, payload);
     }
 }

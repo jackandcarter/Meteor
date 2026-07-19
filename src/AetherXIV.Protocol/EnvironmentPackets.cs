@@ -1,5 +1,41 @@
 namespace AetherXIV.Protocol;
 
+public readonly record struct SetMapPacket(uint RegionId, uint ZoneId, uint Unknown = 0x28);
+
+public sealed class SetMapPacketCodec : IPacketCodec<SetMapPacket>
+{
+    public const int PayloadSize = 0x30 - 0x20;
+    public const uint LegacyUnknown = 0x28;
+
+    public PacketOpcode Opcode => PacketOpcode.MapSetMap;
+
+    public Type PacketType => typeof(SetMapPacket);
+
+    public SetMapPacket Decode(SubPacket packet)
+    {
+        if (packet.Header.Opcode != Opcode)
+            throw new ArgumentException($"Expected opcode {Opcode} but received {packet.Header.Opcode}.", nameof(packet));
+
+        ReadOnlySpan<byte> payload = packet.Payload.Span;
+        if (payload.Length < PayloadSize)
+            throw new InvalidDataException($"Set map payload requires {PayloadSize} bytes; received {payload.Length}.");
+
+        return new SetMapPacket(
+            PacketBinary.ReadUInt32LittleEndian(payload),
+            PacketBinary.ReadUInt32LittleEndian(payload[4..]),
+            PacketBinary.ReadUInt32LittleEndian(payload[8..]));
+    }
+
+    public SubPacket Encode(uint sourceActorId, SetMapPacket packet)
+    {
+        byte[] payload = new byte[PayloadSize];
+        PacketBinary.WriteUInt32LittleEndian(payload, packet.RegionId);
+        PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(4), packet.ZoneId);
+        PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(8), packet.Unknown);
+        return SubPacket.Create(Opcode, sourceActorId, payload);
+    }
+}
+
 public enum WeatherId : ushort
 {
     Clear = 8001,

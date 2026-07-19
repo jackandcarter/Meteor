@@ -1,0 +1,469 @@
+{
+  "schema": "aetherxiv.trace.fixture.v1",
+  "service": "World",
+  "serverHost": null,
+  "serverPort": 54992,
+  "captures": [
+    {
+      "capture": "war_quest_update2.pcapng",
+      "tool": "tshark",
+      "frames": [
+        {
+          "captureName": "war_quest_update2.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 837,
+          "timestamp": "1356946181.528643000",
+          "connectionType": 0,
+          "opcodeKey": "0x0193",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0193",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0143",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0143",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0143",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CB",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0131",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00E2",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0001",
+              "messageLength": 64
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0010",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x000C",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x000D",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x018B",
+              "messageLength": 88
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0006",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0008",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0007",
+              "messageLength": 40
+            }
+          ],
+          "payloadLength": 582,
+          "payloadHex": "010100004e000300808d4bf03b010000789cd360606670d49ccd04c20c0f2efd136198ccc80004acd10f0340b408103301b103863a671475ec0c10f0d8054c6933a0f109e96721a01f00b5331a6001010000930005009e8d4bf03b010000789c5bc1c0cce0a8399b0984191e5cfa27c260cec80004acd10f0340b424e30a1eef878c539233128b12c3f38bb2f50b8af20b528b4a2a19e80a561070a73a4be7c39fbc20d67c8453934b8b8a52f34a9cf3f34a80947b517e6901addda90174a74a5e822bc29da71990dd09030e18fe7166c4a60e1d3c710153dac4da0300e9a43eb70101000038000200a48d4bf03b010000789cd360606650ca4b7075d49ccdc4f0e0d23f1186d30c20c01afd308001096810a90e00aafc0f0f0101000056000200c98d4bf03b010000789c0b60606670d49ccd04c20c0f2efd13613064640002d6e88701201a24ce0ae2e7e5976426a7ba96a5e695306003dc9f381d0cadb83430cc7bc4806c1e135439008e0115ab010100003a000100e98d4bf03b010000789c7360606670d49ccd04c20c0f2efd136160640001d6e8870120fad12d271e5f8810560000937b0900010100009d000900508e4bf03b010000789cd360606670d49ccd04c20c0f2efd1361a866640002d6e887010c484003439d000371ea7850d43933b0e050c78ba22e4e9e15cc8fc050d78de2be352fcb41540348fe3f104c06c9328617a5e66556288417e5e7a53360051e18e69ec3ea9f250a1d47ae2f4e72b2e5527142378309ab3fd8b09a1380a18e03451dc8d960392201a6bdec58ed050076c65107",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        },
+        {
+          "captureName": "war_quest_update2.pcapng",
+          "service": "World",
+          "direction": "server-to-client",
+          "frameIndex": 839,
+          "timestamp": "1356946181.771815000",
+          "connectionType": 0,
+          "opcodeKey": "0x00CA",
+          "messageKeys": [
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0145",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CC",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0137",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0145",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CC",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0145",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x017B",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CC",
+              "messageLength": 296
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CA",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x016B",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00D0",
+              "messageLength": 168
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CE",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x00CF",
+              "messageLength": 80
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x013D",
+              "messageLength": 72
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0134",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0144",
+              "messageLength": 40
+            },
+            {
+              "messageType": "0x0003",
+              "category": "0x0014",
+              "subcode": "0x0179",
+              "messageLength": 72
+            }
+          ],
+          "payloadLength": 555,
+          "payloadHex": "010100002b0230008a8f4bf03b010000789cd557cb4ec240149d29ea5237eedd624c6c8926bad14878c48d09ea82858915650a55a45aaa84b874e3c23fc00f6067e22fa81b43d4f805f217eac2d8168803b7ed1d023e381b12eee1703b33e7746e988488447612d1e9aa445e5f3e27c9037130b6d548110eab80774079de38291a96bec712a7ac68117f603a84367536d8f1092bf92be13a263b4e1a662caf17b201fdd480ceb3e7f3ff1568eb133eefa3fb3ddfa7536f543feef649237af97e75eba597023a4f40c701a6d306ec6ba9731f6c9459c6ca3333ae9b4c2deb052559c82a73aa12e175c240671ee878f3e29e3cd857c5938701fe5f42b0af336f1eede6d549176fc66fbd5694684c5108497fd7f72cc3043d4b72bb24b7a872f74f461cd8a76bf17ca297d5f83d405f2e74e68d54bfb95ede9eba9055bda80725cecfa2b9ef6f2a969f35c0fbcf39c3f7e995336f2aa697023ade39230ad817cc992cdb3dc9213a70bf827286e705e50ccfeb2767789da09ce1794139c3f360ce60eb1547ea92bc592959ec507689b347a69173832564d7eea3a1d03f8d960e38eb4905fd4b87c4bf14f12f15f42f1db07f29e2dfb26116b26b19fb48c1775a1b70bffcfd4b05fd4b07e45f2ae85f2ae85f8af8175baf345297649721733c95b9f777f77a303a2cfed504e7176d40f34b904e2ff34bb08ef8fca20dc9fca221f38b53c7f45240a7ff5cd290f925a3d9ce5877b633cdddc723715e079e43ff5cd204e7176d00f3cb17bf19e50f",
+          "compressionState": "zlib-body",
+          "evidenceStatus": "TraceConfirmed",
+          "source": "202.67.51.120:54992",
+          "destination": "192.168.1.101:36166"
+        }
+      ],
+      "accessIssues": []
+    }
+  ]
+}

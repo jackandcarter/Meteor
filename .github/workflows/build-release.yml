@@ -1,0 +1,260 @@
+name: AetherXIV 2.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to create or update.
+        required: true
+        default: release-v2.0
+      publish_release:
+        description: Publish the AetherXIV 2.0 GitHub Release after all builds pass.
+        type: boolean
+        required: true
+        default: true
+  push:
+    branches:
+      - "2.0"
+    tags:
+      - "release-v2.0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aetherxiv-2.0-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILD_CONFIGURATION: Release
+  RELEASE_NAME: AetherXIV 2.0
+
+jobs:
+  verify:
+    name: Verify source and tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Run the complete verification suite
+        run: ./tools/Development/verify-aetherxiv.sh
+
+  build-linux:
+    name: Build Linux x64
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install the Windows x86 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes g++-mingw-w64-i686
+
+      - name: Build the Linux release
+        run: ./tools/Linux/build-aetherxiv.sh "${BUILD_CONFIGURATION}"
+
+      - name: Package the Linux release
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/AetherXIV-2.0-Linux-x64.tar.gz -C bin/build/Release Linux
+
+      - name: Upload the Linux release
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-AetherXIV-2.0-Linux-x64
+          path: artifacts/*
+          if-no-files-found: error
+
+  build-steamos:
+    name: Build SteamOS x64
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install the Windows x86 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes g++-mingw-w64-i686
+
+      - name: Build the SteamOS release
+        run: ./tools/SteamOS/build-aetherxiv.sh "${BUILD_CONFIGURATION}"
+
+      - name: Package the SteamOS release
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/AetherXIV-2.0-SteamOS-x64.tar.gz -C bin/build/Release SteamOS
+
+      - name: Upload the SteamOS release
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-AetherXIV-2.0-SteamOS-x64
+          path: artifacts/*
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS arm64
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+    needs: verify
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install the Windows x86 cross-compiler
+        run: brew install mingw-w64
+
+      - name: Build the macOS release
+        run: ./tools/MacOS/build-aetherxiv.sh "${BUILD_CONFIGURATION}"
+
+      - name: Package the macOS release
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --sequesterRsrc --keepParent \
+            bin/build/Release/MacOS \
+            artifacts/AetherXIV-2.0-MacOS-arm64.zip
+
+      - name: Upload the macOS release
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-AetherXIV-2.0-MacOS-arm64
+          path: artifacts/*
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows x64
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Build the Windows release
+        shell: pwsh
+        run: ./tools/Windows/build-aetherxiv.ps1 -Configuration $env:BUILD_CONFIGURATION
+
+      - name: Package the Windows release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Compress-Archive -Path "bin/build/Release/Windows" -DestinationPath "artifacts/AetherXIV-2.0-Windows-x64.zip" -CompressionLevel Optimal -Force
+
+      - name: Upload the Windows release
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-AetherXIV-2.0-Windows-x64
+          path: artifacts/*
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish AetherXIV 2.0
+    if: ${{ always() && !cancelled() && needs.verify.result == 'success' && needs.build-linux.result == 'success' && needs.build-steamos.result == 'success' && needs.build-macos.result == 'success' && needs.build-windows.result == 'success' && (startsWith(github.ref, 'refs/tags/') || inputs.publish_release) }}
+    needs:
+      - verify
+      - build-linux
+      - build-steamos
+      - build-macos
+      - build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-AetherXIV-2.0-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          cd release-assets
+          sha256sum ./* > SHA256SUMS.txt
+
+      - name: Create or update the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          release_tag="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_EVENT_NAME}" != "push" ]]; then
+            release_tag="${INPUT_RELEASE_TAG:-release-v2.0}"
+          fi
+
+          mapfile -t assets < <(find release-assets -maxdepth 1 -type f | sort)
+          if [[ "${#assets[@]}" -eq 0 ]]; then
+            echo "No release assets were downloaded." >&2
+            exit 1
+          fi
+
+          if gh release view "${release_tag}" >/dev/null 2>&1; then
+            gh release edit "${release_tag}" \
+              --title "${RELEASE_NAME}" \
+              --notes-file docs/AETHERXIV_2.0_RELEASE_NOTES.md
+            gh release upload "${release_tag}" "${assets[@]}" --clobber
+          else
+            gh release create "${release_tag}" "${assets[@]}" \
+              --target "${GITHUB_SHA}" \
+              --title "${RELEASE_NAME}" \
+              --notes-file docs/AETHERXIV_2.0_RELEASE_NOTES.md
+          fi
