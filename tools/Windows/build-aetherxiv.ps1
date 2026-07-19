@@ -184,8 +184,8 @@ if ($LASTEXITCODE -ne 0) { throw "Lua inventory generation failed." }
 
 Write-Host "Publishing launcher app and helpers..."
 Publish-Project (Join-Path $launcherRoot "AetherXIV.Launcher.App\AetherXIV.Launcher.App.csproj") (Join-Path $OutputRoot "launcher\app") @("--runtime", $LauncherRid) -SelfContained
-Publish-Project (Join-Path $launcherRoot "AetherXIV.Launcher.ClientLauncher\AetherXIV.Launcher.ClientLauncher.csproj") (Join-Path $OutputRoot "launcher\app\Helpers\win-x64") @("--runtime", "win-x64") -SelfContained
-Publish-Project (Join-Path $launcherRoot "AetherXIV.Launcher.ClientLauncher\AetherXIV.Launcher.ClientLauncher.csproj") (Join-Path $OutputRoot "launcher\app\Helpers\win-x86") @("--runtime", "win-x86") -SelfContained
+Publish-Project (Join-Path $launcherRoot "AetherXIV.Launcher.ClientLauncher\AetherXIV.Launcher.ClientLauncher.csproj") (Join-Path $OutputRoot "launcher\app\Helpers\win-x64") @("--runtime", "win-x64", "/p:PublishSingleFile=true", "/p:IncludeNativeLibrariesForSelfExtract=true") -SelfContained
+Publish-Project (Join-Path $launcherRoot "AetherXIV.Launcher.ClientLauncher\AetherXIV.Launcher.ClientLauncher.csproj") (Join-Path $OutputRoot "launcher\app\Helpers\win-x86") @("--runtime", "win-x86", "/p:PublishSingleFile=true", "/p:IncludeNativeLibrariesForSelfExtract=true") -SelfContained
 
 Write-Host "Publishing AetherXIV Core app..."
 Publish-Project (Join-Path $rootDir "src\AetherXIV.UI.App\AetherXIV.UI.App.csproj") (Join-Path $OutputRoot "core\app") @("--runtime", $LauncherRid) -SelfContained

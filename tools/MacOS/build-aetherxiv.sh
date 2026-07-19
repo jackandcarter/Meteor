@@ -285,7 +285,12 @@ python3 "${ROOT_DIR}/tools/Universal/lua-tree-manifest.py" \
 echo "Publishing launcher app and Windows helper payload..."
 publish_self_contained_project "${LAUNCHER_ROOT}/AetherXIV.Launcher.App/AetherXIV.Launcher.App.csproj" "${STAGING_ROOT}/launcher/app" --runtime "${LAUNCHER_RID}"
 for helper_rid in ${HELPER_RIDS}; do
-  publish_self_contained_project "${LAUNCHER_ROOT}/AetherXIV.Launcher.ClientLauncher/AetherXIV.Launcher.ClientLauncher.csproj" "${STAGING_ROOT}/launcher/app/Helpers/${helper_rid}" --runtime "${helper_rid}"
+  publish_self_contained_project \
+    "${LAUNCHER_ROOT}/AetherXIV.Launcher.ClientLauncher/AetherXIV.Launcher.ClientLauncher.csproj" \
+    "${STAGING_ROOT}/launcher/app/Helpers/${helper_rid}" \
+    --runtime "${helper_rid}" \
+    /p:PublishSingleFile=true \
+    /p:IncludeNativeLibrariesForSelfExtract=true
 done
 build_umbra_native_injector
 
