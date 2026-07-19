@@ -1122,7 +1122,7 @@ public sealed partial class MainWindow : Window
                 return false;
             }
 
-            AetherXivMariaDbAdminCredentials? adminCredentials = await RequestMariaDbAdminCredentialsAsync("Migrate Database").ConfigureAwait(true);
+            AetherXivMariaDbAdminCredentials? adminCredentials = await RequestMariaDbAdminCredentialsAsync("Install Clean Database").ConfigureAwait(true);
             if (adminCredentials is null)
             {
                 AppendPreflightStatus("[Blocked] database.compatibility: MariaDB credentials were not provided.");
@@ -1340,13 +1340,13 @@ public sealed partial class MainWindow : Window
     private async Task<bool> ConfirmDatabaseCompatibilityMigrationAsync()
     {
         Button cancelButton = new() { Content = "Cancel", MinWidth = 88 };
-        Button migrateButton = new() { Content = "Back Up and Migrate", MinWidth = 160 };
+        Button migrateButton = new() { Content = "Back Up and Install Clean", MinWidth = 190 };
         migrateButton.Classes.Add("primary");
         Window dialog = new()
         {
             Title = "Database Compatibility",
             Width = 560,
-            Height = 330,
+            Height = 420,
             CanResize = false,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Background = Brush.Parse("#101418"),
@@ -1371,12 +1371,12 @@ public sealed partial class MainWindow : Window
                     },
                     new TextBlock
                     {
-                        Text = "AetherXIV can make a complete verified backup, install the canonical database, and copy accounts, characters, character-owned state, linkshell/retainer records, support records, and customized Launcher content into it. Account and character counts must match or the original backup is restored automatically.",
+                        Text = "AetherXIV will make a complete verified backup and install the canonical database. If compatible account and character tables are present, it will also try to restore accounts, characters, character-owned state, linkshell/retainer records, support records, and customized Launcher content. If that data is incompatible, setup keeps the clean database and retains both recovery backups.",
                         TextWrapping = TextWrapping.Wrap
                     },
                     new TextBlock
                     {
-                        Text = "Stop all AetherXIV services before continuing. The backup is kept outside the release folder.",
+                        Text = "Stop all AetherXIV services before continuing. The untouched backup is kept outside the release folder and is restored automatically only if the clean database itself cannot be installed.",
                         Foreground = Brush.Parse("#F3C969"),
                         TextWrapping = TextWrapping.Wrap
                     },

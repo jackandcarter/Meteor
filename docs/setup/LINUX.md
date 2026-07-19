@@ -21,9 +21,19 @@ and `libfontconfig1`. Use the package names appropriate to your distribution.
 
 ## Install the release
 
-The supplied desktop entries target `/opt/aetherxiv`. Copy the complete Linux
-release there so `core`, `launcher`, `servers`, `Database`, and `desktop` remain
-together. Ensure the two GUI apphosts are executable:
+You can keep the extracted release in any permanent user-owned directory. From
+the release root, run the supplied installer once to create working application
+menu and desktop shortcuts with absolute paths to that directory:
+
+```bash
+./install-desktop-shortcuts.sh
+```
+
+Do not move the release afterward without running the installer again. The
+installer also repairs the executable bits on both graphical applications.
+
+For a system-wide `/opt/aetherxiv` installation, copy the complete Linux release
+there so `core`, `launcher`, `servers`, `Database`, and `desktop` remain together:
 
 ```bash
 sudo install -d /opt/aetherxiv
@@ -32,7 +42,8 @@ sudo chmod +x /opt/aetherxiv/core/app/AetherXIV.Core.App
 sudo chmod +x /opt/aetherxiv/launcher/app/AetherXIV.Launcher.App
 ```
 
-Install the desktop entries for all users if desired:
+The templates under `desktop/` intentionally target `/opt/aetherxiv`. Install
+those entries for all users if desired:
 
 ```bash
 sudo install -m 0644 /opt/aetherxiv/desktop/org.aetherxiv.core.desktop /usr/share/applications/
@@ -77,6 +88,8 @@ the application-data directories; do not copy stale binaries into the new tree.
 
 - A GUI that exits immediately commonly indicates a missing X11, ICE, SM, or
   Fontconfig library.
+- If a shortcut stops working after the release directory is moved, run
+  `./install-desktop-shortcuts.sh` again from its new location.
 - A game-only failure commonly indicates the Wine runtime, prefix, or 32-bit
   graphics stack rather than the Launcher GUI.
 - Reinstall desktop entries after changing the installation root, or edit their

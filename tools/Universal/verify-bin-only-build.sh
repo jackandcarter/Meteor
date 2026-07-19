@@ -135,6 +135,11 @@ for configuration in "${configurations[@]}"; do
       if [[ "${platform}" == Linux || "${platform}" == SteamOS ]]; then
         verify_file "${platform_root}/desktop/org.aetherxiv.core.desktop"
         verify_file "${platform_root}/desktop/org.aetherxiv.launcher.desktop"
+        verify_file "${platform_root}/install-desktop-shortcuts.sh"
+        [[ -x "${platform_root}/install-desktop-shortcuts.sh" ]] || {
+          echo "Linux desktop shortcut installer is not executable: ${platform_root}" >&2
+          exit 1
+        }
         verify_file "${platform_root}/share/icons/hicolor/512x512/apps/org.aetherxiv.core.png"
         verify_file "${platform_root}/share/icons/hicolor/512x512/apps/org.aetherxiv.launcher.png"
         grep -qx 'Terminal=false' "${platform_root}/desktop/org.aetherxiv.core.desktop" || {

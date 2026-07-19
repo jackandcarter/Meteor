@@ -49,6 +49,12 @@ choose the custom preset to edit them.
 For a remote server, use an address clients can actually reach. `127.0.0.1`
 always means the Launcher's own computer.
 
+For a typical public VPS behind an HTTPS reverse proxy, Launcher Service is the
+public URL including its `/launcher` route, for example
+`https://launcher.dev.example.com/launcher`. Server host is the public game
+hostname without `https://`; Lobby and World use their direct TCP ports. Patch
+Base URL can remain empty unless the operator hosts a real patch repository.
+
 ## Client
 
 ![AetherXIV Launcher Client tab](images/launcher/client.png)

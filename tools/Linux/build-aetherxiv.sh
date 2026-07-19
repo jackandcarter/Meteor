@@ -211,6 +211,7 @@ python3 "${ROOT_DIR}/tools/Universal/create-direct-core-database-package.py" \
 mkdir -p "${OUTPUT_ROOT}/desktop"
 install -m 0644 "${ROOT_DIR}/tools/Linux/desktop/org.aetherxiv.core.desktop" "${OUTPUT_ROOT}/desktop/"
 install -m 0644 "${ROOT_DIR}/tools/Linux/desktop/org.aetherxiv.launcher.desktop" "${OUTPUT_ROOT}/desktop/"
+install -m 0755 "${ROOT_DIR}/tools/Linux/install-desktop-shortcuts.sh" "${OUTPUT_ROOT}/install-desktop-shortcuts.sh"
 icon_dir="${OUTPUT_ROOT}/share/icons/hicolor/512x512/apps"
 mkdir -p "${icon_dir}"
 install -m 0644 "${ROOT_DIR}/assets/icons/aetherxiv-core.png" "${icon_dir}/org.aetherxiv.core.png"

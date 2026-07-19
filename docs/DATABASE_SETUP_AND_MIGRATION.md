@@ -32,6 +32,10 @@ The administrator password is used for that operation and is not saved. The
 application database password is saved in the Core settings, so do not upload
 that file in a bug report without redacting it.
 
+This flow handles both a completely absent database and a manually created
+empty schema. In either case, it creates the restricted application account
+before the final verification pass.
+
 ## What automatic setup does
 
 The database package:
@@ -42,10 +46,11 @@ The database package:
 - validates baseline and migration checksums;
 - applies unapplied migrations in order;
 - verifies required tables, seed data, and compatibility identifiers;
-- backs up an existing recognized database before modifying it.
+- backs up any existing database before replacing or modifying it.
 
 If an existing database cannot be recognized as an AetherXIV direct-core
-database, automatic migration is refused rather than guessing.
+database, Core offers a guarded clean installation instead of treating it as an
+in-place upgrade.
 
 ## Command-line administration
 
@@ -82,10 +87,16 @@ Existing databases are dumped before changes. The shell package defaults to
 `~/.aetherxiv/backups/database`; the Core application can supply its own backup
 location. Backups receive a companion SHA-256 file.
 
-Clean migration preserves recognized player and launcher-content tables,
-recreates the canonical schema, restores the preserved data, and verifies that
-account and character counts match. If restoration or verification fails, the
-installer attempts to restore the untouched full backup.
+Clean migration always creates a full verified backup and recreates the
+canonical schema. If both legacy `users` and `characters` tables exist, it also
+creates a player-data export and attempts to restore accounts, characters,
+character-owned tables, linkshell/retainer records, support records, and
+customized Launcher content. Account and character counts must match.
+
+If player data is incompatible, the installer keeps the clean canonical
+database and retains both exports for manual recovery. It restores the
+untouched full backup automatically only when the canonical database itself
+cannot be installed or rebuilt safely.
 
 Always retain an independent copy of the backup before a major upgrade.
 
@@ -103,7 +114,7 @@ migration by adding a new migration with a later name.
   verify the configured application password.
 - **Checksum mismatch:** restore the original release database package; do not
   bypass the check.
-- **Unrecognized database:** back it up and review its schema before attempting
-  manual conversion.
+- **Unrecognized database:** use Core's backed-up clean installation. Review the
+  retained backup if automatic player-data restoration was not possible.
 - **Port already in use:** determine whether another MariaDB instance owns port
   `3306`, then change the configured port consistently if required.

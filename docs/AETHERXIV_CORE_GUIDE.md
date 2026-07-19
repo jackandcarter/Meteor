@@ -86,6 +86,10 @@ release at a different version's service or data folders.
 The default local database is `ffxiv_server` at `127.0.0.1:3306`, using the
 `aetherxiv` application account. **Auto setup/repair** lets Core create, migrate,
 and verify the packaged schema after receiving administrator credentials.
+This includes a completely absent database and a manually created empty schema.
+An incompatible schema is backed up and replaced with the canonical database;
+compatible account and character data is restored on a best-effort,
+count-verified basis.
 
 The database password is saved in Core's settings file. Never attach that file
 to a public report without redacting the password. Change the development
@@ -104,6 +108,34 @@ is the address other services or clients are told to use.
 Default ports are Map `1989`, World `54992`, Lobby `54994`, and Launcher
 Services `8080`. World Map Route points World to Map; Route Zone defaults to
 `209`.
+
+### Hosted example with HTTPS Launcher Services
+
+For a VPS where `launcher.dev.example.com` terminates HTTPS in a reverse proxy
+and the internal Launcher Services port is `8087`, use:
+
+| Core field | Value |
+|---|---|
+| Map endpoint / advertise | `127.0.0.1:1989` |
+| World endpoint | `0.0.0.0:54992` |
+| World advertise | `game.dev.example.com:54992` |
+| Lobby endpoint | `0.0.0.0:54994` |
+| Lobby advertise | `game.dev.example.com:54994` |
+| Launcher service endpoint | `127.0.0.1:8087` |
+| Launcher service advertise | `launcher.dev.example.com:443` |
+| World Map Route | `127.0.0.1:1989` |
+
+Configure the reverse proxy to preserve `/launcher` and forward it to
+`http://127.0.0.1:8087`. The Launcher profile then uses
+`https://launcher.dev.example.com/launcher`, server host
+`game.dev.example.com`, Lobby port `54994`, and World port `54992`. Leave Patch
+Base URL empty unless an actual HTTPS patch repository is being hosted.
+
+Expose TCP `443`, `54992`, and `54994`. Keep `3306`, `1989`, and the proxy-only
+`8087` private. If Launcher Services is deliberately exposed directly instead
+of through HTTPS, bind it to `0.0.0.0:8087` and use an explicit
+`http://host:8087/launcher` URL; this is not recommended for public account
+credentials.
 
 ### Diagnostics
 

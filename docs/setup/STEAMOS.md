@@ -21,10 +21,10 @@ prefixes, and the AetherXIV release will live before configuring the server.
 1. Enter Desktop Mode.
 2. Extract the entire SteamOS release to persistent storage.
 3. Keep `core`, `launcher`, `servers`, `Database`, and `desktop` together.
-4. Mark the Core and Launcher apphosts executable.
-5. Adjust the supplied desktop-entry `Exec`, `TryExec`, and `Icon` paths if you
-   do not install under `/opt/aetherxiv`.
-6. Add the desktop entries to the application menu if desired.
+4. Run `./install-desktop-shortcuts.sh` from the extracted release. It repairs
+   executable bits and writes application-menu and Desktop Mode shortcuts with
+   absolute paths to the persistent release directory.
+5. If you move the release later, run the shortcut installer again.
 
 The entries use `Terminal=false`; the applications are graphical and should
 not open a terminal.

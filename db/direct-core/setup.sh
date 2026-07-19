@@ -188,8 +188,13 @@ LAST_BACKUP_PATH=""
 backup_database() {
   command -v "${MYSQLDUMP_BIN}" >/dev/null 2>&1 || { echo "Database dump client is required before modifying an existing database." >&2; exit 2; }
   mkdir -p "${BACKUP_DIR}"
-  local path
-  path="${BACKUP_DIR}/${DB_NAME}-$(date -u +'%Y%m%dT%H%M%SZ').sql"
+  local base_path path suffix=0
+  base_path="${BACKUP_DIR}/${DB_NAME}-$(date -u +'%Y%m%dT%H%M%SZ')"
+  path="${base_path}.sql"
+  while [[ -e "${path}" || -e "${path}.sha256" ]]; do
+    suffix=$((suffix + 1))
+    path="${base_path}-${suffix}.sql"
+  done
   "${dump[@]}" --routines --triggers --single-transaction "${DB_NAME}" > "${path}"
   write_sha256_sidecar "${path}"
   LAST_BACKUP_PATH="${path}"
@@ -202,56 +207,79 @@ clean_migrate_database() {
   local user_table_count character_table_count
   user_table_count="$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name='users'")"
   character_table_count="$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name='characters'")"
-  [[ "${user_table_count}" == 1 && "${character_table_count}" == 1 ]] || {
-    echo "The configured database is not a recognizable AetherXIV direct-core database; automatic player migration was refused." >&2
-    exit 25
-  }
-
   backup_database
-  local migration_data="${LAST_BACKUP_PATH%.sql}-player-data.sql"
-  local users_before characters_before users_after characters_after table
-  users_before="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM users")"
-  characters_before="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM characters")"
-  local candidates=(
-    users characters reserved_names server_linkshells server_retainers
-    supportdesk_issues supportdesk_tickets launcher_config launcher_status launcher_news
-    launcher_presentation launcher_reel_text
-  )
-  while IFS= read -r table; do candidates+=("${table}"); done < <(
-    "${admin[@]}" -N -B -e "SELECT table_name FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name LIKE 'characters\\_%' ESCAPE '\\\\' ORDER BY table_name"
-  )
-  local preserved=()
-  for table in "${candidates[@]}"; do
-    [[ "$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name='$(literal "${table}")'")" == 1 ]] || continue
-    [[ " ${preserved[*]} " == *" ${table} "* ]] || preserved+=("${table}")
-  done
-  ((${#preserved[@]} > 0)) || { echo "No player tables were available to migrate." >&2; exit 25; }
-  "${dump[@]}" --single-transaction --no-create-info --complete-insert --replace --hex-blob --skip-triggers "${DB_NAME}" "${preserved[@]}" > "${migration_data}"
-  write_sha256_sidecar "${migration_data}"
+  local migration_data="" users_before=0 characters_before=0 table
+  local can_restore_players=0
+  if [[ "${user_table_count}" == 1 && "${character_table_count}" == 1 ]]; then
+    can_restore_players=1
+    migration_data="${LAST_BACKUP_PATH%.sql}-player-data.sql"
+    users_before="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM users")"
+    characters_before="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM characters")"
+    local candidates=(
+      users characters reserved_names server_linkshells server_retainers
+      supportdesk_issues supportdesk_tickets launcher_config launcher_status launcher_news
+      launcher_presentation launcher_reel_text
+    )
+    while IFS= read -r table; do candidates+=("${table}"); done < <(
+      "${admin[@]}" -N -B -e "SELECT table_name FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name LIKE 'characters\\_%' ESCAPE '\\\\' ORDER BY table_name"
+    )
+    local preserved=() existing_table already_preserved
+    for table in "${candidates[@]}"; do
+      [[ "$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name='$(literal "${table}")'")" == 1 ]] || continue
+      already_preserved=0
+      for existing_table in "${preserved[@]-}"; do
+        [[ "${existing_table}" == "${table}" ]] && already_preserved=1 && break
+      done
+      ((already_preserved == 1)) || preserved+=("${table}")
+    done
+    "${dump[@]}" --single-transaction --no-create-info --complete-insert --replace --hex-blob --skip-triggers "${DB_NAME}" "${preserved[@]}" > "${migration_data}"
+    write_sha256_sidecar "${migration_data}"
+  else
+    echo "No complete users/characters pair was found; installing a fresh canonical database. The full backup is retained for manual recovery."
+  fi
 
   set +e
   "${admin[@]}" -e "DROP DATABASE \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci" \
-    && "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}" \
-    && "${admin[@]}" "${DB_NAME}" < "${migration_data}"
-  local migration_status=$?
+    && "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}"
+  local baseline_status=$?
   set -e
-  if ((migration_status != 0)); then
-    echo "Player migration failed; restoring the untouched full backup." >&2
+  if ((baseline_status != 0)); then
+    echo "Canonical database installation failed; restoring the untouched full backup." >&2
     "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
     "${admin[@]}" "${DB_NAME}" < "${LAST_BACKUP_PATH}"
     exit 26
   fi
 
-  users_after="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM users")"
-  characters_after="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM characters")"
-  if [[ "${users_before}" != "${users_after}" || "${characters_before}" != "${characters_after}" ]]; then
-    echo "Player migration count mismatch; restoring the untouched full backup." >&2
-    "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
-    "${admin[@]}" "${DB_NAME}" < "${LAST_BACKUP_PATH}"
-    exit 27
+  if ((can_restore_players == 1)); then
+    set +e
+    "${admin[@]}" "${DB_NAME}" < "${migration_data}"
+    local migration_status=$?
+    local users_after=0 characters_after=0
+    if ((migration_status == 0)); then
+      users_after="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM users")"
+      characters_after="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM characters")"
+      [[ "${users_before}" == "${users_after}" && "${characters_before}" == "${characters_after}" ]] || migration_status=27
+    fi
+    set -e
+    if ((migration_status == 0)); then
+      echo "Migrated ${users_after} accounts and ${characters_after} characters into the AetherXIV 2 baseline. Player-data copy: ${migration_data}"
+    else
+      echo "Player data was incompatible with the canonical schema; keeping the fresh database. The full backup and player-data copy are retained." >&2
+      set +e
+      "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci" \
+        && "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}"
+      local rebuild_status=$?
+      set -e
+      if ((rebuild_status != 0)); then
+        echo "Fresh database recovery failed; restoring the untouched full backup." >&2
+        "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
+        "${admin[@]}" "${DB_NAME}" < "${LAST_BACKUP_PATH}"
+        exit 27
+      fi
+    fi
   fi
   BASELINE_IMPORTED=1
-  echo "Migrated ${users_after} accounts and ${characters_after} characters into the AetherXIV 2 baseline. Player-data copy: ${migration_data}"
+  echo "Canonical AetherXIV 2 database installed. Full backup: ${LAST_BACKUP_PATH}"
 }
 
 if ((MIGRATE_ONLY == 1)); then
@@ -286,7 +314,7 @@ else
   "${admin[@]}" -e "FLUSH PRIVILEGES"
 
   if [[ "${BASELINE_IMPORTED}" == 1 ]]; then
-    echo "Canonical baseline and preserved player data are installed in ${DB_NAME}"
+    echo "Canonical baseline is installed in ${DB_NAME}"
   elif [[ "${exists}" == 0 ]]; then
     echo "Importing canonical direct-core baseline into ${DB_NAME}"
     "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}"

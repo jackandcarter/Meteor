@@ -19,7 +19,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 411 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 431 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 
@@ -71,8 +71,10 @@ __                                                                         __
 - A database compatibility record now prevents the Core from starting against the wrong schema generation or an incomplete database.
 - Applied migrations are recorded with checksums. Modified or mismatched migration files are rejected instead of being silently reapplied.
 - Database setup verifies required tables and seed data before reporting success.
-- Existing installations can be backed up and updated in place. Incompatible installations can use a clean migration that preserves accounts, characters, character-owned progress, social records, retainers, support records and customized launcher content.
-- Account and character totals are checked after migration. If the transfer fails or totals do not match, the untouched backup is restored automatically.
+- A missing database and application account are created automatically after the operator supplies one-time administrator credentials. A manually created empty schema is also handled correctly.
+- Existing installations can be backed up and updated in place. Incompatible installations receive a complete verified backup followed by a clean canonical installation.
+- When compatible player tables are present, clean installation attempts to preserve accounts, characters, character-owned progress, social records, retainers, support records and customized launcher content. Account and character totals must match.
+- If player data cannot be transferred safely, the clean canonical database is retained along with the untouched full backup and player-data export for manual recovery. The old database is restored automatically only if the canonical database itself cannot be installed or rebuilt.
 - Development-only actor workbench and decode-staging tables are removed from the runtime database.
 - New tables support launcher presentation, news, reel captions, patch catalogs, Umbra framework artifacts, plugin repositories and plugin blocks.
 - Class attribute allocations now have a canonical persistence table.
@@ -161,6 +163,7 @@ __                                                                         __
 - **macOS:** dedicated Apple Silicon build path, native Launcher and AetherXIV Core app bundles, plus packaged Windows helpers and Umbra payloads for Wine.
 - **Linux:** dedicated x64 build path with windowed Launcher and AetherXIV Core apps, the server services, Windows client helpers and Umbra payload.
 - **SteamOS / Steam Deck:** a separate build entry based on the Linux runtime, ready for continued device validation.
+- Linux and SteamOS releases include a per-user desktop shortcut installer that writes correct absolute application paths for the extracted release location.
 - **Windows:** dedicated x64 Core and Launcher app packaging with native x86 Umbra injector and bootstrap builds for the 32-bit game client.
 - Every platform build creates the same organized release layout for servers, launcher, UI, database and runtime assets.
 - Release verification rejects source files in the output, missing executables, incomplete runtime data and mismatched direct-port files.

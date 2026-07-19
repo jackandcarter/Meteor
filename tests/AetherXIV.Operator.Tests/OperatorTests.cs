@@ -277,6 +277,57 @@ echo configured-account-migration
     }
 
     [Fact]
+    public async Task DatabaseInstallerUsesAdminCredentialsForFreshAndCleanSetup()
+    {
+        string root = CreateTempDirectory();
+        string package = Path.Combine(root, "Database");
+        Directory.CreateDirectory(package);
+        File.WriteAllText(Path.Combine(package, "ffxiv_server.sql"), "-- baseline");
+        File.WriteAllText(Path.Combine(package, "setup.ps1"), """
+param([switch]$CleanMigrate)
+if ($env:AETHERXIV_DB_USER -ne 'saved-user') { exit 11 }
+if ($env:AETHERXIV_DB_PASSWORD -ne 'saved-password') { exit 12 }
+if ($env:AETHERXIV_DB_ADMIN_USER -ne 'admin-user') { exit 13 }
+if ($env:AETHERXIV_DB_ADMIN_PASSWORD -ne 'admin-password') { exit 14 }
+if ($CleanMigrate) { Write-Output 'clean-setup' } else { Write-Output 'fresh-setup' }
+""");
+        File.WriteAllText(Path.Combine(package, "setup.sh"), """
+#!/usr/bin/env bash
+[[ "${AETHERXIV_DB_USER:-}" == "saved-user" ]] || exit 11
+[[ "${AETHERXIV_DB_PASSWORD:-}" == "saved-password" ]] || exit 12
+[[ "${AETHERXIV_DB_ADMIN_USER:-}" == "admin-user" ]] || exit 13
+[[ "${AETHERXIV_DB_ADMIN_PASSWORD:-}" == "admin-password" ]] || exit 14
+case "${1:-}" in
+  "") echo fresh-setup ;;
+  --clean-migrate) echo clean-setup ;;
+  *) exit 15 ;;
+esac
+""");
+
+        try
+        {
+            AetherXivOperatorConfig config = AetherXivOperatorConfig.CreateDefault(root) with
+            {
+                Database = new AetherXivDatabaseConfig("127.0.0.1", 3306, "ffxiv_server", "saved-user", "saved-password")
+            };
+            AetherXivMariaDbAdminCredentials admin = new("admin-user", "admin-password");
+            AetherXivDatabaseInstaller installer = new();
+
+            AetherXivDatabaseInstallResult fresh = await installer.SetupAsync(config, admin);
+            AetherXivDatabaseInstallResult clean = await installer.CleanMigrateAsync(config, admin);
+
+            Assert.True(fresh.Succeeded, fresh.Output);
+            Assert.Contains("fresh-setup", fresh.Output, StringComparison.Ordinal);
+            Assert.True(clean.Succeeded, clean.Output);
+            Assert.Contains("clean-setup", clean.Output, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void DatabaseCompatibilityContractIsExplicitAndVersioned()
     {
         Assert.Equal("direct-core", AetherXivDatabaseCompatibility.Key);

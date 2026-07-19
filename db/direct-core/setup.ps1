@@ -84,7 +84,13 @@ function Invoke-SqlFile([string]$Path, [string]$Database) {
 
 function Backup-Database {
     New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-    $path = Join-Path $backupDir "$dbName-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')).sql"
+    $basePath = Join-Path $backupDir "$dbName-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ'))"
+    $path = "$basePath.sql"
+    $suffix = 0
+    while ((Test-Path $path) -or (Test-Path "$path.sha256")) {
+        $suffix++
+        $path = "$basePath-$suffix.sql"
+    }
     $info = [Diagnostics.ProcessStartInfo]::new($dump)
     foreach ($argument in $adminArgs) { [void]$info.ArgumentList.Add($argument) }
     foreach ($argument in @("--routines", "--triggers", "--single-transaction", $dbName)) { [void]$info.ArgumentList.Add($argument) }
@@ -197,48 +203,72 @@ else {
         if ($exists -ne "1") { throw "Clean migration requires an existing database." }
         $usersTable = Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name='users'"
         $charactersTable = Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name='characters'"
-        if ($usersTable -ne "1" -or $charactersTable -ne "1") {
-            throw "The configured database is not a recognizable AetherXIV direct-core database; automatic player migration was refused."
-        }
-
         Backup-Database
-        $playerData = $script:LastBackupPath.Substring(0, $script:LastBackupPath.Length - 4) + "-player-data.sql"
-        $usersBefore = Invoke-Query $adminArgs "SELECT COUNT(*) FROM users" $dbName
-        $charactersBefore = Invoke-Query $adminArgs "SELECT COUNT(*) FROM characters" $dbName
-        $candidates = [Collections.Generic.List[string]]::new()
-        foreach ($table in @("users", "characters", "reserved_names", "server_linkshells", "server_retainers",
-            "supportdesk_issues", "supportdesk_tickets", "launcher_config", "launcher_status", "launcher_news",
-            "launcher_presentation", "launcher_reel_text")) { $candidates.Add($table) }
-        $characterTables = Invoke-Query $adminArgs "SELECT table_name FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name LIKE 'characters\\_%' ESCAPE '\\\\' ORDER BY table_name"
-        foreach ($table in ($characterTables -split "`r?`n" | Where-Object { $_ })) { $candidates.Add($table) }
-        $preserved = [Collections.Generic.List[string]]::new()
-        foreach ($table in $candidates) {
-            if ($preserved.Contains($table)) { continue }
-            $tableLiteral = Sql-Literal $table
-            if ((Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name='$tableLiteral'") -eq "1") {
-                $preserved.Add($table)
+        $canRestorePlayers = $usersTable -eq "1" -and $charactersTable -eq "1"
+        $playerData = ""
+        $usersBefore = "0"
+        $charactersBefore = "0"
+        if ($canRestorePlayers) {
+            $playerData = $script:LastBackupPath.Substring(0, $script:LastBackupPath.Length - 4) + "-player-data.sql"
+            $usersBefore = Invoke-Query $adminArgs "SELECT COUNT(*) FROM users" $dbName
+            $charactersBefore = Invoke-Query $adminArgs "SELECT COUNT(*) FROM characters" $dbName
+            $candidates = [Collections.Generic.List[string]]::new()
+            foreach ($table in @("users", "characters", "reserved_names", "server_linkshells", "server_retainers",
+                "supportdesk_issues", "supportdesk_tickets", "launcher_config", "launcher_status", "launcher_news",
+                "launcher_presentation", "launcher_reel_text")) { $candidates.Add($table) }
+            $characterTables = Invoke-Query $adminArgs "SELECT table_name FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name LIKE 'characters\\_%' ESCAPE '\\\\' ORDER BY table_name"
+            foreach ($table in ($characterTables -split "`r?`n" | Where-Object { $_ })) { $candidates.Add($table) }
+            $preserved = [Collections.Generic.List[string]]::new()
+            foreach ($table in $candidates) {
+                if ($preserved.Contains($table)) { continue }
+                $tableLiteral = Sql-Literal $table
+                if ((Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name='$tableLiteral'") -eq "1") {
+                    $preserved.Add($table)
+                }
             }
+            Export-PlayerData $playerData $preserved.ToArray()
         }
-        Export-PlayerData $playerData $preserved.ToArray()
+        else {
+            Write-Host "No complete users/characters pair was found; installing a fresh canonical database. The full backup is retained for manual recovery."
+        }
 
         try {
             [void](Invoke-Query $adminArgs "DROP DATABASE ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
             Invoke-SqlFile $baseline $dbName
-            Invoke-SqlFile $playerData $dbName
-            $usersAfter = Invoke-Query $adminArgs "SELECT COUNT(*) FROM users" $dbName
-            $charactersAfter = Invoke-Query $adminArgs "SELECT COUNT(*) FROM characters" $dbName
-            if ($usersBefore -ne $usersAfter -or $charactersBefore -ne $charactersAfter) {
-                throw "Player migration count mismatch."
-            }
-            $baselineImported = $true
-            Write-Host "Migrated $usersAfter accounts and $charactersAfter characters into the AetherXIV 2 baseline. Player-data copy: $playerData"
         }
         catch {
-            Write-Warning "Player migration failed; restoring the untouched full backup."
+            Write-Warning "Canonical database installation failed; restoring the untouched full backup."
             [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
             Invoke-SqlFile $script:LastBackupPath $dbName
             throw
         }
+
+        if ($canRestorePlayers) {
+            try {
+                Invoke-SqlFile $playerData $dbName
+                $usersAfter = Invoke-Query $adminArgs "SELECT COUNT(*) FROM users" $dbName
+                $charactersAfter = Invoke-Query $adminArgs "SELECT COUNT(*) FROM characters" $dbName
+                if ($usersBefore -ne $usersAfter -or $charactersBefore -ne $charactersAfter) {
+                    throw "Player migration count mismatch."
+                }
+                Write-Host "Migrated $usersAfter accounts and $charactersAfter characters into the AetherXIV 2 baseline. Player-data copy: $playerData"
+            }
+            catch {
+                Write-Warning "Player data was incompatible with the canonical schema; keeping the fresh database. The full backup and player-data copy are retained."
+                try {
+                    [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
+                    Invoke-SqlFile $baseline $dbName
+                }
+                catch {
+                    Write-Warning "Fresh database recovery failed; restoring the untouched full backup."
+                    [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
+                    Invoke-SqlFile $script:LastBackupPath $dbName
+                    throw
+                }
+            }
+        }
+        $baselineImported = $true
+        Write-Host "Canonical AetherXIV 2 database installed. Full backup: $script:LastBackupPath"
     }
 
     if ($exists -eq "1" -and $Drop) {
@@ -255,7 +285,7 @@ else {
     [void](Invoke-Query $adminArgs "FLUSH PRIVILEGES")
 
     if ($baselineImported) {
-        Write-Host "Canonical baseline and preserved player data are installed in $dbName"
+        Write-Host "Canonical baseline is installed in $dbName"
     } elseif ($exists -eq "0") {
         Write-Host "Importing canonical direct-core baseline into $dbName"
         Invoke-SqlFile $baseline $dbName
