@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AetherXIV.Core\AetherXIV.Core.csproj" />
+    <ProjectReference Include="..\AetherXIV.Server.Hosting\AetherXIV.Server.Hosting.csproj" />
+    <ProjectReference Include="..\AetherXIV.Data\AetherXIV.Data.csproj" />
+    <ProjectReference Include="..\AetherXIV.Lobby\AetherXIV.Lobby.csproj" />
+    <ProjectReference Include="..\AetherXIV.World\AetherXIV.World.csproj" />
+    <ProjectReference Include="..\AetherXIV.Map\AetherXIV.Map.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>AetherXIV.Server.Host</AssemblyName>
+  </PropertyGroup>
+
+</Project>

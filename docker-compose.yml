@@ -1,0 +1,105 @@
+# AetherXIV local stack: MariaDB + the three service processes (lobby/world/
+# map), all sharing one built image (aetherxiv-server:local) selected by
+# AETHERXIV_SERVICE. From the repo root:
+#
+#   docker compose up -d --build   # build the image, seed the DB, run the stack
+#   docker compose logs -f lobby   # follow one service
+#   docker compose down            # stop (keeps the DB volume)
+#
+# db/migrations only seeds the database on first boot of an empty
+# aetherxiv-db-data volume (docker-entrypoint-initdb.d semantics). Run
+# `docker compose down -v` before `up` to force a re-seed.
+
+x-aetherxiv-db-env: &aetherxiv-db-env
+  AETHERXIV_DB_HOST: mariadb
+  AETHERXIV_DB_PORT: "3306"
+  AETHERXIV_DB_NAME: aetherxiv2
+  AETHERXIV_DB_USER: aetherxiv
+  AETHERXIV_DB_PASSWORD: ${AETHERXIV_DB_PASSWORD:-aether_dev}
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: ${AETHERXIV_DB_ROOT_PASSWORD:-aether_dev_root}
+      MARIADB_DATABASE: aetherxiv2
+      MARIADB_USER: aetherxiv
+      MARIADB_PASSWORD: ${AETHERXIV_DB_PASSWORD:-aether_dev}
+    ports:
+      - "${AETHERXIV_DB_BIND:-3306}:3306"
+    volumes:
+      - aetherxiv-db-data:/var/lib/mysql
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  lobby:
+    image: aetherxiv-server:local
+    build: .
+    environment:
+      <<: *aetherxiv-db-env
+      AETHERXIV_SERVICE: lobby
+      AETHERXIV_BIND_HOST: "0.0.0.0"
+      AETHERXIV_BIND_PORT: "54994"
+    ports:
+      - "${AETHERXIV_LOBBY_BIND:-54994}:54994"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/54994"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  world:
+    image: aetherxiv-server:local
+    build: .
+    environment:
+      <<: *aetherxiv-db-env
+      AETHERXIV_SERVICE: world
+      AETHERXIV_BIND_HOST: "0.0.0.0"
+      AETHERXIV_BIND_PORT: "54992"
+    ports:
+      - "${AETHERXIV_WORLD_BIND:-54992}:54992"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/54992"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  map:
+    image: aetherxiv-server:local
+    build: .
+    environment:
+      <<: *aetherxiv-db-env
+      AETHERXIV_SERVICE: map
+      AETHERXIV_BIND_HOST: "0.0.0.0"
+      AETHERXIV_BIND_PORT: "1989"
+    ports:
+      - "${AETHERXIV_MAP_BIND:-1989}:1989"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/1989"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  aetherxiv-db-data:

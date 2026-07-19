@@ -1,0 +1,13 @@
+.git
+**/bin/
+**/obj/
+TestResults/
+.DS_Store
+**/.DS_Store
+docs/
+tools/
+tests/
+db/
+.env
+Dockerfile
+docker-compose.yml
