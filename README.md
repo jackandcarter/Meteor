@@ -85,6 +85,54 @@ tree. Set `AETHERXIV_SCRIPT_FIXTURE_ROOT` to the absolute path of a
 `Data/scripts` directory before running tests when that fixture tree is
 available.
 
+## Docker
+
+A local stack (MariaDB plus the three service processes) is available via
+Docker Compose. Prerequisites: Docker with Compose v2 (`docker compose`, not
+the standalone `docker-compose`).
+
+```sh
+cp .env.example .env   # optional, defaults work as-is
+docker compose up -d --build
+```
+
+| Service | Host port | Notes |
+|---------|-----------|-------|
+| mariadb | 3306 | app database `aetherxiv2`, user `aetherxiv` |
+| lobby   | 54994 | |
+| world   | 54992 | |
+| map     | 1989 | |
+
+All three services run from one built image (`aetherxiv-server:local`);
+`AETHERXIV_SERVICE` (or a `lobby`/`world`/`map` CLI argument when running the
+image standalone) selects which one starts.
+
+The schema seeds from `db/migrations` on the first boot of an empty database
+volume only. To force a re-seed:
+
+```sh
+docker compose down -v
+docker compose up -d --build
+```
+
+Tail a service's logs:
+
+```sh
+docker compose logs -f lobby
+```
+
+Connect to the database:
+
+```sh
+docker compose exec mariadb mariadb -uaetherxiv -paether_dev aetherxiv2
+```
+
+Stop the stack (keeps the database volume):
+
+```sh
+docker compose down
+```
+
 ## Development Direction
 
 The first development goal is a correct, testable foundation:
