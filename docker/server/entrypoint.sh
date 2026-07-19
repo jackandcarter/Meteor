@@ -72,7 +72,7 @@ wait_for_port() {
   local port="$2"
   local pid="$3"
   local deadline=$((SECONDS + 45))
-  until bash -c "exec 9<>/dev/tcp/127.0.0.1/${port}; exec 9>&-; exec 9<&-" >/dev/null 2>&1; do
+  until bash -c "exec 9<>/dev/tcp/127.0.0.1/${port}" >/dev/null 2>&1; do
     if ! kill -0 "${pid}" >/dev/null 2>&1; then
       wait "${pid}" || true
       echo "${label} exited before opening port ${port}." >&2

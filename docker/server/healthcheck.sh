@@ -3,7 +3,7 @@ set -euo pipefail
 
 check_port() {
   local port="$1"
-  bash -c "exec 9<>/dev/tcp/127.0.0.1/${port}; exec 9>&-; exec 9<&-" >/dev/null 2>&1
+  bash -c "exec 9<>/dev/tcp/127.0.0.1/${port}" >/dev/null 2>&1
 }
 
 check_port "${AETHERXIV_MAP_PORT:-1989}"
