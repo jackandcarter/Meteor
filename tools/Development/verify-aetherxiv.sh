@@ -13,6 +13,11 @@ cleanup() {
 trap cleanup EXIT
 
 cleanup
+bash -n "${ROOT_DIR}/db/direct-core/setup.sh"
+if command -v pwsh >/dev/null 2>&1; then
+  AETHERXIV_SETUP_PS1="${ROOT_DIR}/db/direct-core/setup.ps1" pwsh -NoProfile -Command \
+    '$errors=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($env:AETHERXIV_SETUP_PS1, [ref]$null, [ref]$errors); if ($errors.Count) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }'
+fi
 "${DOTNET_BIN}" build "${ROOT_DIR}/AetherXIV.sln" \
   --configuration Release -m:1 /nodeReuse:false /p:NuGetAudit=false
 # Several parity tests intentionally execute the authoritative source Lua. Make

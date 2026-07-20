@@ -161,17 +161,9 @@ verify_database() {
   echo "Direct-core database verified: ${DB_NAME} (zones=${zones} commands=${commands} baseStats=${stats})"
 }
 
-verify_migration_candidate() {
-  local database_literal table missing=()
-  database_literal="$(literal "${DB_NAME}")"
-  local required=(users characters server_zones server_battle_commands server_player_base_stats)
-  for table in "${required[@]}"; do
-    [[ "$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${database_literal}' AND table_name='${table}'")" == 1 ]] || missing+=("${table}")
-  done
-  ((${#missing[@]} == 0)) || {
-    echo "The configured database is not a recognizable AetherXIV direct-core database: missing ${missing[*]}" >&2
-    return 25
-  }
+has_current_v2_contract() {
+  [[ "$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name='aether_database_compatibility'")" == 1 ]] || return 1
+  [[ "$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM aether_database_compatibility WHERE compatibility_key='direct-core' AND schema_generation=2 AND schema_version=1 AND compatibility_id='aetherxiv-direct-core-v2' AND baseline_id='20260716_000001_ffxiv_server_v2_baseline'")" == 1 ]]
 }
 
 if [[ "${MODE}" == check ]]; then verify_database; exit $?; fi
@@ -185,6 +177,7 @@ pass_literal="$(literal "${DB_APP_PASS}")"
 exists="$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='${db_literal}'")"
 
 LAST_BACKUP_PATH=""
+ORIGINAL_BACKUP_PATH="${AETHERXIV_ORIGINAL_BACKUP_PATH:-}"
 backup_database() {
   command -v "${MYSQLDUMP_BIN}" >/dev/null 2>&1 || { echo "Database dump client is required before modifying an existing database." >&2; exit 2; }
   mkdir -p "${BACKUP_DIR}"
@@ -198,7 +191,21 @@ backup_database() {
   "${dump[@]}" --routines --triggers --single-transaction "${DB_NAME}" > "${path}"
   write_sha256_sidecar "${path}"
   LAST_BACKUP_PATH="${path}"
+  if [[ -z "${ORIGINAL_BACKUP_PATH}" ]]; then
+    ORIGINAL_BACKUP_PATH="${path}"
+  fi
   echo "Backed up ${DB_NAME} to ${path}"
+}
+
+restore_original_database() {
+  if [[ -n "${ORIGINAL_BACKUP_PATH}" && -f "${ORIGINAL_BACKUP_PATH}" ]]; then
+    echo "Restoring the untouched database backup: ${ORIGINAL_BACKUP_PATH}" >&2
+    "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
+    "${admin[@]}" "${DB_NAME}" < "${ORIGINAL_BACKUP_PATH}"
+  else
+    echo "No original database existed; removing the incomplete new database so setup can be retried." >&2
+    "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`"
+  fi
 }
 
 BASELINE_IMPORTED=0
@@ -215,11 +222,7 @@ clean_migrate_database() {
     migration_data="${LAST_BACKUP_PATH%.sql}-player-data.sql"
     users_before="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM users")"
     characters_before="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM characters")"
-    local candidates=(
-      users characters reserved_names server_linkshells server_retainers
-      supportdesk_issues supportdesk_tickets launcher_config launcher_status launcher_news
-      launcher_presentation launcher_reel_text
-    )
+    local candidates=(users characters)
     while IFS= read -r table; do candidates+=("${table}"); done < <(
       "${admin[@]}" -N -B -e "SELECT table_name FROM information_schema.tables WHERE table_schema='${db_literal}' AND table_name LIKE 'characters\\_%' ESCAPE '\\\\' ORDER BY table_name"
     )
@@ -245,8 +248,7 @@ clean_migrate_database() {
   set -e
   if ((baseline_status != 0)); then
     echo "Canonical database installation failed; restoring the untouched full backup." >&2
-    "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
-    "${admin[@]}" "${DB_NAME}" < "${LAST_BACKUP_PATH}"
+    restore_original_database
     exit 26
   fi
 
@@ -272,8 +274,7 @@ clean_migrate_database() {
       set -e
       if ((rebuild_status != 0)); then
         echo "Fresh database recovery failed; restoring the untouched full backup." >&2
-        "${admin[@]}" -e "DROP DATABASE IF EXISTS \`${db_id}\`; CREATE DATABASE \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
-        "${admin[@]}" "${DB_NAME}" < "${LAST_BACKUP_PATH}"
+        restore_original_database
         exit 27
       fi
     fi
@@ -282,16 +283,33 @@ clean_migrate_database() {
   echo "Canonical AetherXIV 2 database installed. Full backup: ${LAST_BACKUP_PATH}"
 }
 
+ensure_application_account() {
+  IFS=',' read -r -a allowed_hosts <<< "${DB_ALLOWED_HOSTS}"
+  ((${#allowed_hosts[@]} > 0)) || { echo "At least one database application host is required." >&2; return 2; }
+  local host host_literal
+  for host in "${allowed_hosts[@]}"; do
+    host="${host#"${host%%[![:space:]]*}"}"
+    host="${host%"${host##*[![:space:]]}"}"
+    [[ -n "${host}" ]] || { echo "Database application hosts cannot be empty." >&2; return 2; }
+    host_literal="$(literal "${host}")"
+    "${admin[@]}" -e "CREATE USER IF NOT EXISTS '${user_literal}'@'${host_literal}' IDENTIFIED BY '${pass_literal}'; ALTER USER '${user_literal}'@'${host_literal}' IDENTIFIED BY '${pass_literal}'; GRANT ALL PRIVILEGES ON \`${db_id}\`.* TO '${user_literal}'@'${host_literal}'"
+  done
+  "${admin[@]}" -e "FLUSH PRIVILEGES"
+}
+
 if ((MIGRATE_ONLY == 1)); then
   [[ "${exists}" == 1 ]] || {
     echo "The configured database does not exist; administrative setup is required." >&2
     exit 25
   }
-  verify_migration_candidate
+  has_current_v2_contract || {
+    echo "The configured database is not an AetherXIV 2 database; administrator-assisted setup is required." >&2
+    exit 25
+  }
   backup_database
   echo "Applying pending migrations with configured account ${DB_APP_USER}."
 else
-  if [[ "${CLEAN_MIGRATE}" == 1 ]]; then
+  if [[ "${CLEAN_MIGRATE}" == 1 && "${exists}" == 1 ]]; then
     clean_migrate_database
   fi
 
@@ -302,61 +320,87 @@ else
   fi
 
   "${admin[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${db_id}\` CHARACTER SET utf8 COLLATE utf8_general_ci"
-  IFS=',' read -r -a allowed_hosts <<< "${DB_ALLOWED_HOSTS}"
-  ((${#allowed_hosts[@]} > 0)) || { echo "At least one database application host is required." >&2; exit 2; }
-  for host in "${allowed_hosts[@]}"; do
-    host="${host#"${host%%[![:space:]]*}"}"
-    host="${host%"${host##*[![:space:]]}"}"
-    [[ -n "${host}" ]] || { echo "Database application hosts cannot be empty." >&2; exit 2; }
-    host_literal="$(literal "${host}")"
-    "${admin[@]}" -e "CREATE USER IF NOT EXISTS '${user_literal}'@'${host_literal}' IDENTIFIED BY '${pass_literal}'; ALTER USER '${user_literal}'@'${host_literal}' IDENTIFIED BY '${pass_literal}'; GRANT ALL PRIVILEGES ON \`${db_id}\`.* TO '${user_literal}'@'${host_literal}'"
-  done
-  "${admin[@]}" -e "FLUSH PRIVILEGES"
+  ensure_application_account
 
   if [[ "${BASELINE_IMPORTED}" == 1 ]]; then
     echo "Canonical baseline is installed in ${DB_NAME}"
   elif [[ "${exists}" == 0 ]]; then
     echo "Importing canonical direct-core baseline into ${DB_NAME}"
-    "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}"
-  else
-    verify_migration_candidate
-    backup_database
-  fi
-fi
-
-"${admin[@]}" "${DB_NAME}" -e "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8"
-baseline_checksum="$(sha256_file "${BASELINE_FILE}")"
-recorded_baseline="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1")"
-if ((MIGRATE_ONLY == 1)) && [[ -z "${recorded_baseline}" ]]; then
-  echo "The existing database has no recorded direct-core baseline; administrative repair is required." >&2
-  exit 23
-fi
-if ((MIGRATE_ONLY == 0)) && [[ -n "${recorded_baseline}" && "${recorded_baseline}" != "${baseline_checksum}" ]]; then
-  echo "Baseline checksum mismatch." >&2; exit 23
-fi
-if [[ -z "${recorded_baseline}" ]]; then
-  "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','${baseline_checksum}')"
-fi
-
-for migration in "${MIGRATIONS_DIR}"/*.sql; do
-  [[ -e "${migration}" ]] || continue
-  name="$(basename "${migration}")"
-  checksum="$(sha256_file "${migration}")"
-  recorded="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='${name}' LIMIT 1")"
-  if [[ -n "${recorded}" ]]; then
-    if [[ "${recorded}" != "${checksum}" ]]; then
-      if ((MIGRATE_ONLY == 1)); then
-        echo "Warning: already-applied migration file differs from its recorded checksum and will not be reapplied: ${name}" >&2
-      else
-        echo "Migration checksum mismatch: ${name}" >&2
-        exit 23
-      fi
+    if ! "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}"; then
+      echo "Canonical database installation failed." >&2
+      restore_original_database
+      exit 26
     fi
-    continue
+    BASELINE_IMPORTED=1
+  elif has_current_v2_contract; then
+    echo "Existing AetherXIV 2 database detected; checking its migration ledger and canonical schema."
+    backup_database
+  else
+    echo "Existing database is empty or predates AetherXIV 2; preserving a full backup before installing the canonical database."
+    clean_migrate_database
+    ensure_application_account
   fi
-  echo "Applying ${name}"
-  "${admin[@]}" "${DB_NAME}" < "${migration}"
-  "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('${name}','${checksum}')"
-done
+fi
 
+apply_migrations() {
+  "${admin[@]}" "${DB_NAME}" -e "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8"
+  local baseline_checksum recorded_baseline migration name checksum recorded
+  baseline_checksum="$(sha256_file "${BASELINE_FILE}")"
+  recorded_baseline="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1")"
+  if ((MIGRATE_ONLY == 1)) && [[ -z "${recorded_baseline}" ]]; then
+    echo "The existing database has no recorded AetherXIV 2 baseline; an administrator-assisted repair is required." >&2
+    return 23
+  fi
+  if ((MIGRATE_ONLY == 0)) && [[ -n "${recorded_baseline}" && "${recorded_baseline}" != "${baseline_checksum}" ]]; then
+    echo "The recorded baseline checksum is stale; rebuilding from the packaged canonical database." >&2
+    return 23
+  fi
+  if [[ -z "${recorded_baseline}" ]]; then
+    "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','${baseline_checksum}')"
+  fi
+
+  for migration in "${MIGRATIONS_DIR}"/*.sql; do
+    [[ -e "${migration}" ]] || continue
+    name="$(basename "${migration}")"
+    checksum="$(sha256_file "${migration}")"
+    recorded="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='${name}' LIMIT 1")"
+    if [[ -n "${recorded}" ]]; then
+      if [[ "${recorded}" != "${checksum}" ]]; then
+        if ((MIGRATE_ONLY == 1)); then
+          echo "Warning: already-applied migration file differs from its recorded checksum and will not be reapplied: ${name}" >&2
+        else
+          echo "Migration checksum mismatch: ${name}" >&2
+          return 23
+        fi
+      fi
+      continue
+    fi
+    echo "Applying ${name}"
+    "${admin[@]}" "${DB_NAME}" < "${migration}"
+    "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('${name}','${checksum}')"
+  done
+}
+
+migration_status=0
+apply_migrations || migration_status=$?
+if ((migration_status == 0)) && verify_database; then
+  exit 0
+fi
+
+if ((MIGRATE_ONLY == 1)); then
+  echo "The AetherXIV 2 database needs an administrator-assisted canonical repair." >&2
+  ((migration_status != 0)) || migration_status=30
+  exit "${migration_status}"
+fi
+if ((BASELINE_IMPORTED == 1)); then
+  echo "The freshly installed canonical database did not pass verification; the packaged database may be incomplete." >&2
+  restore_original_database
+  ((migration_status != 0)) || migration_status=30
+  exit "${migration_status}"
+fi
+
+echo "The existing AetherXIV 2 schema is incomplete or stale; preserving it and rebuilding the canonical schema."
+clean_migrate_database
+ensure_application_account
+apply_migrations
 verify_database

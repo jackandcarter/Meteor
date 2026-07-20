@@ -35,8 +35,9 @@ The complete release is written to:
 bin/build/Release/SteamOS/
 ```
 
-It includes Core, Launcher, all services, database tools, desktop entries and
-their icon assets, the Windows x64 managed helper, and native x86 Umbra payload.
+It includes Core, Launcher, all services, database tools, the Windows x64
+managed helper, and native x86 Umbra payload. Path-dependent `.desktop`
+shortcuts are intentionally not packaged.
 
 ## Output reset and verification
 

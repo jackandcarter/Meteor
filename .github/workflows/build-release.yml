@@ -1,4 +1,5 @@
 name: AetherXIV 2.0 Release
+run-name: AetherXIV 2.0 Release
 
 on:
   workflow_dispatch:
@@ -352,7 +353,7 @@ jobs:
           cd release-assets
           sha256sum ./* > SHA256SUMS.txt
 
-      - name: Create or update the GitHub Release
+      - name: Replace the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
@@ -373,13 +374,10 @@ jobs:
           fi
 
           if gh release view "${release_tag}" >/dev/null 2>&1; then
-            gh release edit "${release_tag}" \
-              --title "${RELEASE_NAME}" \
-              --notes-file docs/AETHERXIV_2.0_RELEASE_NOTES.md
-            gh release upload "${release_tag}" "${assets[@]}" --clobber
-          else
-            gh release create "${release_tag}" "${assets[@]}" \
-              --target "${GITHUB_SHA}" \
-              --title "${RELEASE_NAME}" \
-              --notes-file docs/AETHERXIV_2.0_RELEASE_NOTES.md
+            gh release delete "${release_tag}" --yes
           fi
+
+          gh release create "${release_tag}" "${assets[@]}" \
+            --target "${GITHUB_SHA}" \
+            --title "${RELEASE_NAME}" \
+            --notes-file docs/AETHERXIV_2.0_RELEASE_NOTES.md

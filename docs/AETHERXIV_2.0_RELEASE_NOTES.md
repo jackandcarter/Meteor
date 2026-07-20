@@ -72,8 +72,8 @@ __                                                                         __
 - Applied migrations are recorded with checksums. Modified or mismatched migration files are rejected instead of being silently reapplied.
 - Database setup verifies required tables and seed data before reporting success.
 - A missing database and application account are created automatically after the operator supplies one-time administrator credentials. A manually created empty schema is also handled correctly.
-- Existing installations can be backed up and updated in place. Incompatible installations receive a complete verified backup followed by a clean canonical installation.
-- When compatible player tables are present, clean installation attempts to preserve accounts, characters, character-owned progress, social records, retainers, support records and customized launcher content. Account and character totals must match.
+- Existing AetherXIV 2 installations are backed up, checked against their migration ledger, updated in place, and verified for required tables, columns, and seeds. Older or damaged installations receive a complete verified backup followed by a clean canonical installation.
+- When compatible player tables are present, canonical repair attempts to preserve accounts, characters, and `characters_`-owned data. Account and character totals must match.
 - If player data cannot be transferred safely, the clean canonical database is retained along with the untouched full backup and player-data export for manual recovery. The old database is restored automatically only if the canonical database itself cannot be installed or rebuilt.
 - Development-only actor workbench and decode-staging tables are removed from the runtime database.
 - New tables support launcher presentation, news, reel captions, patch catalogs, Umbra framework artifacts, plugin repositories and plugin blocks.
@@ -100,9 +100,10 @@ __                                                                         __
 - Start or stop Lobby, World, Map and Launcher Services together or control them individually.
 - See live service state, process IDs, configured endpoints and per-service logs in one place.
 - Configure bind/advertised addresses, database settings, data paths and diagnostic levels from one app.
+- Public World/Lobby configuration catches loopback-only listeners before startup, with a one-click option to use public listener binds while preserving the configured ports.
 - Run dependency and database preflight checks before services start.
 - Create or repair the database through a guided admin-credential prompt; admin credentials are not saved.
-- Receive a clear migration prompt when the installed database is incompatible with the current Core.
+- Receive a clear canonical-repair prompt when the installed database is older than AetherXIV 2 or incomplete.
 - Create, schedule, edit and remove launcher news posts.
 - Customize news title, summary and body colors.
 - Add optional headers, subtext, sizes and colors to individual launcher reel images.
@@ -163,7 +164,7 @@ __                                                                         __
 - **macOS:** dedicated Apple Silicon build path, native Launcher and AetherXIV Core app bundles, plus packaged Windows helpers and Umbra payloads for Wine.
 - **Linux:** dedicated x64 build path with windowed Launcher and AetherXIV Core apps, the server services, Windows client helpers and Umbra payload.
 - **SteamOS / Steam Deck:** a separate build entry based on the Linux runtime, ready for continued device validation.
-- Linux and SteamOS releases include a per-user desktop shortcut installer that writes correct absolute application paths for the extracted release location.
+- Linux and SteamOS releases are relocatable and launch through the native Core and Launcher executables in their `app` folders; unreliable path-dependent desktop shortcuts are not packaged.
 - **Windows:** dedicated x64 Core and Launcher app packaging with native x86 Umbra injector and bootstrap builds for the 32-bit game client.
 - Every platform build creates the same organized release layout for servers, launcher, UI, database and runtime assets.
 - Release verification rejects source files in the output, missing executables, incomplete runtime data and mismatched direct-port files.

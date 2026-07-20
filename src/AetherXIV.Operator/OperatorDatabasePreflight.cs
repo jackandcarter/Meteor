@@ -11,7 +11,7 @@ public enum AetherXivDatabasePreflightStatus
     Failed,
     NeedsAdminCredentials,
     NeedsMigration,
-    Incompatible,
+    NeedsRepair,
     Blocked
 }
 
@@ -45,8 +45,8 @@ public sealed record AetherXivDatabasePreflightResult(
     public bool RequiresInPlaceMigration => Steps.Any(step =>
         step.Status is AetherXivDatabasePreflightStatus.NeedsMigration);
 
-    public bool RequiresCompatibilityMigration => Steps.Any(step =>
-        step.Status is AetherXivDatabasePreflightStatus.Incompatible);
+    public bool RequiresCanonicalRepair => Steps.Any(step =>
+        step.Status is AetherXivDatabasePreflightStatus.NeedsRepair);
 
     public bool CanStartServices => Steps.All(step =>
         step.Status is AetherXivDatabasePreflightStatus.Passed or AetherXivDatabasePreflightStatus.Repaired);
@@ -115,17 +115,24 @@ public sealed class AetherXivDatabasePreflightService
         await using MySqlConnection connection = new(options.ToConnectionString());
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         add("connect", AetherXivDatabasePreflightStatus.Passed,
-            $"Connected to direct core at {options.User}@{options.Host}:{options.Port}/{options.Database}.");
+            $"Connected to the configured database at {options.User}@{options.Host}:{options.Port}/{options.Database}.");
+
+        int tableCount = await CountAsync(connection,
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE();",
+            cancellationToken).ConfigureAwait(false);
+        if (tableCount == 0)
+        {
+            add("database.bootstrap", AetherXivDatabasePreflightStatus.NeedsAdminCredentials,
+                "The configured database exists but is empty. MariaDB administrator credentials are needed once to install the AetherXIV 2 database and application account.");
+            return;
+        }
 
         if (!await TableExistsAsync(connection, "aether_database_compatibility", cancellationToken).ConfigureAwait(false))
         {
-            bool recognizable = await HasRecognizableDirectCoreSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
             add(
-                "database.compatibility",
-                recognizable ? AetherXivDatabasePreflightStatus.NeedsMigration : AetherXivDatabasePreflightStatus.Incompatible,
-                recognizable
-                    ? "The direct-core schema is current but its compatibility contract is not stamped. The packaged updater will back up the database and apply pending migrations in place."
-                    : "The database has neither the AetherXIV 2 compatibility contract nor the required direct-core schema. A backed-up clean migration is required before services can start.");
+                "database.version",
+                AetherXivDatabasePreflightStatus.NeedsRepair,
+                "This database predates AetherXIV 2 or is incomplete. Setup will keep a full backup, install a clean AetherXIV 2 database, and restore compatible account and character data when possible.");
             return;
         }
 
@@ -142,13 +149,10 @@ LIMIT 1;
             if (!await compatibilityReader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
                 await compatibilityReader.DisposeAsync().ConfigureAwait(false);
-                bool recognizable = await HasRecognizableDirectCoreSchemaAsync(connection, cancellationToken).ConfigureAwait(false);
                 add(
-                    "database.compatibility",
-                    recognizable ? AetherXivDatabasePreflightStatus.NeedsMigration : AetherXivDatabasePreflightStatus.Incompatible,
-                    recognizable
-                        ? "The direct-core schema is current but its compatibility record is missing. The packaged updater will back up the database and apply pending migrations in place."
-                        : "The database compatibility record and required direct-core schema are missing. A backed-up clean migration is required before services can start.");
+                    "database.version",
+                    AetherXivDatabasePreflightStatus.NeedsRepair,
+                    "The AetherXIV 2 database version record is missing. Setup will preserve a full backup and rebuild the canonical schema before services start.");
                 return;
             }
 
@@ -161,15 +165,14 @@ LIMIT 1;
                 && String.Equals(baselineId, AetherXivDatabaseCompatibility.BaselineId, StringComparison.Ordinal);
             if (!sameContractFamily || version != AetherXivDatabaseCompatibility.SchemaVersion)
             {
-                add("database.compatibility", AetherXivDatabasePreflightStatus.Incompatible,
-                    $"Database contract is generation={generation} version={version} id={compatibilityId} baseline={baselineId}; "
-                    + $"this core requires generation={AetherXivDatabaseCompatibility.SchemaGeneration} version={AetherXivDatabaseCompatibility.SchemaVersion} "
-                    + $"id={AetherXivDatabaseCompatibility.CompatibilityId} baseline={AetherXivDatabaseCompatibility.BaselineId}.");
+                add("database.version", AetherXivDatabasePreflightStatus.NeedsRepair,
+                    $"The installed database is not the AetherXIV 2 schema (generation {generation}, version {version}). "
+                    + "Setup will preserve a full backup and rebuild it before services start.");
                 return;
             }
         }
-        add("database.compatibility", AetherXivDatabasePreflightStatus.Passed,
-            $"Verified {AetherXivDatabaseCompatibility.CompatibilityId} schema {AetherXivDatabaseCompatibility.SchemaGeneration}.{AetherXivDatabaseCompatibility.SchemaVersion}.");
+        add("database.version", AetherXivDatabasePreflightStatus.Passed,
+            $"Verified AetherXIV 2 database schema {AetherXivDatabaseCompatibility.SchemaGeneration}.{AetherXivDatabaseCompatibility.SchemaVersion}.");
 
         bool hasMigrationLedger = await TableExistsAsync(connection, "aether_schema_migrations", cancellationToken).ConfigureAwait(false);
         int latestMigrationApplied = hasMigrationLedger
@@ -212,8 +215,8 @@ WHERE migration_name='{AetherXivDatabaseCompatibility.LatestDirectCoreMigration}
 
         if (missing.Count > 0)
         {
-            add("direct-core.schema", AetherXivDatabasePreflightStatus.Missing,
-                $"Missing required direct-core tables: {String.Join(", ", missing)}. Run the packaged Database setup tool.");
+            add("database.schema", AetherXivDatabasePreflightStatus.NeedsRepair,
+                $"The AetherXIV 2 database is missing required tables: {String.Join(", ", missing)}. Setup will back it up and rebuild the canonical schema.");
             return;
         }
         add("direct-core.schema", AetherXivDatabasePreflightStatus.Passed,
@@ -232,7 +235,7 @@ WHERE c.id=1200036
 """, cancellationToken).ConfigureAwait(false);
         if (guildleveSearchPointContract != 1)
         {
-            add("guildleve.actor-contract", AetherXivDatabasePreflightStatus.Missing,
+            add("guildleve.actor-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
                 "Guildleve search-point actor data is missing or stale. Run the packaged Database setup tool.");
             return;
         }
@@ -253,7 +256,7 @@ WHERE id=1090464
 """, cancellationToken).ConfigureAwait(false);
         if (chocoboStopContract != 1)
         {
-            add("chocobo-stop.actor-contract", AetherXivDatabasePreflightStatus.Missing,
+            add("chocobo-stop.actor-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
                 "The trace-backed ChocoboStop actor conditions are missing or stale. Run the packaged Database setup tool.");
             return;
         }
@@ -382,7 +385,7 @@ WHERE e.service='grand-company-office-entrance'
             || repairers != 8 || chocoboNamingActors != 3
             || immortalFlamesCompanyShop != 1 || hallOfFlamesExit != 1 || hallOfFlamesEntrance != 1)
         {
-            add("npc-services.seed-contract", AetherXivDatabasePreflightStatus.Missing,
+            add("npc-services.seed-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
                 $"NPC service seed is missing or stale: catalog={npcServiceCatalog}/1, references={npcServiceReferences}/23, "
                 + $"stablemasters={stablemasters}/3, repairers={repairers}/8, namingActors={chocoboNamingActors}/3, "
                 + $"flameShop={immortalFlamesCompanyShop}/1, hallEntrance={hallOfFlamesEntrance}/1, hallExit={hallOfFlamesExit}/1.");
@@ -419,7 +422,7 @@ WHERE bnpcId IN (1,2);
         if (centralShroudActorClasses != 9 || centralShroudSpawns != 23
             || removedDesertRats != 0 || retainedTestEnemies != 2)
         {
-            add("battle-npc.zone162-contract", AetherXivDatabasePreflightStatus.Missing,
+            add("battle-npc.zone162-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
                 $"Central Shroud enemy data is incomplete: actorClasses={centralShroudActorClasses}/9, "
                 + $"spawns={centralShroudSpawns}/23, removedDesertRats={removedDesertRats}, "
                 + $"retainedTestEnemies={retainedTestEnemies}/2.");
@@ -472,7 +475,7 @@ WHERE (id=2104009 AND classPath='/Chara/Npc/Monster/Lemming/HareStandard' AND di
         if (zone150PinRows != 60 || zone150PromotedPins != 11 || zone150InvalidPromotions != 0
             || zone150StarMarmotSpawns != 13 || zone150ActorClasses != 2)
         {
-            add("battle-npc.zone150-pinspawn-contract", AetherXivDatabasePreflightStatus.Missing,
+            add("battle-npc.zone150-pinspawn-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
                 $"Central Shroud pinspawn restoration is incomplete: pins={zone150PinRows}/60, "
                 + $"promoted={zone150PromotedPins}/11, invalidPromotions={zone150InvalidPromotions}, "
                 + $"spawns={zone150StarMarmotSpawns}/13, actorClasses={zone150ActorClasses}/2.");
@@ -491,7 +494,7 @@ WHERE table_schema=DATABASE() AND (
 """, cancellationToken).ConfigureAwait(false);
         if (launcherColumns != 11)
         {
-            add("launcher.storage-contract", AetherXivDatabasePreflightStatus.Missing,
+            add("launcher.storage-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
                 $"Modern Launcher storage bridge is incomplete: columns={launcherColumns}/11.");
             return;
         }
@@ -503,7 +506,7 @@ WHERE table_schema=DATABASE() AND (
         int baseStats = await CountAsync(connection, "SELECT COUNT(*) FROM server_player_base_stats;", cancellationToken).ConfigureAwait(false);
         if (zones == 0 || commands == 0 || baseStats == 0)
         {
-            add("direct-core.seed", AetherXivDatabasePreflightStatus.Failed,
+            add("direct-core.seed", AetherXivDatabasePreflightStatus.NeedsRepair,
                 $"Direct-core seed data is incomplete: zones={zones}, commands={commands}, baseStats={baseStats}.");
             return;
         }
@@ -516,7 +519,7 @@ WHERE table_schema=DATABASE() AND (
         await using MySqlDataReader reader = await readWorld.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
-            add("direct-core.world", AetherXivDatabasePreflightStatus.Missing, "World id 1 is missing from servers.");
+            add("direct-core.world", AetherXivDatabasePreflightStatus.NeedsRepair, "World id 1 is missing from servers; canonical database repair is required.");
             return;
         }
         string address = reader.GetString(0);
@@ -544,37 +547,6 @@ WHERE table_schema=DATABASE() AND (
         await updateWorld.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         add("direct-core.world", AetherXivDatabasePreflightStatus.Repaired,
             $"World id 1 now advertises {world.Host}:{world.Port}.");
-    }
-
-    private static async Task<bool> HasRecognizableDirectCoreSchemaAsync(
-        MySqlConnection connection,
-        CancellationToken cancellationToken)
-    {
-        string[] requiredTables =
-        [
-            "users", "sessions", "servers", "characters", "characters_appearance",
-            "characters_quest_scenario", "characters_quest_completed", "characters_hotbar",
-            "server_sessions", "server_zones", "server_zones_privateareas",
-            "server_battlenpc_spawn_locations", "server_battlenpc_spawn_audit_pins",
-            "server_battle_commands", "server_player_base_stats",
-            "launcher_config", "launcher_status", "launcher_news", "launcher_patch_files",
-            "launcher_presentation", "launcher_reel_text"
-        ];
-        foreach (string table in requiredTables)
-        {
-            if (!await TableExistsAsync(connection, table, cancellationToken).ConfigureAwait(false))
-                return false;
-        }
-
-        int launcherColumns = await CountAsync(connection, """
-SELECT COUNT(*) FROM information_schema.columns
-WHERE table_schema=DATABASE() AND (
-  (table_name='launcher_config' AND column_name IN ('service_version','server_name','is_active')) OR
-  (table_name='launcher_news' AND column_name IN ('news_id','is_active','title_color','summary_color','body_color')) OR
-  (table_name='launcher_patch_files' AND column_name IN ('patch_file_id','target_boot_version','target_game_version'))
-);
-""", cancellationToken).ConfigureAwait(false);
-        return launcherColumns == 11;
     }
 
     private static async Task<int> CountAsync(

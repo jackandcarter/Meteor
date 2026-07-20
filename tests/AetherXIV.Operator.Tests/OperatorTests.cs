@@ -200,9 +200,9 @@ public sealed class OperatorTests
         [
             new AetherXivDatabasePreflightStep("database.bootstrap", AetherXivDatabasePreflightStatus.NeedsAdminCredentials, "")
         ]);
-        AetherXivDatabasePreflightResult incompatible = new(
+        AetherXivDatabasePreflightResult needsRepair = new(
         [
-            new AetherXivDatabasePreflightStep("database.compatibility", AetherXivDatabasePreflightStatus.Incompatible, "")
+            new AetherXivDatabasePreflightStep("database.repair", AetherXivDatabasePreflightStatus.NeedsRepair, "")
         ]);
         AetherXivDatabasePreflightResult needsMigration = new(
         [
@@ -213,10 +213,10 @@ public sealed class OperatorTests
         Assert.False(blocked.CanStartServices);
         Assert.True(needsAdmin.NeedsAdminCredentials);
         Assert.False(needsAdmin.CanStartServices);
-        Assert.True(incompatible.RequiresCompatibilityMigration);
-        Assert.False(incompatible.CanStartServices);
+        Assert.True(needsRepair.RequiresCanonicalRepair);
+        Assert.False(needsRepair.CanStartServices);
         Assert.True(needsMigration.RequiresInPlaceMigration);
-        Assert.False(needsMigration.RequiresCompatibilityMigration);
+        Assert.False(needsMigration.RequiresCanonicalRepair);
         Assert.False(needsMigration.CanStartServices);
     }
 
@@ -314,7 +314,7 @@ esac
             AetherXivDatabaseInstaller installer = new();
 
             AetherXivDatabaseInstallResult fresh = await installer.SetupAsync(config, admin);
-            AetherXivDatabaseInstallResult clean = await installer.CleanMigrateAsync(config, admin);
+            AetherXivDatabaseInstallResult clean = await installer.RebuildCanonicalAsync(config, admin);
 
             Assert.True(fresh.Succeeded, fresh.Output);
             Assert.Contains("fresh-setup", fresh.Output, StringComparison.Ordinal);
@@ -361,6 +361,44 @@ esac
         Assert.Contains(result.Steps, step => step.Name == "scripts-integrity" && step.Status == AetherXivDependencyStatus.Passed);
         Assert.Contains(result.Steps, step => step.Name == "system-actors" && step.Status == AetherXivDependencyStatus.Passed);
         Assert.Contains(result.Steps, step => step.Name == "service-Map" && step.Status == AetherXivDependencyStatus.Passed);
+    }
+
+    [Fact]
+    public void DependencyPreflightBlocksPublicWorldAndLobbyOnLoopbackBinds()
+    {
+        AetherXivOperatorConfig config = CreateMinimalWorkspaceConfig() with
+        {
+            World = new AetherXivEndpointConfig("127.0.0.1:54992", "game.dev.demidevunit.com:54992"),
+            Lobby = new AetherXivEndpointConfig("127.0.0.1:54994", "game.dev.demidevunit.com:54994")
+        };
+
+        AetherXivDependencyCheckResult result = new AetherXivDependencyPreflightService().Run(config);
+
+        Assert.False(result.CanStartServices);
+        Assert.Contains(result.Steps, step =>
+            step.Name == "world-public-bind"
+            && step.Status == AetherXivDependencyStatus.Failed
+            && step.Message.Contains("0.0.0.0:54992", StringComparison.Ordinal));
+        Assert.Contains(result.Steps, step =>
+            step.Name == "lobby-public-bind"
+            && step.Status == AetherXivDependencyStatus.Failed
+            && step.Message.Contains("0.0.0.0:54994", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void DependencyPreflightAcceptsPublicWorldAndLobbyWildcardBinds()
+    {
+        AetherXivOperatorConfig config = CreateMinimalWorkspaceConfig() with
+        {
+            World = new AetherXivEndpointConfig("0.0.0.0:54992", "game.dev.demidevunit.com:54992"),
+            Lobby = new AetherXivEndpointConfig("0.0.0.0:54994", "game.dev.demidevunit.com:54994")
+        };
+
+        AetherXivDependencyCheckResult result = new AetherXivDependencyPreflightService().Run(config);
+
+        Assert.True(result.CanStartServices);
+        Assert.Contains(result.Steps, step => step.Name == "world-public-bind" && step.Status == AetherXivDependencyStatus.Passed);
+        Assert.Contains(result.Steps, step => step.Name == "lobby-public-bind" && step.Status == AetherXivDependencyStatus.Passed);
     }
 
     [Fact]

@@ -476,6 +476,7 @@
                       ToolTip.Tip="Downloads the pinned AetherXIV Wine package for this platform, verifies its checksum, installs it into Launcher storage, and validates it." />
               <Button x:Name="ValidateRuntimeButton" Content="Validate Runtime" Click="ValidateRuntime_Click" />
               <Button x:Name="ResetPrefixButton" Content="Reset Prefix" Click="ResetPrefix_Click" />
+              <Button x:Name="SaveRuntimeButton" Content="Save Runtime Settings" Click="SaveRuntimeSettings_Click" />
             </StackPanel>
 
             <TextBlock Grid.Row="6" Text="Detected runtime" VerticalAlignment="Center" />
@@ -504,6 +505,7 @@
                       Grid.Column="1"
                       Grid.ColumnSpan="2"
                       SelectedIndex="0"
+                      SelectionChanged="RuntimeMode_SelectionChanged"
                       ToolTip.Tip="Use this only when you want to point AetherXIV Launcher at a runtime manually.">
               <ComboBoxItem>Wine prefix</ComboBoxItem>
               <ComboBoxItem>Custom command</ComboBoxItem>
@@ -512,16 +514,24 @@
             <TextBlock Grid.Row="10" Text="Custom name" VerticalAlignment="Center" />
             <TextBox x:Name="RuntimeNameBox" Grid.Row="10" Grid.Column="1" Grid.ColumnSpan="2" Text="Local Wine Runtime" />
 
-            <TextBlock Grid.Row="11" Text="Command and prefix" VerticalAlignment="Center" />
-            <Grid Grid.Row="11" Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+            <TextBlock Grid.Row="11" Text="Runtime and prefix paths" VerticalAlignment="Center" />
+            <Grid Grid.Row="11" Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto,*,Auto" ColumnSpacing="8">
               <TextBox x:Name="RuntimeCommandBox"
                        Text="wine"
-                       PlaceholderText="wine command"
+                       PlaceholderText="Wine executable or command"
                        ToolTip.Tip="The command or executable path used to start Wine." />
+              <Button x:Name="BrowseRuntimeButton"
+                      Grid.Column="1"
+                      Content="Browse Runtime"
+                      Click="BrowseRuntime_Click" />
               <TextBox x:Name="RuntimeValueBox"
-                       Grid.Column="1"
+                       Grid.Column="2"
                        PlaceholderText="WINEPREFIX path"
                        ToolTip.Tip="Optional Wine prefix path. Leave blank to use AetherXIV Launcher's managed prefix." />
+              <Button x:Name="BrowseRuntimePrefixButton"
+                      Grid.Column="3"
+                      Content="Browse Prefix"
+                      Click="BrowseRuntimePrefix_Click" />
             </Grid>
           </Grid>
         </ScrollViewer>

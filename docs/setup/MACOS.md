@@ -77,7 +77,8 @@ Do not expose MariaDB port `3306` publicly.
 
 Stop the stack, preserve the complete old release and database backup, extract
 the new release into a new folder, and open the new Core. Core will validate the
-database contract and request permission before a compatibility migration.
+database version, migrations, tables, and columns and request permission before
+a canonical repair when the installed database is older or incomplete.
 
 ## Troubleshooting
 

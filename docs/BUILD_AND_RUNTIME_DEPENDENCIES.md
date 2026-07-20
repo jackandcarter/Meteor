@@ -11,13 +11,12 @@ does not require a terminal or a separate desktop .NET installation.
 |---|---|---|---|
 | macOS | Apple silicon, macOS 14 or later | `tools/MacOS/build-aetherxiv.sh` | `AetherXIV Core.app`, `AetherXIV Launcher.app` |
 | Windows | Windows 11 x64 | `tools/Windows/build-aetherxiv.ps1` | `AetherXIV.Core.App.exe`, `AetherXIV.Launcher.App.exe` |
-| Linux | x64 desktop Linux | `tools/Linux/build-aetherxiv.sh` | Native GUI apphosts plus `.desktop` entries |
-| SteamOS | Steam Deck Desktop Mode | `tools/SteamOS/build-aetherxiv.sh` | Linux GUI apphosts plus `.desktop` entries |
+| Linux | x64 desktop Linux | `tools/Linux/build-aetherxiv.sh` | Native Core and Launcher GUI apphosts |
+| SteamOS | Steam Deck Desktop Mode | `tools/SteamOS/build-aetherxiv.sh` | Linux Core and Launcher GUI apphosts |
 
-Linux and SteamOS desktop entries target an installation rooted at
-`/opt/aetherxiv`. Both entries declare `Terminal=false`. The native GUI
-executables can also be opened directly from a graphical file manager without
-starting a separate terminal.
+Linux and SteamOS releases omit path-dependent `.desktop` entries. Open the
+native Core and Launcher executables directly from their packaged `app`
+folders so the release remains relocatable.
 
 ## Requirements for every build host
 

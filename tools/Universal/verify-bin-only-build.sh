@@ -132,33 +132,6 @@ for configuration in "${configurations[@]}"; do
       verify_file "${platform_root}/servers/world/AetherXIV.Core.World${executable_suffix}"
       verify_file "${platform_root}/servers/lobby/AetherXIV.Core.Lobby${executable_suffix}"
       verify_file "${platform_root}/servers/launcher-services/AetherXIV.Launcher.Host${executable_suffix}"
-      if [[ "${platform}" == Linux || "${platform}" == SteamOS ]]; then
-        verify_file "${platform_root}/desktop/org.aetherxiv.core.desktop"
-        verify_file "${platform_root}/desktop/org.aetherxiv.launcher.desktop"
-        verify_file "${platform_root}/install-desktop-shortcuts.sh"
-        [[ -x "${platform_root}/install-desktop-shortcuts.sh" ]] || {
-          echo "Linux desktop shortcut installer is not executable: ${platform_root}" >&2
-          exit 1
-        }
-        verify_file "${platform_root}/share/icons/hicolor/512x512/apps/org.aetherxiv.core.png"
-        verify_file "${platform_root}/share/icons/hicolor/512x512/apps/org.aetherxiv.launcher.png"
-        grep -qx 'Terminal=false' "${platform_root}/desktop/org.aetherxiv.core.desktop" || {
-          echo "Core desktop entry may open a terminal: ${platform_root}" >&2
-          exit 8
-        }
-        grep -qx 'Terminal=false' "${platform_root}/desktop/org.aetherxiv.launcher.desktop" || {
-          echo "Launcher desktop entry may open a terminal: ${platform_root}" >&2
-          exit 8
-        }
-        grep -qx 'Icon=/opt/aetherxiv/share/icons/hicolor/512x512/apps/org.aetherxiv.core.png' "${platform_root}/desktop/org.aetherxiv.core.desktop" || {
-          echo "Core desktop entry does not declare its packaged icon: ${platform_root}" >&2
-          exit 8
-        }
-        grep -qx 'Icon=/opt/aetherxiv/share/icons/hicolor/512x512/apps/org.aetherxiv.launcher.png' "${platform_root}/desktop/org.aetherxiv.launcher.desktop" || {
-          echo "Launcher desktop entry does not declare its packaged icon: ${platform_root}" >&2
-          exit 8
-        }
-      fi
     fi
 
     map_suffix=""; [[ "${platform}" == Windows ]] && map_suffix=".exe"

@@ -20,14 +20,11 @@ prefixes, and the AetherXIV release will live before configuring the server.
 
 1. Enter Desktop Mode.
 2. Extract the entire SteamOS release to persistent storage.
-3. Keep `core`, `launcher`, `servers`, `Database`, and `desktop` together.
-4. Run `./install-desktop-shortcuts.sh` from the extracted release. It repairs
-   executable bits and writes application-menu and Desktop Mode shortcuts with
-   absolute paths to the persistent release directory.
-5. If you move the release later, run the shortcut installer again.
-
-The entries use `Terminal=false`; the applications are graphical and should
-not open a terminal.
+3. Keep `core`, `launcher`, `servers`, and `Database` together.
+4. Make `core/app/AetherXIV.Core.App` and
+   `launcher/app/AetherXIV.Launcher.App` executable, then open those apps
+   directly from their folders. The release intentionally does not ship
+   path-dependent `.desktop` shortcuts.
 
 ## Local setup
 
@@ -51,8 +48,8 @@ disable SteamOS read-only protection merely to make automatic detection work.
 
 ## After SteamOS updates
 
-Recheck the .NET runtime, MariaDB service, graphics support, desktop-entry
-paths, and executable bits. Launcher-managed data and prefixes should remain in
+Recheck the .NET runtime, MariaDB service, graphics support, and executable
+bits. Launcher-managed data and prefixes should remain in
 writable user storage.
 
 See the [Linux setup guide](LINUX.md) for the shared runtime process and the

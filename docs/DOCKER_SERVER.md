@@ -1,9 +1,15 @@
-# AetherXIV 2.0 Docker server
+# Optional AetherXIV 2.0 Docker server
 
-The Docker deployment runs the AetherXIV server stack and MariaDB without the
-graphical AetherXIV Core or Launcher applications. It uses the same Compose
-file on macOS, Windows, Linux, and SteamOS because every supported host runs
-Linux containers.
+Docker is an optional headless server deployment intended primarily for a Linux
+VPS or container host. It is not the supported desktop build, server-management,
+Launcher, runtime, or game-client path. Normal Windows, macOS, Linux, and
+SteamOS use runs the native AetherXIV Core UI and AetherXIV Launcher directly.
+
+The Docker deployment runs only the server stack and MariaDB. macOS and Windows
+can technically run the same Linux containers through Docker Desktop, but that
+adds a Linux virtual machine and is unnecessary for a normal native desktop
+installation. Use it there only when intentionally testing the containerized
+server deployment.
 
 ## Included services
 
@@ -23,14 +29,13 @@ Map, World, and Lobby currently share one server container because the restored
 direct-core World-to-Map route deliberately uses loopback networking. Only the
 client-facing services are published to the host.
 
-## Host requirements
+## Recommended host
 
-| Host | Requirement |
+| Host | Support level and requirement |
 | --- | --- |
-| macOS Intel or Apple silicon | Docker Desktop using Linux containers |
-| Windows 11 x64 | Docker Desktop using the WSL 2/Linux container backend |
-| Linux x64 or ARM64 | Docker Engine with the Compose plugin |
-| SteamOS | Docker Engine in Desktop Mode; OS updates may require Docker to be re-enabled |
+| Linux x64 or ARM64 server/VPS | Recommended optional Docker target; Docker Engine with the Compose plugin |
+| macOS or Windows development host | Optional container testing only; Docker Desktop runs the Linux images in a VM. Prefer the native Core UI for normal use |
+| SteamOS | Not recommended for server containers; use the native SteamOS release or a remote Linux/VPS server |
 
 The server image and MariaDB image support `linux/amd64` and `linux/arm64`.
 Docker selects the host architecture automatically for local builds.
@@ -138,11 +143,11 @@ docker compose up --detach
 docker compose logs --follow server
 ```
 
-On startup, the new image checks database compatibility. If installation or a
-migration is required, it uses the database package embedded in that image.
-Existing recognizable databases are backed up before migrations are applied.
-A checksum mismatch or incompatible schema stops the container instead of
-silently modifying the database.
+On startup, the new image classifies the database using the same package as the
+native Core UI. It creates a missing database, rebuilds an empty or pre-2.0
+database after a full backup, applies missing migrations to a valid 2.0
+database, and backs up/rebuilds a damaged 2.0 schema. Compatible account and
+character rows are restored on a best-effort, count-verified basis.
 
 ## Building one image for both CPU architectures
 
@@ -165,7 +170,9 @@ source.
 
 - This is a server deployment, not a containerized game client. Wine, Umbra
   injection, client patches, and graphical desktop dependencies are excluded.
-- AetherXIV Core's graphical process controls are replaced by Compose commands.
+- This optional headless path uses Compose commands instead of AetherXIV Core's
+  graphical process controls. The normal desktop path always uses the native
+  Core UI.
 - The default Compose file intentionally keeps one Map process. Horizontal Map
   scaling requires separating the database's client-advertised route from its
   internal World-to-Map route before each Map process can become an independent

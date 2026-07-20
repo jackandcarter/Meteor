@@ -1166,6 +1166,58 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void SaveRuntimeSettings_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SaveCurrentProfile();
+        ManagedRuntimeStatus.Text = "Runtime settings saved. Select Validate Runtime to test this executable and prefix.";
+        AppendLog($"Runtime settings saved: {ProfileStore.DefaultProfilePath}");
+    }
+
+    private async void BrowseRuntime_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (!StorageProvider.CanOpen)
+        {
+            AppendLog("Runtime executable picker is not available on this platform.");
+            return;
+        }
+
+        IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select Wine runtime executable",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { FilePickerFileTypes.All }
+        });
+        string? selectedPath = files.FirstOrDefault()?.TryGetLocalPath();
+        if (String.IsNullOrWhiteSpace(selectedPath))
+            return;
+
+        RuntimeCommandBox.Text = selectedPath;
+        SaveCurrentProfile();
+        AppendLog($"Custom runtime executable selected: {selectedPath}");
+    }
+
+    private async void BrowseRuntimePrefix_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (!StorageProvider.CanPickFolder)
+        {
+            AppendLog("Wine prefix folder picker is not available on this platform.");
+            return;
+        }
+
+        IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Wine prefix folder",
+            AllowMultiple = false
+        });
+        string? selectedPath = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (String.IsNullOrWhiteSpace(selectedPath))
+            return;
+
+        RuntimeValueBox.Text = selectedPath;
+        SaveCurrentProfile();
+        AppendLog($"Custom Wine prefix selected: {selectedPath}");
+    }
+
     private void ResetPrefix_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         try
@@ -2379,6 +2431,9 @@ public sealed partial class MainWindow : Window
         RuntimeNameBox.IsEnabled = !isBusy;
         RuntimeCommandBox.IsEnabled = !isBusy;
         RuntimeValueBox.IsEnabled = !isBusy;
+        BrowseRuntimeButton.IsEnabled = !isBusy;
+        BrowseRuntimePrefixButton.IsEnabled = !isBusy;
+        SaveRuntimeButton.IsEnabled = !isBusy;
     }
 
     private void SetUmbraBusy(bool isBusy)
@@ -2401,6 +2456,7 @@ public sealed partial class MainWindow : Window
         RuntimeSelectionMode mode = ReadRuntimeMode();
         bool automatic = mode == RuntimeSelectionMode.AutomaticManaged;
         bool custom = mode == RuntimeSelectionMode.CustomRuntime;
+        bool customWinePrefix = custom && CustomRuntimeKindBox.SelectedIndex == 0;
 
         InstallRuntimeButton.IsEnabled = !isBusy && automatic;
         ValidateRuntimeButton.IsEnabled = !isBusy;
@@ -2411,7 +2467,10 @@ public sealed partial class MainWindow : Window
         CustomRuntimeKindBox.IsEnabled = !isBusy && custom;
         RuntimeNameBox.IsEnabled = !isBusy && custom;
         RuntimeCommandBox.IsEnabled = !isBusy && custom;
-        RuntimeValueBox.IsEnabled = !isBusy && custom;
+        RuntimeValueBox.IsEnabled = !isBusy && customWinePrefix;
+        BrowseRuntimeButton.IsEnabled = !isBusy && custom;
+        BrowseRuntimePrefixButton.IsEnabled = !isBusy && customWinePrefix;
+        SaveRuntimeButton.IsEnabled = !isBusy && custom;
 
         if (automatic)
         {

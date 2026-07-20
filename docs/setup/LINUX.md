@@ -21,19 +21,21 @@ and `libfontconfig1`. Use the package names appropriate to your distribution.
 
 ## Install the release
 
-You can keep the extracted release in any permanent user-owned directory. From
-the release root, run the supplied installer once to create working application
-menu and desktop shortcuts with absolute paths to that directory:
+You can keep the extracted release in any permanent user-owned directory. Make
+the two graphical apphosts executable after extracting the release:
 
 ```bash
-./install-desktop-shortcuts.sh
+chmod +x ./core/app/AetherXIV.Core.App
+chmod +x ./launcher/app/AetherXIV.Launcher.App
 ```
 
-Do not move the release afterward without running the installer again. The
-installer also repairs the executable bits on both graphical applications.
+Open `core/app/AetherXIV.Core.App` and `launcher/app/AetherXIV.Launcher.App`
+directly from the extracted folders. The release does not ship `.desktop`
+shortcuts because their executable paths become invalid when the release folder
+is moved or installed under a different parent.
 
 For a system-wide `/opt/aetherxiv` installation, copy the complete Linux release
-there so `core`, `launcher`, `servers`, `Database`, and `desktop` remain together:
+there so `core`, `launcher`, `servers`, and `Database` remain together:
 
 ```bash
 sudo install -d /opt/aetherxiv
@@ -42,21 +44,10 @@ sudo chmod +x /opt/aetherxiv/core/app/AetherXIV.Core.App
 sudo chmod +x /opt/aetherxiv/launcher/app/AetherXIV.Launcher.App
 ```
 
-The templates under `desktop/` intentionally target `/opt/aetherxiv`. Install
-those entries for all users if desired:
-
-```bash
-sudo install -m 0644 /opt/aetherxiv/desktop/org.aetherxiv.core.desktop /usr/share/applications/
-sudo install -m 0644 /opt/aetherxiv/desktop/org.aetherxiv.launcher.desktop /usr/share/applications/
-```
-
-Both entries declare `Terminal=false`. Opening either application from the
-desktop menu or a graphical file manager must not open a terminal window.
-
 ## Start the local server
 
 1. Start the MariaDB service.
-2. Open **AetherXIV Core** from the application menu.
+2. Open `core/app/AetherXIV.Core.App` from the release folder.
 3. Verify dependencies on **Config**.
 4. Select **Start Stack** and provide MariaDB administrator credentials if
    requested.
@@ -64,7 +55,7 @@ desktop menu or a graphical file manager must not open a terminal window.
 
 ## Configure the Launcher
 
-1. Open **AetherXIV Launcher**.
+1. Open `launcher/app/AetherXIV.Launcher.App` from the release folder.
 2. Save the **Localhost** server preset.
 3. Locate and validate the Final Fantasy XIV 1.23b client.
 4. On **Runtime**, select **Install Runtime** if Wine is not detected. The
@@ -88,12 +79,8 @@ the application-data directories; do not copy stale binaries into the new tree.
 
 - A GUI that exits immediately commonly indicates a missing X11, ICE, SM, or
   Fontconfig library.
-- If a shortcut stops working after the release directory is moved, run
-  `./install-desktop-shortcuts.sh` again from its new location.
 - A game-only failure commonly indicates the Wine runtime, prefix, or 32-bit
   graphics stack rather than the Launcher GUI.
-- Reinstall desktop entries after changing the installation root, or edit their
-  `Exec`, `TryExec`, and `Icon` paths consistently.
 
 See the [Launcher guide](../LAUNCHER_GUIDE.md), [Core guide](../AETHERXIV_CORE_GUIDE.md),
 and [debugging guide](../DEBUGGING_AND_BUG_REPORTING.md).

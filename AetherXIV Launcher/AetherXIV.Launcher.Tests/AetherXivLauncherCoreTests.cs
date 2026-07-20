@@ -1286,13 +1286,20 @@ public sealed class AetherXivLauncherCoreTests
     public void ProfileStoreRoundTripsLocalProfile()
     {
         string path = Path.Combine(CreateTempDirectory(), "profile.json");
+        string runtimeCommand = Path.Combine(Path.GetDirectoryName(path)!, "runtime", "bin", "wine64");
+        string runtimePrefix = Path.Combine(Path.GetDirectoryName(path)!, "prefixes", "ffxiv");
+        WineRuntimeProfile runtime = WineRuntimeProfile.WinePrefix(
+            "Custom Wine",
+            runtimePrefix,
+            runtimeCommand,
+            new Dictionary<string, string> { ["WINEDEBUG"] = "fixme-all" });
         LauncherProfile profile = new(
             "/games/ffxiv-1x",
             "/patches/ffxiv-1x",
             "https://launcher.example.test/launcher",
             "https://cdn.example.test/ffxiv_patches",
             ServerProfile.LocalDefault(),
-            WineRuntimeProfile.CrossOverBottle("CrossOver", "AetherXIV"),
+            runtime,
             RuntimeSelectionMode.CustomRuntime,
             ClientLaunchHelperMode.X86,
             ClientGraphicsTarget.WineD3DVulkan);
@@ -1307,6 +1314,11 @@ public sealed class AetherXivLauncherCoreTests
         Assert.Equal(profile.ServerProfile, loaded.ServerProfile);
         Assert.Equal(profile.RuntimeProfile.Name, loaded.RuntimeProfile.Name);
         Assert.Equal(profile.RuntimeProfile.Kind, loaded.RuntimeProfile.Kind);
+        Assert.Equal(runtimeCommand, loaded.RuntimeProfile.Command);
+        Assert.Equal(runtimePrefix, loaded.RuntimeProfile.PrefixPath);
+        Assert.Equal(runtimePrefix, loaded.RuntimeProfile.Environment["WINEPREFIX"]);
+        Assert.Equal("fixme-all", loaded.RuntimeProfile.Environment["WINEDEBUG"]);
+        Assert.Equal(WineRuntimeProfile.DefaultDirect3DConfig, loaded.RuntimeProfile.Environment["WINE_D3D_CONFIG"]);
         Assert.Equal(profile.RuntimeMode, loaded.RuntimeMode);
         Assert.Equal(profile.LaunchHelperMode, loaded.LaunchHelperMode);
         Assert.Equal(profile.GraphicsTarget, loaded.GraphicsTarget);

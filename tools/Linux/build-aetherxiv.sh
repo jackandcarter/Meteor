@@ -206,17 +206,6 @@ python3 "${ROOT_DIR}/tools/Universal/create-direct-core-database-package.py" \
   --repo-root "${ROOT_DIR}" \
   --output-dir "${OUTPUT_ROOT}/Database"
 
-# Desktop entries target the documented /opt/aetherxiv installation layout and
-# explicitly prevent desktop environments from opening a terminal.
-mkdir -p "${OUTPUT_ROOT}/desktop"
-install -m 0644 "${ROOT_DIR}/tools/Linux/desktop/org.aetherxiv.core.desktop" "${OUTPUT_ROOT}/desktop/"
-install -m 0644 "${ROOT_DIR}/tools/Linux/desktop/org.aetherxiv.launcher.desktop" "${OUTPUT_ROOT}/desktop/"
-install -m 0755 "${ROOT_DIR}/tools/Linux/install-desktop-shortcuts.sh" "${OUTPUT_ROOT}/install-desktop-shortcuts.sh"
-icon_dir="${OUTPUT_ROOT}/share/icons/hicolor/512x512/apps"
-mkdir -p "${icon_dir}"
-install -m 0644 "${ROOT_DIR}/assets/icons/aetherxiv-core.png" "${icon_dir}/org.aetherxiv.core.png"
-install -m 0644 "${ROOT_DIR}/assets/icons/aetherxiv-launcher.png" "${icon_dir}/org.aetherxiv.launcher.png"
-
 if [[ "${CONFIGURATION}" == Release ]]; then
   find "${OUTPUT_ROOT}" -type f -name '*.pdb' -delete
 fi

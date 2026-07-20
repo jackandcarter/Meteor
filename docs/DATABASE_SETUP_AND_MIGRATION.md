@@ -45,12 +45,18 @@ The database package:
 - imports the canonical baseline;
 - validates baseline and migration checksums;
 - applies unapplied migrations in order;
-- verifies required tables, seed data, and compatibility identifiers;
+- verifies the AetherXIV 2 version record, migration ledger, required tables,
+  columns, and seed data;
 - backs up any existing database before replacing or modifying it.
 
-If an existing database cannot be recognized as an AetherXIV direct-core
-database, Core offers a guarded clean installation instead of treating it as an
-in-place upgrade.
+Setup handles each state explicitly:
+
+| Existing state | Action |
+|---|---|
+| Database absent | Create the database and restricted application account, then install and verify AetherXIV 2 |
+| Empty database or pre-2.0 database | Keep a full backup, recreate the canonical database, and try to restore compatible account/character data |
+| Valid AetherXIV 2 database | Check the migration ledger, apply missing migrations, and verify required tables, columns, and seeds |
+| Damaged or incomplete AetherXIV 2 database | Keep a full backup, rebuild the canonical schema, and try to restore compatible account/character data |
 
 ## Command-line administration
 
@@ -87,11 +93,11 @@ Existing databases are dumped before changes. The shell package defaults to
 `~/.aetherxiv/backups/database`; the Core application can supply its own backup
 location. Backups receive a companion SHA-256 file.
 
-Clean migration always creates a full verified backup and recreates the
+Canonical rebuild always creates a full verified backup and recreates the
 canonical schema. If both legacy `users` and `characters` tables exist, it also
 creates a player-data export and attempts to restore accounts, characters,
-character-owned tables, linkshell/retainer records, support records, and
-customized Launcher content. Account and character counts must match.
+and tables whose names begin with `characters_`. Account and character counts
+must match.
 
 If player data is incompatible, the installer keeps the clean canonical
 database and retains both exports for manual recovery. It restores the
@@ -114,7 +120,7 @@ migration by adding a new migration with a later name.
   verify the configured application password.
 - **Checksum mismatch:** restore the original release database package; do not
   bypass the check.
-- **Unrecognized database:** use Core's backed-up clean installation. Review the
+- **Pre-2.0 or damaged database:** use Core's backed-up canonical repair. Review the
   retained backup if automatic player-data restoration was not possible.
 - **Port already in use:** determine whether another MariaDB instance owns port
   `3306`, then change the configured port consistently if required.

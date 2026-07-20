@@ -27,7 +27,7 @@ database check, start the service stack, and then configure AetherXIV Launcher.
 - [AetherXIV Core guide](AETHERXIV_CORE_GUIDE.md)
 - [AetherXIV Launcher guide](LAUNCHER_GUIDE.md)
 - [Database setup, updates, and recovery](DATABASE_SETUP_AND_MIGRATION.md)
-- [Docker server deployment](DOCKER_SERVER.md)
+- [Optional Docker server deployment for Linux/VPS hosts](DOCKER_SERVER.md)
 - [Debugging and bug reporting](DEBUGGING_AND_BUG_REPORTING.md)
 - [Umbra SDK and plugin development](UMBRA_SDK.md)
 

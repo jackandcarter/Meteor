@@ -28,7 +28,7 @@ public sealed class AetherXivDatabaseInstaller
         CancellationToken cancellationToken = default) =>
         RunAsync(config, adminCredentials: null, InstallMode.MigrateExisting, cancellationToken);
 
-    public Task<AetherXivDatabaseInstallResult> CleanMigrateAsync(
+    public Task<AetherXivDatabaseInstallResult> RebuildCanonicalAsync(
         AetherXivOperatorConfig config,
         AetherXivMariaDbAdminCredentials adminCredentials,
         CancellationToken cancellationToken = default) =>

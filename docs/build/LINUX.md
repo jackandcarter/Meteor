@@ -48,15 +48,13 @@ Linux/
 ├── core/app/AetherXIV.Core.App
 ├── launcher/app/AetherXIV.Launcher.App
 ├── servers/
-├── Database/
-├── desktop/
-└── share/icons/hicolor/512x512/apps/
+└── Database/
 ```
 
-The desktop entries target `/opt/aetherxiv`, contain `Terminal=false`, and point
-to the packaged Core and Launcher icons. The Launcher contains a self-contained
-Windows x64 managed helper plus the native x86 Umbra payload used with the
-32-bit Wine-hosted game. A 32-bit .NET runtime is not required.
+The package intentionally omits path-dependent `.desktop` shortcuts. The
+Launcher contains a self-contained Windows x64 managed helper plus the native
+x86 Umbra payload used with the 32-bit Wine-hosted game. A 32-bit .NET runtime
+is not required.
 
 ## Output reset warning
 

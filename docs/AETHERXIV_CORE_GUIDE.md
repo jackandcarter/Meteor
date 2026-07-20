@@ -87,8 +87,8 @@ The default local database is `ffxiv_server` at `127.0.0.1:3306`, using the
 `aetherxiv` application account. **Auto setup/repair** lets Core create, migrate,
 and verify the packaged schema after receiving administrator credentials.
 This includes a completely absent database and a manually created empty schema.
-An incompatible schema is backed up and replaced with the canonical database;
-compatible account and character data is restored on a best-effort,
+An older or incomplete schema is backed up and replaced with the canonical
+database; compatible account and character data is restored on a best-effort,
 count-verified basis.
 
 The database password is saved in Core's settings file. Never attach that file
@@ -136,6 +136,13 @@ Expose TCP `443`, `54992`, and `54994`. Keep `3306`, `1989`, and the proxy-only
 of through HTTPS, bind it to `0.0.0.0:8087` and use an explicit
 `http://host:8087/launcher` URL; this is not recommended for public account
 credentials.
+
+Core blocks startup when World or Lobby advertises a public host but still
+binds to `127.0.0.1`. The **Use Public World/Lobby Binds** button changes those
+two listener hosts to `0.0.0.0` while preserving their ports; the public DNS
+name still belongs in each **Advertise** field. After changing a running VPS,
+stop and restart the stack. The Lobby log must report `0.0.0.0:54994` (or the
+VPS interface address), not `127.0.0.1:54994`.
 
 ### Diagnostics
 

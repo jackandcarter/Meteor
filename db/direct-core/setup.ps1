@@ -17,6 +17,7 @@ $appUser = if ($env:AETHERXIV_DB_USER) { $env:AETHERXIV_DB_USER } else { "aether
 $appPass = if ($env:AETHERXIV_DB_PASSWORD) { $env:AETHERXIV_DB_PASSWORD } else { "aether_dev" }
 $adminUser = if ($env:AETHERXIV_DB_ADMIN_USER) { $env:AETHERXIV_DB_ADMIN_USER } else { "root" }
 $adminPass = if ($env:AETHERXIV_DB_ADMIN_PASSWORD) { $env:AETHERXIV_DB_ADMIN_PASSWORD } else { "" }
+$allowedHosts = if ($env:AETHERXIV_DB_ALLOWED_HOSTS) { $env:AETHERXIV_DB_ALLOWED_HOSTS } else { "localhost,127.0.0.1" }
 
 if ($MigrateOnly -and ($Drop -or $CleanMigrate)) {
     throw "-MigrateOnly cannot be combined with -Drop or -CleanMigrate."
@@ -105,7 +106,20 @@ function Backup-Database {
     $hash = (Get-FileHash -Algorithm SHA256 $path).Hash.ToLowerInvariant()
     Set-Content -Encoding ascii "$path.sha256" "$hash  $([IO.Path]::GetFileName($path))"
     $script:LastBackupPath = $path
+    if (-not $script:OriginalBackupPath) { $script:OriginalBackupPath = $path }
     Write-Host "Backed up $dbName to $path"
+}
+
+function Restore-OriginalDatabase {
+    if ($script:OriginalBackupPath -and (Test-Path $script:OriginalBackupPath -PathType Leaf)) {
+        Write-Warning "Restoring the untouched database backup: $script:OriginalBackupPath"
+        [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
+        Invoke-SqlFile $script:OriginalBackupPath $dbName
+    }
+    else {
+        Write-Warning "No original database existed; removing the incomplete new database so setup can be retried."
+        [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``")
+    }
 }
 
 function Export-PlayerData([string]$Path, [string[]]$Tables) {
@@ -166,17 +180,11 @@ function Test-Database {
     Write-Host "Direct-core database verified: $dbName (zones=$zones commands=$commands baseStats=$stats)"
 }
 
-function Test-MigrationCandidate {
-    $schema = Sql-Literal $dbName
-    $required = @("users", "characters", "server_zones", "server_battle_commands", "server_player_base_stats")
-    $missing = @()
-    foreach ($table in $required) {
-        $count = Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$schema' AND table_name='$table'"
-        if ($count -ne "1") { $missing += $table }
-    }
-    if ($missing.Count) {
-        throw "The configured database is not a recognizable AetherXIV direct-core database: missing $($missing -join ', ')"
-    }
+function Test-CurrentV2Contract {
+    $compatibilityTable = Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name='aether_database_compatibility'"
+    if ($compatibilityTable -ne "1") { return $false }
+    $contract = Invoke-Query $adminArgs "SELECT COUNT(*) FROM aether_database_compatibility WHERE compatibility_key='direct-core' AND schema_generation=2 AND schema_version=1 AND compatibility_id='aetherxiv-direct-core-v2' AND baseline_id='20260716_000001_ffxiv_server_v2_baseline'" $dbName
+    return $contract -eq "1"
 }
 
 if ($Check) { Test-Database; exit 0 }
@@ -190,11 +198,17 @@ $userLiteral = Sql-Literal $appUser
 $passLiteral = Sql-Literal $appPass
 $exists = Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='$dbLiteral'"
 $script:LastBackupPath = ""
+$script:OriginalBackupPath = if ($env:AETHERXIV_ORIGINAL_BACKUP_PATH) { $env:AETHERXIV_ORIGINAL_BACKUP_PATH } else { "" }
 $baselineImported = $false
+
+if (-not $MigrateOnly -and -not $Drop -and -not $CleanMigrate -and $exists -eq "1" -and -not (Test-CurrentV2Contract)) {
+    Write-Host "Existing database is empty or predates AetherXIV 2; preserving a full backup before installing the canonical database."
+    $CleanMigrate = $true
+}
 
 if ($MigrateOnly) {
     if ($exists -ne "1") { throw "The configured database does not exist; administrative setup is required." }
-    Test-MigrationCandidate
+    if (-not (Test-CurrentV2Contract)) { throw "The configured database is not an AetherXIV 2 database; administrator-assisted setup is required." }
     Backup-Database
     Write-Host "Applying pending migrations with configured account $appUser."
 }
@@ -213,10 +227,8 @@ else {
             $usersBefore = Invoke-Query $adminArgs "SELECT COUNT(*) FROM users" $dbName
             $charactersBefore = Invoke-Query $adminArgs "SELECT COUNT(*) FROM characters" $dbName
             $candidates = [Collections.Generic.List[string]]::new()
-            foreach ($table in @("users", "characters", "reserved_names", "server_linkshells", "server_retainers",
-                "supportdesk_issues", "supportdesk_tickets", "launcher_config", "launcher_status", "launcher_news",
-                "launcher_presentation", "launcher_reel_text")) { $candidates.Add($table) }
-            $characterTables = Invoke-Query $adminArgs "SELECT table_name FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name LIKE 'characters\\_%' ESCAPE '\\\\' ORDER BY table_name"
+            foreach ($table in @("users", "characters")) { $candidates.Add($table) }
+            $characterTables = Invoke-Query $adminArgs "SELECT table_name FROM information_schema.tables WHERE table_schema='$dbLiteral' AND table_name LIKE 'characters\\_%' ORDER BY table_name"
             foreach ($table in ($characterTables -split "`r?`n" | Where-Object { $_ })) { $candidates.Add($table) }
             $preserved = [Collections.Generic.List[string]]::new()
             foreach ($table in $candidates) {
@@ -238,8 +250,7 @@ else {
         }
         catch {
             Write-Warning "Canonical database installation failed; restoring the untouched full backup."
-            [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
-            Invoke-SqlFile $script:LastBackupPath $dbName
+            Restore-OriginalDatabase
             throw
         }
 
@@ -261,8 +272,7 @@ else {
                 }
                 catch {
                     Write-Warning "Fresh database recovery failed; restoring the untouched full backup."
-                    [void](Invoke-Query $adminArgs "DROP DATABASE IF EXISTS ``$dbId``; CREATE DATABASE ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
-                    Invoke-SqlFile $script:LastBackupPath $dbName
+                    Restore-OriginalDatabase
                     throw
                 }
             }
@@ -278,7 +288,11 @@ else {
     }
 
     [void](Invoke-Query $adminArgs "CREATE DATABASE IF NOT EXISTS ``$dbId`` CHARACTER SET utf8 COLLATE utf8_general_ci")
-    foreach ($hostName in @("localhost", "127.0.0.1")) {
+    $applicationHosts = @($allowedHosts -split "," | ForEach-Object { $_.Trim() })
+    if ($applicationHosts.Count -eq 0 -or @($applicationHosts | Where-Object { -not $_ }).Count -gt 0) {
+        throw "Database application hosts cannot be empty."
+    }
+    foreach ($hostName in $applicationHosts) {
         $hostLiteral = Sql-Literal $hostName
         [void](Invoke-Query $adminArgs "CREATE USER IF NOT EXISTS '$userLiteral'@'$hostLiteral' IDENTIFIED BY '$passLiteral'; ALTER USER '$userLiteral'@'$hostLiteral' IDENTIFIED BY '$passLiteral'; GRANT ALL PRIVILEGES ON ``$dbId``.* TO '$userLiteral'@'$hostLiteral'")
     }
@@ -288,41 +302,64 @@ else {
         Write-Host "Canonical baseline is installed in $dbName"
     } elseif ($exists -eq "0") {
         Write-Host "Importing canonical direct-core baseline into $dbName"
-        Invoke-SqlFile $baseline $dbName
+        try { Invoke-SqlFile $baseline $dbName }
+        catch {
+            Write-Warning "Canonical database installation failed."
+            Restore-OriginalDatabase
+            throw
+        }
+        $baselineImported = $true
     } else {
-        Test-MigrationCandidate
+        Write-Host "Existing AetherXIV 2 database detected; checking its migration ledger and canonical schema."
         Backup-Database
     }
 }
 
-[void](Invoke-Query $adminArgs "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8" $dbName)
-$baselineHash = (Get-FileHash -Algorithm SHA256 $baseline).Hash.ToLowerInvariant()
-$recordedBaseline = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1" $dbName
-if ($MigrateOnly -and -not $recordedBaseline) {
-    throw "The existing database has no recorded direct-core baseline; administrative repair is required."
-}
-if (-not $MigrateOnly -and $recordedBaseline -and $recordedBaseline -ne $baselineHash) { throw "Baseline checksum mismatch." }
-if (-not $recordedBaseline) {
-    [void](Invoke-Query $adminArgs "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','$baselineHash')" $dbName)
-}
-
-foreach ($migration in Get-ChildItem -Path $migrations -Filter *.sql | Sort-Object Name) {
-    $hash = (Get-FileHash -Algorithm SHA256 $migration.FullName).Hash.ToLowerInvariant()
-    $recorded = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='$($migration.Name)' LIMIT 1" $dbName
-    if ($recorded) {
-        if ($recorded -ne $hash) {
-            if ($MigrateOnly) {
-                Write-Warning "Already-applied migration file differs from its recorded checksum and will not be reapplied: $($migration.Name)"
-            }
-            else {
-                throw "Migration checksum mismatch: $($migration.Name)"
-            }
-        }
-        continue
+try {
+    [void](Invoke-Query $adminArgs "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8" $dbName)
+    $baselineHash = (Get-FileHash -Algorithm SHA256 $baseline).Hash.ToLowerInvariant()
+    $recordedBaseline = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1" $dbName
+    if ($MigrateOnly -and -not $recordedBaseline) {
+        throw "The existing database has no recorded AetherXIV 2 baseline; administrator-assisted repair is required."
     }
-    Write-Host "Applying $($migration.Name)"
-    Invoke-SqlFile $migration.FullName $dbName
-    [void](Invoke-Query $adminArgs "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('$($migration.Name)','$hash')" $dbName)
-}
+    if (-not $MigrateOnly -and $recordedBaseline -and $recordedBaseline -ne $baselineHash) { throw "Baseline checksum mismatch." }
+    if (-not $recordedBaseline) {
+        [void](Invoke-Query $adminArgs "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','$baselineHash')" $dbName)
+    }
 
-Test-Database
+    foreach ($migration in Get-ChildItem -Path $migrations -Filter *.sql | Sort-Object Name) {
+        $hash = (Get-FileHash -Algorithm SHA256 $migration.FullName).Hash.ToLowerInvariant()
+        $recorded = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='$($migration.Name)' LIMIT 1" $dbName
+        if ($recorded) {
+            if ($recorded -ne $hash) {
+                if ($MigrateOnly) {
+                    Write-Warning "Already-applied migration file differs from its recorded checksum and will not be reapplied: $($migration.Name)"
+                }
+                else {
+                    throw "Migration checksum mismatch: $($migration.Name)"
+                }
+            }
+            continue
+        }
+        Write-Host "Applying $($migration.Name)"
+        Invoke-SqlFile $migration.FullName $dbName
+        [void](Invoke-Query $adminArgs "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('$($migration.Name)','$hash')" $dbName)
+    }
+
+    Test-Database
+}
+catch {
+    if (-not $MigrateOnly -and -not $baselineImported) {
+        Write-Warning "The existing AetherXIV 2 schema is incomplete or stale; preserving it and rebuilding the canonical schema."
+        $previousOriginalBackup = $env:AETHERXIV_ORIGINAL_BACKUP_PATH
+        $env:AETHERXIV_ORIGINAL_BACKUP_PATH = $script:OriginalBackupPath
+        try { & $PSCommandPath -CleanMigrate }
+        finally {
+            if ($null -eq $previousOriginalBackup) { Remove-Item Env:AETHERXIV_ORIGINAL_BACKUP_PATH -ErrorAction SilentlyContinue }
+            else { $env:AETHERXIV_ORIGINAL_BACKUP_PATH = $previousOriginalBackup }
+        }
+        exit 0
+    }
+    if ($baselineImported) { Restore-OriginalDatabase }
+    throw
+}

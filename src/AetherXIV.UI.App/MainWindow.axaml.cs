@@ -692,6 +692,42 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void UsePublicServiceBinds_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (operationInProgress)
+            return;
+
+        try
+        {
+            WorldBindBox.Text = WithWildcardBindHost(WorldBindBox.Text, "World");
+            LobbyBindBox.Text = WithWildcardBindHost(LobbyBindBox.Text, "Lobby");
+            bool stackRunning = supervisor.HasRunningServices;
+            if (!TrySaveConfig(reloadSupervisor: true, requireReloadForCurrentConfig: false))
+                return;
+
+            HeaderStatusText.Text = stackRunning
+                ? "Public World/Lobby binds saved; stop and restart the stack to apply them"
+                : "Public World/Lobby binds saved; set public DNS names in Advertise, then verify dependencies";
+        }
+        catch (Exception ex)
+        {
+            HeaderStatusText.Text = $"Public bind setup failed: {ex.Message}";
+        }
+    }
+
+    private static string WithWildcardBindHost(string? endpoint, string serviceName)
+    {
+        string value = endpoint?.Trim() ?? "";
+        int separator = value.LastIndexOf(':');
+        if (separator <= 0 || separator == value.Length - 1
+            || !UInt16.TryParse(value[(separator + 1)..], out ushort port))
+        {
+            throw new InvalidOperationException($"{serviceName} endpoint must use host:port syntax.");
+        }
+
+        return $"0.0.0.0:{port}";
+    }
+
     private bool TrySaveConfig(bool reloadSupervisor, bool requireReloadForCurrentConfig)
     {
         try
@@ -1104,7 +1140,7 @@ public sealed partial class MainWindow : Window
         {
             AppendPreflightStatus("[Updating] database.migrations: Backing up and applying pending migrations with the configured database account.");
             AetherXivDatabaseInstallResult update = await databaseInstaller.ApplyPendingMigrationsAsync(config).ConfigureAwait(true);
-            AppendDatabaseInstallerResult("database.compatibility", update);
+            AppendDatabaseInstallerResult("database.update", update);
             if (!update.Succeeded)
             {
                 HeaderStatusText.Text = "Database update failed; backup retained";
@@ -1113,28 +1149,28 @@ public sealed partial class MainWindow : Window
             result = await RunDatabasePreflightAsync(repair: true, adminCredentials: null, clearStatus: false).ConfigureAwait(true);
         }
 
-        if (result.RequiresCompatibilityMigration)
+        if (result.RequiresCanonicalRepair)
         {
-            if (!await ConfirmDatabaseCompatibilityMigrationAsync().ConfigureAwait(true))
+            if (!await ConfirmCanonicalDatabaseRepairAsync().ConfigureAwait(true))
             {
-                AppendPreflightStatus("[Blocked] database.compatibility: Compatibility migration was cancelled.");
-                HeaderStatusText.Text = "Database migration cancelled";
+                AppendPreflightStatus("[Blocked] database.repair: Canonical database repair was cancelled.");
+                HeaderStatusText.Text = "Database repair cancelled";
                 return false;
             }
 
-            AetherXivMariaDbAdminCredentials? adminCredentials = await RequestMariaDbAdminCredentialsAsync("Install Clean Database").ConfigureAwait(true);
+            AetherXivMariaDbAdminCredentials? adminCredentials = await RequestMariaDbAdminCredentialsAsync("Repair Database").ConfigureAwait(true);
             if (adminCredentials is null)
             {
-                AppendPreflightStatus("[Blocked] database.compatibility: MariaDB credentials were not provided.");
-                HeaderStatusText.Text = "Database migration cancelled";
+                AppendPreflightStatus("[Blocked] database.repair: MariaDB credentials were not provided.");
+                HeaderStatusText.Text = "Database repair cancelled";
                 return false;
             }
 
-            AetherXivDatabaseInstallResult migration = await databaseInstaller.CleanMigrateAsync(config, adminCredentials).ConfigureAwait(true);
-            AppendDatabaseInstallerResult("database.compatibility", migration);
-            if (!migration.Succeeded)
+            AetherXivDatabaseInstallResult repair = await databaseInstaller.RebuildCanonicalAsync(config, adminCredentials).ConfigureAwait(true);
+            AppendDatabaseInstallerResult("database.repair", repair);
+            if (!repair.Succeeded)
             {
-                HeaderStatusText.Text = "Database migration failed; original backup restored";
+                HeaderStatusText.Text = "Database repair failed; recovery backup retained";
                 return false;
             }
             result = await RunDatabasePreflightAsync(repair: true, adminCredentials: null, clearStatus: false).ConfigureAwait(true);
@@ -1337,14 +1373,14 @@ public sealed partial class MainWindow : Window
         return await dialog.ShowDialog<AetherXivMariaDbAdminCredentials?>(this).ConfigureAwait(true);
     }
 
-    private async Task<bool> ConfirmDatabaseCompatibilityMigrationAsync()
+    private async Task<bool> ConfirmCanonicalDatabaseRepairAsync()
     {
         Button cancelButton = new() { Content = "Cancel", MinWidth = 88 };
         Button migrateButton = new() { Content = "Back Up and Install Clean", MinWidth = 190 };
         migrateButton.Classes.Add("primary");
         Window dialog = new()
         {
-            Title = "Database Compatibility",
+            Title = "Database Repair",
             Width = 560,
             Height = 420,
             CanResize = false,
@@ -1364,14 +1400,14 @@ public sealed partial class MainWindow : Window
                 {
                     new TextBlock
                     {
-                        Text = "This database is not compatible with the installed AetherXIV 2 core.",
+                        Text = "This database needs to be initialized or repaired for AetherXIV 2.",
                         FontSize = 18,
                         FontWeight = FontWeight.SemiBold,
                         TextWrapping = TextWrapping.Wrap
                     },
                     new TextBlock
                     {
-                        Text = "AetherXIV will make a complete verified backup and install the canonical database. If compatible account and character tables are present, it will also try to restore accounts, characters, character-owned state, linkshell/retainer records, support records, and customized Launcher content. If that data is incompatible, setup keeps the clean database and retains both recovery backups.",
+                        Text = "AetherXIV will make a complete verified backup and install the canonical database. If compatible account and character tables are present, it will also try to restore accounts, characters, and character-owned tables. If those rows do not fit the AetherXIV 2 schema, setup keeps the clean database and retains the recovery files.",
                         TextWrapping = TextWrapping.Wrap
                     },
                     new TextBlock

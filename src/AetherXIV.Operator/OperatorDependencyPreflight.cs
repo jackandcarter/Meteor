@@ -52,6 +52,9 @@ public sealed class AetherXivDependencyPreflightService
         foreach (AetherXivServiceDefinition service in services)
             AddServiceHostCheck(steps, service, normalized);
 
+        AddPublicServiceBindCheck(steps, "world-public-bind", "World", normalized.World);
+        AddPublicServiceBindCheck(steps, "lobby-public-bind", "Lobby", normalized.Lobby);
+
         if (String.IsNullOrWhiteSpace(normalized.WorldMapRoute))
             Add("world-map-route", AetherXivDependencyStatus.Failed, "World map route endpoint is not configured.");
         else
@@ -59,6 +62,83 @@ public sealed class AetherXivDependencyPreflightService
 
         return new AetherXivDependencyCheckResult(steps);
     }
+
+    private static void AddPublicServiceBindCheck(
+        List<AetherXivDependencyCheckStep> steps,
+        string name,
+        string serviceName,
+        AetherXivEndpointConfig endpoint)
+    {
+        if (!TryParseEndpoint(endpoint.Bind, out string bindHost, out ushort bindPort))
+        {
+            steps.Add(new AetherXivDependencyCheckStep(
+                name,
+                AetherXivDependencyStatus.Failed,
+                $"{serviceName} bind endpoint is invalid: {endpoint.Bind}. Use host:port syntax."));
+            return;
+        }
+        if (!TryParseEndpoint(endpoint.Advertise, out string advertiseHost, out ushort advertisePort))
+        {
+            steps.Add(new AetherXivDependencyCheckStep(
+                name,
+                AetherXivDependencyStatus.Failed,
+                $"{serviceName} advertise endpoint is invalid: {endpoint.Advertise}. Use host:port syntax."));
+            return;
+        }
+        if (IsUnspecifiedHost(advertiseHost))
+        {
+            steps.Add(new AetherXivDependencyCheckStep(
+                name,
+                AetherXivDependencyStatus.Failed,
+                $"{serviceName} cannot advertise wildcard address {advertiseHost}; use the DNS name or IP address clients can reach."));
+            return;
+        }
+
+        bool publicAdvertise = !IsLoopbackHost(advertiseHost);
+        if (publicAdvertise && IsLoopbackHost(bindHost))
+        {
+            steps.Add(new AetherXivDependencyCheckStep(
+                name,
+                AetherXivDependencyStatus.Failed,
+                $"{serviceName} advertises {advertiseHost}:{advertisePort} but listens only on {bindHost}:{bindPort}. "
+                + $"Set the {serviceName} endpoint to 0.0.0.0:{bindPort} (or the VPS interface address) and keep the public DNS name in Advertise."));
+            return;
+        }
+
+        string scope = publicAdvertise ? "public" : "local-only";
+        steps.Add(new AetherXivDependencyCheckStep(
+            name,
+            AetherXivDependencyStatus.Passed,
+            $"{serviceName} {scope} routing is coherent: bind={bindHost}:{bindPort}, advertise={advertiseHost}:{advertisePort}."));
+    }
+
+    private static bool TryParseEndpoint(string value, out string host, out ushort port)
+    {
+        host = "";
+        port = 0;
+        if (String.IsNullOrWhiteSpace(value))
+            return false;
+
+        int separator = value.LastIndexOf(':');
+        if (separator <= 0 || separator == value.Length - 1)
+            return false;
+
+        host = value[..separator].Trim().Trim('[', ']');
+        return host.Length > 0 && UInt16.TryParse(value[(separator + 1)..], out port);
+    }
+
+    private static bool IsLoopbackHost(string host)
+    {
+        if (String.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return System.Net.IPAddress.TryParse(host, out System.Net.IPAddress? address)
+            && System.Net.IPAddress.IsLoopback(address);
+    }
+
+    private static bool IsUnspecifiedHost(string host) =>
+        String.Equals(host, "*", StringComparison.Ordinal)
+        || String.Equals(host, "0.0.0.0", StringComparison.Ordinal)
+        || String.Equals(host, "::", StringComparison.Ordinal);
 
     private static void AddDirectoryCheck(
         List<AetherXivDependencyCheckStep> steps,
