@@ -328,8 +328,10 @@ esac
         }
     }
 
-    [Fact]
-    public async Task MissingDatabaseInstallsBaselineBeforeAnyCompatibilityOrMigrationCheck()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MissingOrBlankDatabaseInstallsBaselineBeforeVerification(bool databaseExists)
     {
         if (OperatingSystem.IsWindows())
             return;
@@ -338,6 +340,7 @@ esac
         string package = Path.Combine(root, "Database");
         string migrations = Path.Combine(package, "migrations");
         string logPath = Path.Combine(root, "mysql-calls.log");
+        string schemaReadyPath = Path.Combine(root, "schema-ready");
         Directory.CreateDirectory(migrations);
         File.Copy(FindRepositoryFile("db", "direct-core", "setup.sh"), Path.Combine(package, "setup.sh"));
         File.Copy(FindRepositoryFile("db", "direct-core", "setup.ps1"), Path.Combine(package, "setup.ps1"));
@@ -362,15 +365,17 @@ for ((index=0; index<${#args[@]}; index++)); do
 done
 if [[ -z "${query}" ]]; then
   cat >/dev/null
+  touch "${FAKE_SCHEMA_READY}"
   echo "BASELINE_IMPORT" >> "${FAKE_MYSQL_LOG}"
   exit 0
 fi
 echo "QUERY:${query}" >> "${FAKE_MYSQL_LOG}"
 case "${query}" in
-  *information_schema.schemata*) echo 0 ;;
+  *information_schema.schemata*) echo "${FAKE_DATABASE_EXISTS}" ;;
+  *"SELECT COUNT(*) FROM aether_database_compatibility"*) echo 1 ;;
   *server_battlenpc_appearance_audit*) echo 0 ;;
   *information_schema.columns*) echo 3 ;;
-  *information_schema.tables*) echo 1 ;;
+  *information_schema.tables*) [[ -e "${FAKE_SCHEMA_READY}" ]] && echo 1 || echo 0 ;;
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
   *promotionMigration*) echo "60:11:13:0" ;;
   *server_battlenpc_pools*) echo "2" ;;
@@ -397,6 +402,8 @@ esac
             startInfo.Environment["MYSQL_BIN"] = fakeMariaDb;
             startInfo.Environment["MYSQLDUMP_BIN"] = Path.Combine(root, "missing-mysqldump");
             startInfo.Environment["FAKE_MYSQL_LOG"] = logPath;
+            startInfo.Environment["FAKE_SCHEMA_READY"] = schemaReadyPath;
+            startInfo.Environment["FAKE_DATABASE_EXISTS"] = databaseExists ? "1" : "0";
             startInfo.Environment["AETHERXIV_CORE_BACKUP_DIR"] = Path.Combine(root, "backups");
             startInfo.Environment["AETHERXIV_DB_NAME"] = "ffxiv_server";
             startInfo.Environment["AETHERXIV_DB_USER"] = "aetherxiv";
@@ -410,8 +417,16 @@ esac
             await process.WaitForExitAsync();
 
             Assert.True(process.ExitCode == 0, $"stdout:\n{output}\nstderr:\n{error}");
-            Assert.Contains("Importing canonical direct-core baseline", output, StringComparison.Ordinal);
-            Assert.DoesNotContain("Backed up", output, StringComparison.Ordinal);
+            if (databaseExists)
+            {
+                Assert.Contains("Canonical AetherXIV 2 database installed", output, StringComparison.Ordinal);
+                Assert.Contains("Backed up", output, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.Contains("Importing canonical direct-core baseline", output, StringComparison.Ordinal);
+                Assert.DoesNotContain("Backed up", output, StringComparison.Ordinal);
+            }
 
             string calls = File.ReadAllText(logPath);
             int createIndex = calls.IndexOf("CREATE DATABASE IF NOT EXISTS", StringComparison.Ordinal);
@@ -419,9 +434,13 @@ esac
             Assert.True(createIndex >= 0 && importIndex > createIndex, calls);
 
             string beforeImport = calls[..importIndex];
-            Assert.DoesNotContain("aether_database_compatibility", beforeImport, StringComparison.Ordinal);
+            if (!databaseExists)
+                Assert.DoesNotContain("aether_database_compatibility", beforeImport, StringComparison.Ordinal);
             Assert.DoesNotContain("aether_schema_migrations", beforeImport, StringComparison.Ordinal);
-            Assert.DoesNotContain("DROP DATABASE", beforeImport, StringComparison.Ordinal);
+            if (databaseExists)
+                Assert.Contains("DROP DATABASE", beforeImport, StringComparison.Ordinal);
+            else
+                Assert.DoesNotContain("DROP DATABASE", beforeImport, StringComparison.Ordinal);
             Assert.Contains("aether_database_compatibility", calls[importIndex..], StringComparison.Ordinal);
 
             string? pwsh = FindExecutableOnPath("pwsh");
@@ -432,6 +451,7 @@ esac
                 File.SetUnixFileMode(fakePowerShellMariaDb,
                     UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
                 File.WriteAllText(logPath, "");
+                File.Delete(schemaReadyPath);
 
                 ProcessStartInfo powerShellStart = new(pwsh)
                 {
@@ -446,6 +466,8 @@ esac
                 powerShellStart.ArgumentList.Add(Path.Combine(package, "setup.ps1"));
                 powerShellStart.Environment["PATH"] = root + Path.PathSeparator + powerShellStart.Environment["PATH"];
                 powerShellStart.Environment["FAKE_MYSQL_LOG"] = logPath;
+                powerShellStart.Environment["FAKE_SCHEMA_READY"] = schemaReadyPath;
+                powerShellStart.Environment["FAKE_DATABASE_EXISTS"] = databaseExists ? "1" : "0";
                 powerShellStart.Environment["AETHERXIV_FORCE_LEGACY_PROCESS_ARGUMENTS"] = "1";
                 powerShellStart.Environment["AETHERXIV_CORE_BACKUP_DIR"] = Path.Combine(root, "backup path with spaces");
                 powerShellStart.Environment["AETHERXIV_DB_NAME"] = "ffxiv_server";
@@ -461,7 +483,10 @@ esac
 
                 Assert.True(powerShellProcess.ExitCode == 0,
                     $"stdout:\n{powerShellOutput}\nstderr:\n{powerShellError}");
-                Assert.Contains("Importing canonical direct-core baseline", powerShellOutput, StringComparison.Ordinal);
+                Assert.Contains(
+                    databaseExists ? "Canonical AetherXIV 2 database installed" : "Importing canonical direct-core baseline",
+                    powerShellOutput,
+                    StringComparison.Ordinal);
                 Assert.Contains("BASELINE_IMPORT", File.ReadAllText(logPath), StringComparison.Ordinal);
             }
         }
