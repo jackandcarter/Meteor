@@ -114,6 +114,25 @@ sha256_file() {
     return 2
   fi
 }
+sha256_stdin() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{print tolower($1)}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print tolower($1)}'
+  else
+    echo "A SHA-256 tool is required (shasum or sha256sum)." >&2
+    return 2
+  fi
+}
+migration_checksum_matches_file() {
+  local recorded="$1" path="$2" raw lf crlf
+  raw="$(sha256_file "${path}")"
+  [[ "${recorded}" == "${raw}" ]] && return 0
+  lf="$(tr -d '\r' < "${path}" | sha256_stdin)"
+  [[ "${recorded}" == "${lf}" ]] && return 0
+  crlf="$(tr -d '\r' < "${path}" | sed $'s/$/\r/' | sha256_stdin)"
+  [[ "${recorded}" == "${crlf}" ]]
+}
 is_trusted_baseline_checksum() {
   local candidate="$1" hash rest
   while read -r hash rest; do
@@ -407,7 +426,7 @@ apply_migrations() {
     checksum="$(sha256_file "${migration}")"
     recorded="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='${name}' LIMIT 1")"
     if [[ -n "${recorded}" ]]; then
-      if [[ "${recorded}" != "${checksum}" ]]; then
+      if ! migration_checksum_matches_file "${recorded}" "${migration}"; then
         echo "Migration checksum mismatch: ${name}" >&2
         return 23
       fi

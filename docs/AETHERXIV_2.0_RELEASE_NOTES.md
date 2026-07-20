@@ -23,7 +23,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 462 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 463 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 

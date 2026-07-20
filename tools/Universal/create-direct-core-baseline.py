@@ -55,7 +55,9 @@ def main() -> int:
     sources: list[dict[str, str]] = []
     for path in source_files:
         relative = path.relative_to(root).as_posix()
-        content = path.read_bytes()
+        # Git may check text files out with CRLF on Windows. The canonical
+        # baseline must be byte-identical on every build host.
+        content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
         sources.append({"path": relative, "sha256": digest(content)})
         chunks.extend((f"\n-- BEGIN {relative}\n".encode(), content, f"\n-- END {relative}\n".encode()))
 

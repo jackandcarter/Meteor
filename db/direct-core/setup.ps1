@@ -60,6 +60,39 @@ function Test-TrustedBaselineChecksum([string]$Checksum) {
     }
     return $false
 }
+function Get-LineEndingChecksums([string]$Path) {
+    [byte[]]$raw = [IO.File]::ReadAllBytes($Path)
+    $lfStream = [IO.MemoryStream]::new()
+    try {
+        for ($index = 0; $index -lt $raw.Length; $index++) {
+            if ($raw[$index] -eq 13) {
+                if ($index + 1 -lt $raw.Length -and $raw[$index + 1] -eq 10) { $index++ }
+                $lfStream.WriteByte(10)
+            }
+            else { $lfStream.WriteByte($raw[$index]) }
+        }
+        [byte[]]$lf = $lfStream.ToArray()
+    }
+    finally { $lfStream.Dispose() }
+
+    $crlfStream = [IO.MemoryStream]::new()
+    try {
+        foreach ($value in $lf) {
+            if ($value -eq 10) { $crlfStream.WriteByte(13) }
+            $crlfStream.WriteByte($value)
+        }
+        [byte[]]$crlf = $crlfStream.ToArray()
+    }
+    finally { $crlfStream.Dispose() }
+
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+        return @($raw, $lf, $crlf) | ForEach-Object {
+            ([BitConverter]::ToString($sha.ComputeHash($_))).Replace("-", "").ToLowerInvariant()
+        } | Select-Object -Unique
+    }
+    finally { $sha.Dispose() }
+}
 function Connection-Args([string]$User, [string]$Password) {
     $result = @("-h", $dbHost, "-P", $dbPort, "-u", $User)
     if ($Password) { $result += "-p$Password" }
@@ -401,7 +434,7 @@ try {
         $hash = (Get-FileHash -Algorithm SHA256 $migration.FullName).Hash.ToLowerInvariant()
         $recorded = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='$($migration.Name)' LIMIT 1" $dbName
         if ($recorded) {
-            if ($recorded -ne $hash) {
+            if (@(Get-LineEndingChecksums $migration.FullName) -notcontains $recorded.ToLowerInvariant()) {
                 throw "Migration checksum mismatch: $($migration.Name)"
             }
             continue

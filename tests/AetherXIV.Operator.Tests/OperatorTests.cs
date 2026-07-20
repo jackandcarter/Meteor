@@ -496,8 +496,10 @@ esac
         }
     }
 
-    [Fact]
-    public async Task TrustedEarlierBaselineMigratesVerifiesAndAdvancesLedgerInPlace()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TrustedEarlierBaselineMigratesVerifiesAndAdvancesLedgerInPlace(bool migrationRecordedWithCrlf)
     {
         if (OperatingSystem.IsWindows())
             return;
@@ -517,7 +519,11 @@ esac
         File.WriteAllText(
             Path.Combine(package, "baseline-history.sha256"),
             $"{earlierHash}  earlier\n{currentHash}  current\n");
-        File.WriteAllText(Path.Combine(migrations, AetherXivDatabaseCompatibility.LatestDirectCoreMigration), "SELECT 1;\n");
+        string migrationPath = Path.Combine(migrations, AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
+        File.WriteAllText(migrationPath, "SELECT 1;\n");
+        string crlfMigrationHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData("SELECT 1;\r\n"u8.ToArray()))
+            .ToLowerInvariant();
 
         string fakeMariaDb = Path.Combine(root, "fake-mariadb");
         File.WriteAllText(fakeMariaDb, """
@@ -544,7 +550,7 @@ case "${query}" in
   *information_schema.columns*) echo 3 ;;
   *information_schema.tables*) echo 1 ;;
   *"migration_name='baseline/"*) echo "${TRUSTED_EARLIER_HASH}" ;;
-  *"SELECT checksum_sha256"*) ;;
+  *"SELECT checksum_sha256"*) [[ -z "${MIGRATION_RECORDED_HASH}" ]] || echo "${MIGRATION_RECORDED_HASH}" ;;
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
   *promotionMigration*) echo "60:11:13:0" ;;
   *server_battlenpc_pools*) echo 2 ;;
@@ -576,6 +582,7 @@ esac
             startInfo.Environment["MYSQLDUMP_BIN"] = fakeDump;
             startInfo.Environment["FAKE_MYSQL_LOG"] = logPath;
             startInfo.Environment["TRUSTED_EARLIER_HASH"] = earlierHash;
+            startInfo.Environment["MIGRATION_RECORDED_HASH"] = migrationRecordedWithCrlf ? crlfMigrationHash : "";
             startInfo.Environment["AETHERXIV_CORE_BACKUP_DIR"] = Path.Combine(root, "backups");
             startInfo.Environment["AETHERXIV_DB_NAME"] = "ffxiv_server";
             startInfo.Environment["AETHERXIV_DB_USER"] = "aetherxiv";
@@ -588,11 +595,19 @@ esac
 
             Assert.True(process.ExitCode == 0, $"stdout:\n{output}\nstderr:\n{error}");
             Assert.Contains("Recognized a trusted earlier canonical baseline", output, StringComparison.Ordinal);
-            Assert.Contains($"Applying {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}", output, StringComparison.Ordinal);
             Assert.Contains("Direct-core database verified", output, StringComparison.Ordinal);
             Assert.Contains("Advanced the trusted baseline ledger", output, StringComparison.Ordinal);
             string calls = File.ReadAllText(logPath);
-            Assert.Contains("SQL_IMPORT", calls, StringComparison.Ordinal);
+            if (migrationRecordedWithCrlf)
+            {
+                Assert.DoesNotContain($"Applying {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}", output, StringComparison.Ordinal);
+                Assert.DoesNotContain("SQL_IMPORT", calls, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.Contains($"Applying {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}", output, StringComparison.Ordinal);
+                Assert.Contains("SQL_IMPORT", calls, StringComparison.Ordinal);
+            }
             Assert.Contains($"SET checksum_sha256='{currentHash}'", calls, StringComparison.Ordinal);
         }
         finally

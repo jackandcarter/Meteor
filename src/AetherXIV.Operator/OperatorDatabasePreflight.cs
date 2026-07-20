@@ -244,7 +244,7 @@ LIMIT 1;
             return;
         }
 
-        Dictionary<string, string> expectedMigrations = new(StringComparer.Ordinal);
+        Dictionary<string, HashSet<string>> expectedMigrations = new(StringComparer.Ordinal);
         foreach (string migrationName in AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations)
         {
             string migrationPath = Path.Combine(migrationDirectory, migrationName);
@@ -254,7 +254,7 @@ LIMIT 1;
                     $"The packaged Database installer is missing required migration {migrationName}.");
                 return;
             }
-            expectedMigrations[migrationName] = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(migrationPath))).ToLowerInvariant();
+            expectedMigrations[migrationName] = CalculateLineEndingChecksums(File.ReadAllBytes(migrationPath));
         }
 
         Dictionary<string, string> recordedMigrations = new(StringComparer.Ordinal);
@@ -276,7 +276,7 @@ WHERE migration_name IN ({String.Join(",", parameterNames)});
 
         string[] changedMigrations = expectedMigrations
             .Where(pair => recordedMigrations.TryGetValue(pair.Key, out string? checksum)
-                && !String.Equals(pair.Value, checksum, StringComparison.OrdinalIgnoreCase))
+                && !pair.Value.Contains(checksum))
             .Select(pair => pair.Key)
             .ToArray();
         if (changedMigrations.Length > 0)
@@ -716,6 +716,39 @@ WHERE table_schema=DATABASE() AND (
         command.CommandText = sql;
         object? result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return result is null or DBNull ? null : Convert.ToString(result);
+    }
+
+    private static HashSet<string> CalculateLineEndingChecksums(byte[] raw)
+    {
+        List<byte> lf = new(raw.Length);
+        for (int index = 0; index < raw.Length; index++)
+        {
+            if (raw[index] == (byte)'\r')
+            {
+                if (index + 1 < raw.Length && raw[index + 1] == (byte)'\n')
+                    index++;
+                lf.Add((byte)'\n');
+            }
+            else
+            {
+                lf.Add(raw[index]);
+            }
+        }
+
+        List<byte> crlf = new(lf.Count + 128);
+        foreach (byte value in lf)
+        {
+            if (value == (byte)'\n')
+                crlf.Add((byte)'\r');
+            crlf.Add(value);
+        }
+
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            Convert.ToHexString(SHA256.HashData(raw)).ToLowerInvariant(),
+            Convert.ToHexString(SHA256.HashData(lf.ToArray())).ToLowerInvariant(),
+            Convert.ToHexString(SHA256.HashData(crlf.ToArray())).ToLowerInvariant()
+        };
     }
 
     private static ServerEndpoint ParseEndpoint(string raw, string label)
