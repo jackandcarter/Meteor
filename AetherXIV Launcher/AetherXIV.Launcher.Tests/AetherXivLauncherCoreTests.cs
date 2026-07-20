@@ -1097,22 +1097,43 @@ public sealed class AetherXivLauncherCoreTests
     }
 
     [Fact]
-    public void LegacyPatchApplierDeletesFileEntry()
+    public void LegacyPatchApplierAppliesPayloadForFirstHashMode()
     {
         string root = CreateTempDirectory();
         string targetPath = Path.Combine(root, "client", "script", "staticactors.bin");
         Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-        File.WriteAllText(targetPath, "delete me");
-        string patchPath = Path.Combine(CreateTempDirectory(), "delete.patch");
+        File.WriteAllText(targetPath, "old bytes");
+        string patchPath = Path.Combine(CreateTempDirectory(), "first-hash.patch");
+        byte[] expected = Encoding.ASCII.GetBytes("replacement bytes");
 
         WritePatchFileChunks(
             patchPath,
             "client/script/staticactors.bin",
-            (0x44, [], false, 0));
+            (0x44, expected, false, (uint)expected.Length));
 
         LegacyPatchApplier.ApplyPatchFile(root, patchPath);
 
-        Assert.False(File.Exists(targetPath));
+        Assert.Equal(expected, File.ReadAllBytes(targetPath));
+    }
+
+    [Fact]
+    public void LegacyPatchApplierDoesNotDeleteFileForEmptyFirstHashMode()
+    {
+        string root = CreateTempDirectory();
+        string targetPath = Path.Combine(root, "client", "script", "staticactors.bin");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+        byte[] expected = Encoding.ASCII.GetBytes("keep me");
+        File.WriteAllBytes(targetPath, expected);
+        string patchPath = Path.Combine(CreateTempDirectory(), "first-hash-empty.patch");
+
+        WritePatchFileChunks(
+            patchPath,
+            "client/script/staticactors.bin",
+            (0x44, [], false, (uint)expected.Length));
+
+        LegacyPatchApplier.ApplyPatchFile(root, patchPath);
+
+        Assert.Equal(expected, File.ReadAllBytes(targetPath));
     }
 
     [Fact]

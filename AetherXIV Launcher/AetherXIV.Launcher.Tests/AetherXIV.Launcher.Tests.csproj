@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AetherXIV.Launcher.Core\AetherXIV.Launcher.Core.csproj" />
+    <ProjectReference Include="..\AetherXIV.Launcher.ClientLauncher\AetherXIV.Launcher.ClientLauncher.csproj" />
     <ProjectReference Include="..\Umbra\Aether.Umbra.Framework\Aether.Umbra.Framework.csproj" />
     <ProjectReference Include="..\Umbra\Aether.Umbra.SamplePlugin\Aether.Umbra.SamplePlugin.csproj" />
   </ItemGroup>

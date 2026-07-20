@@ -299,17 +299,6 @@ public static class LegacyPatchApplier
             uint newFileSize = ReadUInt32BigEndian(input);
             expectedFileSize = newFileSize;
 
-            if (entryMode == 0x44)
-            {
-                SkipPayload(input, compressedSize, cancellationToken);
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
-                else
-                    messages?.Add($"File not found for deletion: {filePath}");
-
-                continue;
-            }
-
             if (index != itemCount - 1 && compressedSize != 0)
                 throw new InvalidDataException($"Non-final ZiPatch entry contains file data: {displayPath}.");
 

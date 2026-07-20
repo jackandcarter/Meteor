@@ -10,6 +10,9 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 
 **Highlights**
 
+- Corrected ZiPatch `0x44` handling so hash-selection records apply their payload instead of deleting valid client files.
+- Client memory patches now resolve from the suspended process's actual loaded image base, including the Windows/WOW64 helper path.
+- Gridania's opening tutorial now registers retail-shaped content and temporary-party groups atomically, with correct NPC names and a single active content director during zone-in.
 - Modernized .NET 10 core and tooling.
 - One release layout for the AetherXIV Core app, Launcher, database tools and Umbra.
 - New AetherXIV Core app for starting, stopping and monitoring the full server stack.

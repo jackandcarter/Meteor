@@ -38,6 +38,16 @@ internal static partial class NativeMethods
         out int lpNumberOfBytesRead);
 
     [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetThreadContext(
+        IntPtr hThread,
+        ref WOW64_CONTEXT lpContext);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool Wow64GetThreadContext(
+        IntPtr hThread,
+        ref WOW64_CONTEXT lpContext);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool VirtualProtectEx(
         IntPtr hProcess,
         IntPtr lpAddress,
@@ -105,6 +115,17 @@ internal static partial class NativeMethods
     internal const uint WaitTimeout = 0x00000102;
     internal const uint WaitFailed = 0xFFFFFFFF;
     internal const uint ResumeThreadFailed = 0xFFFFFFFF;
+    internal const uint ContextFullX86 = 0x00010007;
+
+    [StructLayout(LayoutKind.Explicit, Size = 716)]
+    internal struct WOW64_CONTEXT
+    {
+        [FieldOffset(0)]
+        internal uint ContextFlags;
+
+        [FieldOffset(164)]
+        internal uint Ebx;
+    }
 
     [Flags]
     internal enum ProcessCreationFlags : uint

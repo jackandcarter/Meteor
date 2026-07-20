@@ -8,13 +8,12 @@ namespace AetherXIV.Launcher.ClientLauncher;
 internal static class ClientProcessLauncher
 {
     private const int MaxVisibleLogicalProcessors = 15;
-    private const uint ImageBase = 0x400000;
-    private const uint EncryptionTimePatchAddress = ImageBase + 0x9A15E3;
-    private const uint LobbyHostNameAddress = ImageBase + 0xB90110;
+    private const uint EncryptionTimePatchRva = 0x9A15E3;
+    private const uint LobbyHostNameRva = 0xB90110;
     private const uint LobbyHostNamePatchSize = 0x14;
-    private const uint BootSkipPatchAddress = 0x403698;
-    private const uint LaunchFlag1PatchAddress = ImageBase + 0xBB952B;
-    private const uint LaunchFlag2PatchAddress = ImageBase + 0xBB95D3;
+    private const uint BootSkipPatchRva = 0x3698;
+    private const uint LaunchFlag1PatchRva = 0xBB952B;
+    private const uint LaunchFlag2PatchRva = 0xBB95D3;
 
     private static readonly byte[] EncryptionTimeOriginalBytes = [0xE8, 0x3D, 0x41, 0xC3, 0xFF];
     private static readonly byte[] EncryptionTimePatchBytes = [0xB8, 0x12, 0xE8, 0xE0, 0x50];
@@ -77,8 +76,9 @@ internal static class ClientProcessLauncher
         try
         {
             log?.Invoke("memory_patch_sequence_start=true");
-            log?.Invoke($"assumed_image_base=0x{ImageBase:X8}");
-            ApplyPatches(processInfo.hProcess, lobbyHost, log);
+            uint imageBase = ReadSuspendedImageBase(processInfo.hProcess, processInfo.hThread, log);
+            log?.Invoke($"loaded_image_base=0x{imageBase:X8}");
+            ApplyPatches(processInfo.hProcess, imageBase, lobbyHost, log);
             log?.Invoke("memory_patch_sequence_complete=true");
 
             if (options.Umbra.Enabled)
@@ -256,12 +256,65 @@ internal static class ClientProcessLauncher
         return UIntPtr.Size == 8 ? value.ToUInt64() : value.ToUInt32();
     }
 
-    private static void ApplyPatches(IntPtr processHandle, string lobbyHost, Action<string>? log)
+    private static uint ReadSuspendedImageBase(
+        IntPtr processHandle,
+        IntPtr threadHandle,
+        Action<string>? log)
+    {
+        NativeMethods.WOW64_CONTEXT context = new()
+        {
+            ContextFlags = NativeMethods.ContextFullX86
+        };
+        bool contextRead;
+        if (Environment.Is64BitProcess)
+        {
+            log?.Invoke("thread_context_api=Wow64GetThreadContext");
+            contextRead = NativeMethods.Wow64GetThreadContext(threadHandle, ref context);
+        }
+        else
+        {
+            log?.Invoke("thread_context_api=GetThreadContext");
+            contextRead = NativeMethods.GetThreadContext(threadHandle, ref context);
+        }
+
+        if (!contextRead)
+            throw new Win32Exception();
+        if (context.Ebx > uint.MaxValue - 8)
+            throw new InvalidOperationException("Suspended client PEB address is invalid.");
+
+        uint imageBasePointer = context.Ebx + 8;
+        log?.Invoke($"thread_context_ebx=0x{context.Ebx:X8}");
+        log?.Invoke($"image_base_pointer=0x{imageBasePointer:X8}");
+        byte[] imageBaseBytes = new byte[sizeof(uint)];
+        if (!NativeMethods.ReadProcessMemory(
+                processHandle,
+                (IntPtr)(long)imageBasePointer,
+                imageBaseBytes,
+                sizeof(uint),
+                out int bytesRead))
+        {
+            throw new Win32Exception();
+        }
+
+        if (bytesRead != sizeof(uint))
+            throw new InvalidOperationException($"Incomplete client image-base read ({bytesRead}/{sizeof(uint)} bytes).");
+
+        uint imageBase = BitConverter.ToUInt32(imageBaseBytes);
+        if (imageBase == 0)
+            throw new InvalidOperationException("Suspended client reported a null image base.");
+
+        return imageBase;
+    }
+
+    internal static uint ResolvePatchAddress(uint imageBase, uint relativeVirtualAddress) =>
+        checked(imageBase + relativeVirtualAddress);
+
+    private static void ApplyPatches(IntPtr processHandle, uint imageBase, string lobbyHost, Action<string>? log)
     {
         ApplyPatch(
             processHandle,
             "encryption_time",
-            EncryptionTimePatchAddress,
+            ResolvePatchAddress(imageBase, EncryptionTimePatchRva),
             EncryptionTimePatchBytes,
             EncryptionTimeOriginalBytes,
             log);
@@ -273,11 +326,11 @@ internal static class ClientProcessLauncher
         byte[] lobbyHostPatch = new byte[LobbyHostNamePatchSize];
         byte[] lobbyHostBytes = Encoding.ASCII.GetBytes(lobbyHost);
         Buffer.BlockCopy(lobbyHostBytes, 0, lobbyHostPatch, 0, lobbyHostBytes.Length);
-        ApplyPatch(processHandle, "lobby_host", LobbyHostNameAddress, lobbyHostPatch, LobbyHostOriginalBytes, log);
+        ApplyPatch(processHandle, "lobby_host", ResolvePatchAddress(imageBase, LobbyHostNameRva), lobbyHostPatch, LobbyHostOriginalBytes, log);
 
-        ApplyPatch(processHandle, "boot_skip", BootSkipPatchAddress, BootSkipPatchBytes, BootSkipOriginalBytes, log);
-        ApplyPatch(processHandle, "launch_flag_1", LaunchFlag1PatchAddress, LaunchFlagPatchBytes, LaunchFlag1OriginalBytes, log);
-        ApplyPatch(processHandle, "launch_flag_2", LaunchFlag2PatchAddress, LaunchFlagPatchBytes, LaunchFlag2OriginalBytes, log);
+        ApplyPatch(processHandle, "boot_skip", ResolvePatchAddress(imageBase, BootSkipPatchRva), BootSkipPatchBytes, BootSkipOriginalBytes, log);
+        ApplyPatch(processHandle, "launch_flag_1", ResolvePatchAddress(imageBase, LaunchFlag1PatchRva), LaunchFlagPatchBytes, LaunchFlag1OriginalBytes, log);
+        ApplyPatch(processHandle, "launch_flag_2", ResolvePatchAddress(imageBase, LaunchFlag2PatchRva), LaunchFlagPatchBytes, LaunchFlag2OriginalBytes, log);
     }
 
     private static void ApplyPatch(

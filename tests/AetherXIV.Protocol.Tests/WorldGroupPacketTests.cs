@@ -65,6 +65,7 @@ public sealed class WorldGroupPacketTests
         Assert.Equal(0ul, PacketBinary.ReadUInt64LittleEndian(packets[0].Payload.Span[0x10..]));
         Assert.Equal(0ul, PacketBinary.ReadUInt64LittleEndian(packets[0].Payload.Span[0x18..]));
         Assert.Equal(9ul, PacketBinary.ReadUInt64LittleEndian(packets[0].Payload.Span[0x28..]));
+        Assert.Equal(0x3F3Eu, PacketBinary.ReadUInt32LittleEndian(packets[0].Payload.Span[0x64..]));
         Assert.Equal(17u, PacketBinary.ReadUInt32LittleEndian(packets[3].Payload.Span[0x10..]));
         Assert.Equal(1u, PacketBinary.ReadUInt32LittleEndian(packets[3].Payload.Span[0x190..]));
     }
@@ -90,6 +91,8 @@ public sealed class WorldGroupPacketTests
             packets.Select(packet => packet.Opcode!.Value).ToArray());
         Assert.Equal(WorldGroupClientPackets.SimpleContentGroupType,
             PacketBinary.ReadUInt32LittleEndian(packets[0].Payload.Span[0x30..]));
+        Assert.Equal(0u, PacketBinary.ReadUInt32LittleEndian(packets[0].Payload.Span[0x64..]));
+        Assert.Equal(0u, PacketBinary.ReadUInt32LittleEndian(packets[0].Payload.Span[0x70..]));
         Assert.Equal(1u, PacketBinary.ReadUInt32LittleEndian(packets[2].Payload.Span[0x10..]));
         Assert.Equal(17u, PacketBinary.ReadUInt32LittleEndian(packets[3].Payload.Span[0x10..]));
         Assert.Equal(1u, PacketBinary.ReadUInt32LittleEndian(packets[3].Payload.Span[0x70..]));

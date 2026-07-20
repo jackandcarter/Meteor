@@ -1,6 +1,7 @@
 ﻿using AetherXIV.Core.Map.actors.group.Work;
 using AetherXIV.Core.Map.packets.send.group;
 using AetherXIV.Core.Map.Actors;
+using AetherXIV.Core.Map.dataobjects;
 using System.Collections.Generic;
 
 namespace AetherXIV.Core.Map.actors.group
@@ -9,11 +10,14 @@ namespace AetherXIV.Core.Map.actors.group
     {
         public PartyWork partyGroupWork = new PartyWork();
         public List<uint> members = new List<uint>();
+        private ulong clientGroupIndex;
+        private uint compositionOrdinal;
 
         public Party(ulong groupId, uint leaderCharaId) : base(groupId)
         {
             partyGroupWork._globalTemp.owner = (ulong)(((ulong)leaderCharaId << 32) | 0xB36F92);
             members.Add(leaderCharaId);
+            clientGroupIndex = groupId;
         }
 
         public void SetLeader(uint actorId)
@@ -53,6 +57,11 @@ namespace AetherXIV.Core.Map.actors.group
             return Group.PlayerPartyGroup;
         }
 
+        public override ulong GetClientGroupIndex()
+        {
+            return clientGroupIndex;
+        }
+
         public override List<GroupMember> BuildMemberList(uint id)
         {
             List<GroupMember> groupMembers = new List<GroupMember>();
@@ -74,7 +83,52 @@ namespace AetherXIV.Core.Map.actors.group
                 actor.actorId,
                 actor.displayNameId,
                 actor.customDisplayName,
-                isRecipient);
+                isRecipient,
+                actor is Player);
+        }
+
+        public void AddTransientMembers(uint firstMemberId, uint secondMemberId)
+        {
+            ulong previousClientGroupIndex = clientGroupIndex;
+            SendDeletePacketsForClientIndex(previousClientGroupIndex, members);
+
+            AddTransientMember(firstMemberId);
+            AddTransientMember(secondMemberId);
+            compositionOrdinal++;
+            clientGroupIndex = BuildClientGroupIndex(GetLeader(), members.Count, compositionOrdinal, groupIndex);
+        }
+
+        private void AddTransientMember(uint memberId)
+        {
+            if (!members.Contains(memberId))
+                members.Add(memberId);
+
+            if (Server.GetWorldManager().GetActorInWorld(memberId) is Character character)
+                character.currentParty = this;
+        }
+
+        internal static ulong BuildClientGroupIndex(
+            uint leaderActorId,
+            int memberCount,
+            uint ordinal,
+            ulong soloGroupIndex)
+        {
+            if (memberCount <= 1)
+                return soloGroupIndex;
+
+            return 0x8000000000000000ul
+                | ((ulong)leaderActorId << 16)
+                | (ordinal & 0xFFFFu);
+        }
+
+        private static void SendDeletePacketsForClientIndex(ulong clientIndex, IEnumerable<uint> recipients)
+        {
+            foreach (uint recipient in recipients)
+            {
+                Session session = Server.GetServer().GetSession(recipient);
+                if (session != null)
+                    session.QueuePacket(AetherXIV.Core.Map.packets.send.groups.DeleteGroupPacket.buildPacket(recipient, clientIndex));
+            }
         }
 
         public void AddMember(uint memberId)
@@ -86,12 +140,25 @@ namespace AetherXIV.Core.Map.actors.group
 
         public void RemoveTransientMembers(IEnumerable<uint> memberIds)
         {
+            ulong previousClientGroupIndex = clientGroupIndex;
             bool changed = false;
             foreach (uint memberId in memberIds)
+            {
                 changed |= members.Remove(memberId);
+                if (Server.GetWorldManager().GetActorInWorld(memberId) is Character character
+                    && character.currentParty == this)
+                {
+                    character.currentParty = null;
+                }
+            }
 
             if (changed)
+            {
+                SendDeletePacketsForClientIndex(previousClientGroupIndex, members);
+                compositionOrdinal++;
+                clientGroupIndex = BuildClientGroupIndex(GetLeader(), members.Count, compositionOrdinal, groupIndex);
                 SendGroupPacketsAll(members);
+            }
         }
 
         public void RemoveMember(uint memberId)

@@ -23,7 +23,7 @@ public static class AetherXivDatabaseCompatibility
     public const string CompatibilityId = "aetherxiv-direct-core-v2";
     public const string BaselineId = "20260716_000001_ffxiv_server_v2_baseline";
     public const string GuildleveContentMigration = "20260716_000005_guildleve_content_contract.sql";
-    public const string LatestDirectCoreMigration = "20260720_000016_gridania_tutorial_actor_roles.sql";
+    public const string LatestDirectCoreMigration = "20260720_000017_gridania_tutorial_spawn_contract.sql";
     public const string NpcServiceCatalogId = "zone-service-npcs-1.23b";
     public const string NpcServiceCatalogVersion = "2026.07.19.1";
     public const string NpcServiceCatalogHash = "f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de";
@@ -197,7 +197,7 @@ WHERE migration_name='{AetherXivDatabaseCompatibility.LatestDirectCoreMigration}
             "users", "sessions", "servers", "characters", "characters_appearance",
             "characters_quest_scenario", "characters_quest_completed", "characters_hotbar",
             "server_sessions", "server_zones", "server_zones_privateareas",
-            "server_battlenpc_spawn_locations", "server_battlenpc_spawn_audit_pins", "server_battlenpc_pools",
+            "server_battlenpc_spawn_locations", "server_battlenpc_spawn_audit_pins", "server_battlenpc_groups", "server_battlenpc_pools",
             "server_battle_commands", "server_player_base_stats", "server_spawn_locations",
             "gamedata_actor_class", "gamedata_actor_appearance", "server_items_modifiers",
             "characters_inventory", "characters_chocobo", "server_npc_spawn_evidence",
@@ -224,18 +224,20 @@ WHERE migration_name='{AetherXivDatabaseCompatibility.LatestDirectCoreMigration}
 
         int gridaniaTutorialActorRoles = await CountAsync(connection, """
 SELECT COUNT(*)
-FROM server_battlenpc_pools
-WHERE (poolId=3 AND name='yda' AND actorClassId=2290006)
-   OR (poolId=4 AND name='papalymo' AND actorClassId=2290005);
+FROM server_battlenpc_spawn_locations s
+JOIN server_battlenpc_groups g ON g.groupId=s.groupId
+JOIN server_battlenpc_pools p ON p.poolId=g.poolId
+WHERE (s.bnpcId=6 AND s.customDisplayName='yda' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006)
+   OR (s.bnpcId=7 AND s.customDisplayName='papalymo' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005);
 """, cancellationToken).ConfigureAwait(false);
         if (gridaniaTutorialActorRoles != 2)
         {
             add("gridania-tutorial.actor-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
-                "The Gridania tutorial ally roles are missing or stale. Run the packaged Database setup tool.");
+                "The Gridania tutorial spawn IDs 6 and 7 are missing, reversed, or stale. Run the packaged Database setup tool.");
             return;
         }
         add("gridania-tutorial.actor-contract", AetherXivDatabasePreflightStatus.Passed,
-            "Verified the Gridania tutorial Yda and Papalymo actor roles.");
+            "Verified Gridania tutorial spawn 6 as Yda and spawn 7 as Papalymo.");
 
         int guildleveSearchPointContract = await CountAsync(connection, """
 SELECT COUNT(*)

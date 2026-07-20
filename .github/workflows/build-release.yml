@@ -1,9 +1,13 @@
 name: AetherXIV 2.0 Runtime Update
-run-name: AetherXIV 2.0 Runtime Update
+run-name: ${{ inputs.build_name || 'AetherXIV 2.0 Runtime Update' }}
 
 on:
   workflow_dispatch:
     inputs:
+      build_name:
+        description: Name shown for this release build.
+        required: true
+        default: Patch Helper + Tutorial Update
       release_tag:
         description: Release tag to create or update.
         required: true

@@ -23,16 +23,16 @@
             uint actorId,
             uint displayNameId,
             string customDisplayName,
-            bool isRecipient)
+            bool isRecipient,
+            bool isPlayer)
         {
-            bool hasCustomName = !System.String.IsNullOrWhiteSpace(customDisplayName);
             return new GroupMember(
                 actorId,
-                hasCustomName ? -1 : unchecked((int)displayNameId),
+                isPlayer ? -1 : unchecked((int)displayNameId),
                 0,
                 !isRecipient,
                 true,
-                hasCustomName ? customDisplayName : "");
+                isPlayer ? customDisplayName : "");
         }
     }
 }

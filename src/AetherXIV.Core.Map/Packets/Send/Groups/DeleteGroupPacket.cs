@@ -12,7 +12,7 @@ namespace AetherXIV.Core.Map.packets.send.groups
 
         public static SubPacket buildPacket(uint playerActorID, Group group)
         {
-            return buildPacket(playerActorID, group.groupIndex);
+            return buildPacket(playerActorID, group.GetClientGroupIndex());
         }
 
         public static SubPacket buildPacket(uint playerActorID, ulong groupId)

@@ -42,8 +42,8 @@ public sealed class GridaniaOpeningTutorialScriptTests
         Assert.Contains("SpawnActor(1090384, \"openingstoper\"", script, StringComparison.Ordinal);
         Assert.Contains("director:AddMember(papalymo)", script, StringComparison.Ordinal);
         Assert.Contains("director:AddMember(yda)", script, StringComparison.Ordinal);
-        Assert.Contains("currentParty:AddMember(papalymo.actorId)", script, StringComparison.Ordinal);
-        Assert.Contains("currentParty:AddMember(yda.actorId)", script, StringComparison.Ordinal);
+        Assert.Contains("currentParty:AddTransientMembers(papalymo.actorId, yda.actorId)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("currentParty:AddMember(", script, StringComparison.Ordinal);
 
         string director = ReadDataScript("directors", "Quest", "QuestDirectorMan0g001.lua");
         Assert.DoesNotContain("director:StartContentGroup()", director, StringComparison.Ordinal);

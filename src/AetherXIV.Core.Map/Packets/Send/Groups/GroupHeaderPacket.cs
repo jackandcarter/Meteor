@@ -27,14 +27,22 @@ namespace AetherXIV.Core.Map.packets.send.group
                     binWriter.Write((UInt64)locationCode);
                     binWriter.Write((UInt64)sequenceId);
 
-                    //Write list id
-                    binWriter.Write((UInt64)3);
-                    binWriter.Write((UInt64)group.groupIndex);
+                    uint typeId = group.GetTypeId();
+                    bool isPlayerParty = typeId == Group.PlayerPartyGroup && group.GetMemberCount() > 1;
+                    bool isContentGroup = typeId >= Group.ContentGroup_GuildleveGroup
+                        && typeId <= Group.ContentGroup_SimpleContentGroup24C;
+                    ulong clientGroupIndex = group.GetClientGroupIndex();
+
+                    // Retail uses distinct registration envelopes for player
+                    // parties and content groups. Other legacy group families
+                    // retain the inherited Meteor shape.
+                    binWriter.Write(isPlayerParty ? (UInt64)0 : (UInt64)3);
+                    binWriter.Write(isPlayerParty ? (UInt64)0 : clientGroupIndex);
                     binWriter.Write((UInt64)0);
-                    binWriter.Write((UInt64)group.groupIndex);
+                    binWriter.Write(clientGroupIndex);
 
                     //This seems to change depending on what the list is for
-                    binWriter.Write((UInt32)group.GetTypeId());
+                    binWriter.Write(typeId);
                     binWriter.Seek(0x40, SeekOrigin.Begin);
 
                     //This is for Linkshell
@@ -43,10 +51,11 @@ namespace AetherXIV.Core.Map.packets.send.group
 
                     binWriter.Seek(0x64, SeekOrigin.Begin);
 
-                    binWriter.Write((UInt32)0x6D);
-                    binWriter.Write((UInt32)0x6D);
-                    binWriter.Write((UInt32)0x6D);
-                    binWriter.Write((UInt32)0x6D);
+                    uint marker = isPlayerParty ? 0x3F3Eu : isContentGroup ? 0u : 0x6Du;
+                    binWriter.Write(marker);
+                    binWriter.Write(marker);
+                    binWriter.Write(marker);
+                    binWriter.Write(marker);
 
                     binWriter.Write((UInt32)group.GetMemberCount());
                 }

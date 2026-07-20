@@ -760,15 +760,17 @@ public static class WorldGroupClientPackets
         byte[] payload = new byte[0x78];
         PacketBinary.WriteUInt64LittleEndian(payload, locationCode);
         PacketBinary.WriteUInt64LittleEndian(payload.AsSpan(0x08), sequenceId);
-        bool isParty = groupType == PartyGroupType;
+        bool isParty = groupType == PartyGroupType && memberCount > 1;
+        bool isContent = groupType is >= 30001 and <= 30018;
         PacketBinary.WriteUInt64LittleEndian(payload.AsSpan(0x10), isParty ? 0ul : 3ul);
         PacketBinary.WriteUInt64LittleEndian(payload.AsSpan(0x18), isParty ? 0ul : groupId);
         PacketBinary.WriteUInt64LittleEndian(payload.AsSpan(0x28), groupId);
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(0x30), groupType);
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(0x40), unchecked((uint)localizedName));
         WriteFixedAscii(payload.AsSpan(0x44, 0x20), name);
+        uint marker = isParty ? 0x3F3Eu : isContent ? 0u : 0x6Du;
         for (int offset = 0x64; offset <= 0x70; offset += sizeof(uint))
-            PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(offset), 0x6D);
+            PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(offset), marker);
         PacketBinary.WriteUInt32LittleEndian(payload.AsSpan(0x74), checked((uint)memberCount));
         return Game(PacketOpcode.GroupHeader, recipientActorId, payload);
     }

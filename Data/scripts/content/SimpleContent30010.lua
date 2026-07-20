@@ -17,8 +17,10 @@ function onCreate(starterPlayer, contentArea, director)
 
 	-- The 1.23b party HUD reads group 10001, not the content group. NPC
 	-- party rows use their localized display-name IDs and no custom name.
-	starterPlayer.currentParty:AddMember(papalymo.actorId);
-	starterPlayer.currentParty:AddMember(yda.actorId);
+	-- Mutate the temporary roster atomically. The old solo group is retired
+	-- here; the destination zone-in emits the complete three-member roster
+	-- once, after all destination actors have been instantiated.
+	starterPlayer.currentParty:AddTransientMembers(papalymo.actorId, yda.actorId);
 
 	-- No actor can die while the client is still running its targeting and
 	-- weaponskill lessons. The director releases the wolves after the player

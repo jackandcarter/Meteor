@@ -1,4 +1,5 @@
 using AetherXIV.Core.Map.Actors;
+using AetherXIV.Core.Map.actors.group;
 using AetherXIV.Core.Map.packets.send.group;
 
 namespace AetherXIV.Core.Map.Tests;
@@ -40,9 +41,9 @@ public sealed class GridaniaWireSafetyTests
     {
         List<GroupMember> members =
         [
-            GroupMember.ForActor(0x45000001, uint.MaxValue, "Test Player", true),
-            GroupMember.ForActor(0x45000006, 2300120, "", false),
-            GroupMember.ForActor(0x45000007, 1400004, "", false)
+            GroupMember.ForActor(0x45000001, uint.MaxValue, "Test Player", true, true),
+            GroupMember.ForActor(0x45000006, 2300120, "yda", false, false),
+            GroupMember.ForActor(0x45000007, 1400004, "papalymo", false, false)
         ];
         int offset = 0;
 
@@ -62,5 +63,43 @@ public sealed class GridaniaWireSafetyTests
         Assert.Equal(1400004, BitConverter.ToInt32(packet.data, 0x74));
         Assert.Equal(1, packet.data[0x7C]);
         Assert.Equal(3, BitConverter.ToInt32(packet.data, 0x190));
+    }
+
+    [Fact]
+    public void GroupHeadersUseRetailPartyAndContentEnvelopes()
+    {
+        TestGroup party = new(0x8000000000000042, Group.PlayerPartyGroup, 3);
+        TestGroup content = new(0x3000000000000042, Group.ContentGroup_SimpleContentGroup24B, 7);
+
+        AetherXIV.Core.Common.SubPacket partyPacket = GroupHeaderPacket.buildPacket(1, 166, 1234, party);
+        AetherXIV.Core.Common.SubPacket contentPacket = GroupHeaderPacket.buildPacket(1, 166, 1234, content);
+
+        Assert.Equal(0ul, BitConverter.ToUInt64(partyPacket.data, 0x10));
+        Assert.Equal(0ul, BitConverter.ToUInt64(partyPacket.data, 0x18));
+        Assert.Equal(0x3F3Eu, BitConverter.ToUInt32(partyPacket.data, 0x64));
+        Assert.Equal(3ul, BitConverter.ToUInt64(contentPacket.data, 0x10));
+        Assert.Equal(content.groupIndex, BitConverter.ToUInt64(contentPacket.data, 0x18));
+        Assert.Equal(0u, BitConverter.ToUInt32(contentPacket.data, 0x64));
+        Assert.Equal(0u, BitConverter.ToUInt32(contentPacket.data, 0x70));
+    }
+
+    [Fact]
+    public void TutorialPartyCompositionGetsFreshClientGroupIndex()
+    {
+        const ulong solo = 0x8000000000000042;
+
+        ulong first = Party.BuildClientGroupIndex(0x42, 3, 1, solo);
+        ulong second = Party.BuildClientGroupIndex(0x42, 2, 2, solo);
+
+        Assert.Equal(0x8000000000420001ul, first);
+        Assert.Equal(0x8000000000420002ul, second);
+        Assert.NotEqual(first, second);
+        Assert.Equal(solo, Party.BuildClientGroupIndex(0x42, 1, 3, solo));
+    }
+
+    private sealed class TestGroup(ulong groupIndex, uint typeId, int memberCount) : Group(groupIndex)
+    {
+        public override uint GetTypeId() => typeId;
+        public override int GetMemberCount() => memberCount;
     }
 }

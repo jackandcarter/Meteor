@@ -124,7 +124,8 @@ verify_database() {
   "${app[@]}" "${DB_NAME}" -e "SELECT 1" >/dev/null
   local required=(users sessions servers characters characters_appearance characters_quest_scenario
     characters_quest_completed characters_hotbar server_sessions server_zones server_zones_privateareas
-    server_battlenpc_spawn_locations server_battlenpc_spawn_audit_pins server_battle_commands
+    server_battlenpc_spawn_locations server_battlenpc_spawn_audit_pins server_battlenpc_groups
+    server_battlenpc_pools server_battle_commands
     server_player_base_stats characters_class_attributes server_spawn_locations gamedata_actor_class
     gamedata_actor_appearance server_items_modifiers characters_inventory characters_chocobo
     server_npc_spawn_evidence server_npc_spawn_evidence_catalog launcher_config aether_database_compatibility
@@ -155,8 +156,8 @@ verify_database() {
     return 29
   }
   local gridania_tutorial_actors
-  gridania_tutorial_actors="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=3 AND name='yda' AND actorClassId=2290006),':',(SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=4 AND name='papalymo' AND actorClassId=2290005))")"
-  [[ "${gridania_tutorial_actors}" == "1:1" ]] || {
+  gridania_tutorial_actors="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE (s.bnpcId=6 AND s.customDisplayName='yda' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006) OR (s.bnpcId=7 AND s.customDisplayName='papalymo' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005)")"
+  [[ "${gridania_tutorial_actors}" == "2" ]] || {
     echo "Gridania tutorial actor-role contract mismatch: ${gridania_tutorial_actors:-missing}" >&2
     return 30
   }
@@ -367,8 +368,8 @@ apply_migrations() {
     echo "The existing database has no recorded AetherXIV 2 baseline; an administrator-assisted repair is required." >&2
     return 23
   fi
-  if ((MIGRATE_ONLY == 0)) && [[ -n "${recorded_baseline}" && "${recorded_baseline}" != "${baseline_checksum}" ]]; then
-    echo "The recorded baseline checksum is stale; rebuilding from the packaged canonical database." >&2
+  if [[ -n "${recorded_baseline}" && "${recorded_baseline}" != "${baseline_checksum}" ]]; then
+    echo "The recorded baseline checksum differs from the packaged canonical baseline." >&2
     return 23
   fi
   if [[ -z "${recorded_baseline}" ]]; then
@@ -382,12 +383,8 @@ apply_migrations() {
     recorded="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='${name}' LIMIT 1")"
     if [[ -n "${recorded}" ]]; then
       if [[ "${recorded}" != "${checksum}" ]]; then
-        if ((MIGRATE_ONLY == 1)); then
-          echo "Warning: already-applied migration file differs from its recorded checksum and will not be reapplied: ${name}" >&2
-        else
-          echo "Migration checksum mismatch: ${name}" >&2
-          return 23
-        fi
+        echo "Migration checksum mismatch: ${name}" >&2
+        return 23
       fi
       continue
     fi

@@ -56,6 +56,11 @@ namespace AetherXIV.Core.Map.actors.group
             return 0;            
         }
 
+        public virtual ulong GetClientGroupIndex()
+        {
+            return groupIndex;
+        }
+
         public virtual string GetGroupName()
         {
             return "";

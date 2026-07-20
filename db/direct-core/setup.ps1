@@ -188,7 +188,7 @@ function Test-Database {
     $schema = Sql-Literal $dbName
     $required = @("users", "sessions", "servers", "characters", "characters_appearance",
         "characters_quest_scenario", "characters_quest_completed", "characters_hotbar", "server_sessions",
-        "server_zones", "server_zones_privateareas", "server_battlenpc_spawn_locations",
+        "server_zones", "server_zones_privateareas", "server_battlenpc_spawn_locations", "server_battlenpc_groups", "server_battlenpc_pools",
         "server_battle_commands", "server_player_base_stats", "characters_class_attributes", "server_battlenpc_spawn_audit_pins",
         "server_spawn_locations", "gamedata_actor_class", "gamedata_actor_appearance", "server_items_modifiers",
         "characters_inventory", "characters_chocobo", "server_npc_spawn_evidence", "server_npc_spawn_evidence_catalog",
@@ -216,8 +216,8 @@ function Test-Database {
     if ($centralShroudPinspawnContract -ne "60:11:13:0") {
         throw "Central Shroud pinspawn contract mismatch: $centralShroudPinspawnContract"
     }
-    $gridaniaTutorialActors = Invoke-Query $appArgs "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=3 AND name='yda' AND actorClassId=2290006),':',(SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=4 AND name='papalymo' AND actorClassId=2290005))" $dbName
-    if ($gridaniaTutorialActors -ne "1:1") {
+    $gridaniaTutorialActors = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE (s.bnpcId=6 AND s.customDisplayName='yda' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006) OR (s.bnpcId=7 AND s.customDisplayName='papalymo' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005)" $dbName
+    if ($gridaniaTutorialActors -ne "2") {
         throw "Gridania tutorial actor-role contract mismatch: $gridaniaTutorialActors"
     }
     $contract = Invoke-Query $appArgs "SELECT CONCAT(schema_generation,':',schema_version,':',compatibility_id,':',baseline_id) FROM aether_database_compatibility WHERE compatibility_key='direct-core' LIMIT 1" $dbName
@@ -369,7 +369,7 @@ try {
     if ($MigrateOnly -and -not $recordedBaseline) {
         throw "The existing database has no recorded AetherXIV 2 baseline; administrator-assisted repair is required."
     }
-    if (-not $MigrateOnly -and $recordedBaseline -and $recordedBaseline -ne $baselineHash) { throw "Baseline checksum mismatch." }
+    if ($recordedBaseline -and $recordedBaseline -ne $baselineHash) { throw "Baseline checksum mismatch." }
     if (-not $recordedBaseline) {
         [void](Invoke-Query $adminArgs "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','$baselineHash')" $dbName)
     }
@@ -379,12 +379,7 @@ try {
         $recorded = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='$($migration.Name)' LIMIT 1" $dbName
         if ($recorded) {
             if ($recorded -ne $hash) {
-                if ($MigrateOnly) {
-                    Write-Warning "Already-applied migration file differs from its recorded checksum and will not be reapplied: $($migration.Name)"
-                }
-                else {
-                    throw "Migration checksum mismatch: $($migration.Name)"
-                }
+                throw "Migration checksum mismatch: $($migration.Name)"
             }
             continue
         }

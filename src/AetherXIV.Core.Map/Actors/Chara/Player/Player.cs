@@ -1,6 +1,7 @@
 using AetherXIV.Core.Common;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MoonSharp.Interpreter;
 using AetherXIV.Core.Map.dataobjects;
 using AetherXIV.Core.Map.dataobjects.chara;
@@ -17,6 +18,7 @@ using AetherXIV.Core.Map.actors.chara.ai.controllers;
 using AetherXIV.Core.Map.actors.chara.ai.utils;
 using AetherXIV.Core.Map.actors.chara.ai.state;
 using AetherXIV.Core.Map.actors.chara;
+using AetherXIV.Core.Map.actors.area;
 using AetherXIV.Core.Map.packets.send;
 using AetherXIV.Core.Map.packets.send.actor;
 using AetherXIV.Core.Map.packets.send.events;
@@ -724,7 +726,14 @@ namespace AetherXIV.Core.Map.Actors
 
             int ownedDirectorSpawnPackets = 0;
             int ownedDirectorInitPackets = 0;
-            foreach (Director director in ownedDirectors)
+            IEnumerable<Director> zoneInDirectors = ownedDirectors;
+            if (zone is PrivateAreaContent contentArea)
+            {
+                Director activeContentDirector = contentArea.GetContentDirector();
+                zoneInDirectors = ownedDirectors.Where(director => director == activeContentDirector);
+            }
+            Director[] sentDirectors = zoneInDirectors.ToArray();
+            foreach (Director director in sentDirectors)
             {
                 List<SubPacket> directorSpawnPackets = director.GetSpawnPackets();
                 List<SubPacket> directorInitPackets = director.GetInitPackets();
@@ -760,6 +769,7 @@ namespace AetherXIV.Core.Map.Actors
                 "worldPackets", worldMasterSpawn.Count,
                 "weatherDirectorPackets", weatherDirectorPackets,
                 "ownedDirectorCount", ownedDirectors.Count,
+                "zoneInDirectorCount", sentDirectors.Length,
                 "ownedDirectorSpawnPackets", ownedDirectorSpawnPackets,
                 "ownedDirectorInitPackets", ownedDirectorInitPackets,
                 "hasContentGroup", currentContentGroup != null,
