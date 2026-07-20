@@ -341,7 +341,12 @@ esac
         Directory.CreateDirectory(migrations);
         File.Copy(FindRepositoryFile("db", "direct-core", "setup.sh"), Path.Combine(package, "setup.sh"));
         File.Copy(FindRepositoryFile("db", "direct-core", "setup.ps1"), Path.Combine(package, "setup.ps1"));
-        File.WriteAllText(Path.Combine(package, "ffxiv_server.sql"), "-- minimal test baseline\n");
+        string baselinePath = Path.Combine(package, "ffxiv_server.sql");
+        File.WriteAllText(baselinePath, "-- minimal test baseline\n");
+        string baselineHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(baselinePath)))
+            .ToLowerInvariant();
+        File.WriteAllText(Path.Combine(package, "baseline-history.sha256"), $"{baselineHash}  test-baseline\n");
 
         string fakeMariaDb = Path.Combine(root, "fake-mariadb");
         File.WriteAllText(fakeMariaDb, """
@@ -363,6 +368,7 @@ fi
 echo "QUERY:${query}" >> "${FAKE_MYSQL_LOG}"
 case "${query}" in
   *information_schema.schemata*) echo 0 ;;
+  *server_battlenpc_appearance_audit*) echo 0 ;;
   *information_schema.columns*) echo 3 ;;
   *information_schema.tables*) echo 1 ;;
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
@@ -466,6 +472,111 @@ esac
     }
 
     [Fact]
+    public async Task TrustedEarlierBaselineMigratesVerifiesAndAdvancesLedgerInPlace()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        const string earlierHash = "4165e4ea7e1c646145e383c236f44f14b423f031b415b6490960aa3cb06555e5";
+        string root = CreateTempDirectory();
+        string package = Path.Combine(root, "Database");
+        string migrations = Path.Combine(package, "migrations");
+        string logPath = Path.Combine(root, "mysql-calls.log");
+        Directory.CreateDirectory(migrations);
+        File.Copy(FindRepositoryFile("db", "direct-core", "setup.sh"), Path.Combine(package, "setup.sh"));
+        string baselinePath = Path.Combine(package, "ffxiv_server.sql");
+        File.WriteAllText(baselinePath, "-- newer canonical baseline\n");
+        string currentHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(baselinePath)))
+            .ToLowerInvariant();
+        File.WriteAllText(
+            Path.Combine(package, "baseline-history.sha256"),
+            $"{earlierHash}  earlier\n{currentHash}  current\n");
+        File.WriteAllText(Path.Combine(migrations, AetherXivDatabaseCompatibility.LatestDirectCoreMigration), "SELECT 1;\n");
+
+        string fakeMariaDb = Path.Combine(root, "fake-mariadb");
+        File.WriteAllText(fakeMariaDb, """
+#!/bin/bash
+set -euo pipefail
+query=""
+args=("$@")
+for ((index=0; index<${#args[@]}; index++)); do
+  if [[ "${args[index]}" == "-e" ]]; then
+    query="${args[index+1]}"
+    break
+  fi
+done
+if [[ -z "${query}" ]]; then
+  cat >/dev/null
+  echo "SQL_IMPORT" >> "${FAKE_MYSQL_LOG}"
+  exit 0
+fi
+echo "QUERY:${query}" >> "${FAKE_MYSQL_LOG}"
+case "${query}" in
+  *information_schema.schemata*) echo 1 ;;
+  *"SELECT COUNT(*) FROM aether_database_compatibility"*) echo 1 ;;
+  *server_battlenpc_appearance_audit*) echo 0 ;;
+  *information_schema.columns*) echo 3 ;;
+  *information_schema.tables*) echo 1 ;;
+  *"migration_name='baseline/"*) echo "${TRUSTED_EARLIER_HASH}" ;;
+  *"SELECT checksum_sha256"*) ;;
+  *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
+  *promotionMigration*) echo "60:11:13:0" ;;
+  *server_battlenpc_pools*) echo 2 ;;
+  *"CONCAT(schema_generation"*) echo "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ;;
+  *"SELECT COUNT(*) FROM server_zones"*) echo 1 ;;
+  *"SELECT COUNT(*) FROM server_battle_commands"*) echo 1 ;;
+  *"SELECT COUNT(*) FROM server_player_base_stats"*) echo 1 ;;
+esac
+""");
+        File.SetUnixFileMode(fakeMariaDb,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        string fakeDump = Path.Combine(root, "fake-mariadb-dump");
+        File.WriteAllText(fakeDump, "#!/bin/bash\necho -- verified backup\n");
+        File.SetUnixFileMode(fakeDump,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        try
+        {
+            ProcessStartInfo startInfo = new("/bin/bash")
+            {
+                WorkingDirectory = package,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            startInfo.ArgumentList.Add(Path.Combine(package, "setup.sh"));
+            startInfo.ArgumentList.Add("--migrate-only");
+            startInfo.Environment["MYSQL_BIN"] = fakeMariaDb;
+            startInfo.Environment["MYSQLDUMP_BIN"] = fakeDump;
+            startInfo.Environment["FAKE_MYSQL_LOG"] = logPath;
+            startInfo.Environment["TRUSTED_EARLIER_HASH"] = earlierHash;
+            startInfo.Environment["AETHERXIV_CORE_BACKUP_DIR"] = Path.Combine(root, "backups");
+            startInfo.Environment["AETHERXIV_DB_NAME"] = "ffxiv_server";
+            startInfo.Environment["AETHERXIV_DB_USER"] = "aetherxiv";
+            startInfo.Environment["AETHERXIV_DB_PASSWORD"] = "test-password";
+
+            using Process process = Process.Start(startInfo)!;
+            string output = await process.StandardOutput.ReadToEndAsync();
+            string error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            Assert.True(process.ExitCode == 0, $"stdout:\n{output}\nstderr:\n{error}");
+            Assert.Contains("Recognized a trusted earlier canonical baseline", output, StringComparison.Ordinal);
+            Assert.Contains($"Applying {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}", output, StringComparison.Ordinal);
+            Assert.Contains("Direct-core database verified", output, StringComparison.Ordinal);
+            Assert.Contains("Advanced the trusted baseline ledger", output, StringComparison.Ordinal);
+            string calls = File.ReadAllText(logPath);
+            Assert.Contains("SQL_IMPORT", calls, StringComparison.Ordinal);
+            Assert.Contains($"SET checksum_sha256='{currentHash}'", calls, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void DatabaseCompatibilityContractIsExplicitAndVersioned()
     {
         Assert.Equal("direct-core", AetherXivDatabaseCompatibility.Key);
@@ -474,6 +585,13 @@ esac
         Assert.Equal("aetherxiv-direct-core-v2", AetherXivDatabaseCompatibility.CompatibilityId);
         Assert.Contains("baseline", AetherXivDatabaseCompatibility.BaselineId, StringComparison.Ordinal);
         Assert.Equal("20260720_000017_gridania_tutorial_spawn_contract.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
+        Assert.Equal(19, AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Count);
+        Assert.Equal(
+            AetherXivDatabaseCompatibility.LatestDirectCoreMigration,
+            AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations[^1]);
+        Assert.Equal(
+            AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Count,
+            AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal("zone-service-npcs-1.23b", AetherXivDatabaseCompatibility.NpcServiceCatalogId);
         Assert.Equal(64, AetherXivDatabaseCompatibility.NpcServiceCatalogHash.Length);
     }

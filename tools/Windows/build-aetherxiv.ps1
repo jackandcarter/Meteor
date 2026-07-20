@@ -250,6 +250,7 @@ $requiredReleaseFiles = @(
     "servers\map\navmesh\wil0Field01.snb",
     "servers\map\navmesh\SHARPNAV_LICENSE",
     "Database\ffxiv_server.sql",
+    "Database\baseline-history.sha256",
     "Database\setup.ps1",
     "launcher\app\Helpers\win-x64\Umbra.NativeInjector.x86.exe",
     "launcher\app\Helpers\win-x86\Umbra.NativeInjector.x86.exe",

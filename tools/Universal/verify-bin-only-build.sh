@@ -87,6 +87,7 @@ for configuration in "${configurations[@]}"; do
     [[ -d "${platform_root}" ]] || continue
     verify_file "${platform_root}/Database/ffxiv_server.sql"
     verify_file "${platform_root}/Database/ffxiv_server.sql.sha256"
+    verify_file "${platform_root}/Database/baseline-history.sha256"
     verify_file "${platform_root}/Database/baseline-manifest.json"
     verify_file "${platform_root}/Database/setup.sh"
     verify_file "${platform_root}/Database/setup.ps1"
@@ -97,6 +98,8 @@ for configuration in "${configurations[@]}"; do
     verify_file "${platform_root}/Database/migrations/20260717_000006_central_shroud_enemy_restore.sql"
     verify_file "${platform_root}/Database/migrations/20260717_000007_character_attribute_allocations.sql"
     verify_file "${platform_root}/Database/migrations/20260718_000013_central_shroud_pinspawn_restore.sql"
+    verify_file "${platform_root}/Database/migrations/20260720_000016_gridania_tutorial_actor_roles.sql"
+    verify_file "${platform_root}/Database/migrations/20260720_000017_gridania_tutorial_spawn_contract.sql"
     grep -q 'CREATE TABLE IF NOT EXISTS server_battlenpc_spawn_audit_pins' \
       "${platform_root}/Database/ffxiv_server.sql" || {
         echo "Database baseline omits pinspawn persistence: ${platform_root}" >&2

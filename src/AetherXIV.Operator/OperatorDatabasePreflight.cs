@@ -1,5 +1,6 @@
 using AetherXIV.Data;
 using MySqlConnector;
+using System.Security.Cryptography;
 
 namespace AetherXIV.Operator;
 
@@ -24,6 +25,28 @@ public static class AetherXivDatabaseCompatibility
     public const string BaselineId = "20260716_000001_ffxiv_server_v2_baseline";
     public const string GuildleveContentMigration = "20260716_000005_guildleve_content_contract.sql";
     public const string LatestDirectCoreMigration = "20260720_000017_gridania_tutorial_spawn_contract.sql";
+    public static readonly IReadOnlyList<string> RequiredDirectCoreMigrations =
+    [
+        "20260627_battlenpc_spawn_audit_pins.sql",
+        "20260707_seed_level1_player_base_stats.sql",
+        "20260716_000001_launcher_ui_contract.sql",
+        "20260716_000002_remove_development_workbench.sql",
+        "20260716_000003_launcher_local_identity.sql",
+        "20260716_000004_database_compatibility.sql",
+        "20260716_000005_guildleve_content_contract.sql",
+        "20260717_000006_central_shroud_enemy_restore.sql",
+        "20260717_000007_character_attribute_allocations.sql",
+        "20260718_000008_zone_service_npcs.sql",
+        "20260718_000009_chocobo_stop_runtime.sql",
+        "20260718_000010_immortal_flames_company_shop.sql",
+        "20260718_000011_uldah_company_office_entrance.sql",
+        "20260718_000012_hall_of_flames_exit.sql",
+        "20260718_000013_central_shroud_pinspawn_restore.sql",
+        "20260718_000014_hall_of_flames_exit_runtime.sql",
+        "20260719_000015_hall_of_flames_push_circle.sql",
+        "20260720_000016_gridania_tutorial_actor_roles.sql",
+        "20260720_000017_gridania_tutorial_spawn_contract.sql"
+    ];
     public const string NpcServiceCatalogId = "zone-service-npcs-1.23b";
     public const string NpcServiceCatalogVersion = "2026.07.19.1";
     public const string NpcServiceCatalogHash = "f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de";
@@ -174,23 +197,109 @@ LIMIT 1;
         add("database.version", AetherXivDatabasePreflightStatus.Passed,
             $"Verified AetherXIV 2 database schema {AetherXivDatabaseCompatibility.SchemaGeneration}.{AetherXivDatabaseCompatibility.SchemaVersion}.");
 
-        bool hasMigrationLedger = await TableExistsAsync(connection, "aether_schema_migrations", cancellationToken).ConfigureAwait(false);
-        int latestMigrationApplied = hasMigrationLedger
-            ? await CountAsync(connection, $"""
-SELECT COUNT(*)
+        if (!await TableExistsAsync(connection, "aether_schema_migrations", cancellationToken).ConfigureAwait(false))
+        {
+            add("database.migrations", AetherXivDatabasePreflightStatus.NeedsRepair,
+                "The AetherXIV 2 migration ledger is missing, so this database cannot be safely advanced in place. "
+                + "Setup will retain a backup and offer a fresh canonical install.");
+            return;
+        }
+
+        string? databasePackage = AetherXivDatabaseInstaller.FindPackageDirectory(
+            config.WorkspaceRoot,
+            AppContext.BaseDirectory,
+            Environment.CurrentDirectory);
+        if (databasePackage is null)
+        {
+            add("database.package", AetherXivDatabasePreflightStatus.Blocked,
+                "The packaged Database installer is missing or incomplete, so schema and migration checksums cannot be verified.");
+            return;
+        }
+
+        string baselineHistoryPath = Path.Combine(databasePackage, "baseline-history.sha256");
+        string migrationDirectory = Path.Combine(databasePackage, "migrations");
+        if (!File.Exists(baselineHistoryPath) || !Directory.Exists(migrationDirectory))
+        {
+            add("database.package", AetherXivDatabasePreflightStatus.Blocked,
+                "The packaged Database installer is missing its trusted baseline history or migrations directory.");
+            return;
+        }
+
+        HashSet<string> trustedBaselines = File.ReadLines(baselineHistoryPath)
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith('#'))
+            .Select(line => line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)[0])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string? recordedBaseline = await ScalarStringAsync(connection, """
+SELECT checksum_sha256
 FROM aether_schema_migrations
-WHERE migration_name='{AetherXivDatabaseCompatibility.LatestDirectCoreMigration}';
-""", cancellationToken).ConfigureAwait(false)
-            : 0;
-        if (latestMigrationApplied != 1)
+WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2'
+LIMIT 1;
+""", cancellationToken).ConfigureAwait(false);
+        if (String.IsNullOrWhiteSpace(recordedBaseline) || !trustedBaselines.Contains(recordedBaseline))
+        {
+            add("database.baseline", AetherXivDatabasePreflightStatus.NeedsRepair,
+                "The recorded baseline is missing or is not a known canonical AetherXIV baseline. "
+                + "It cannot be safely migrated in place; setup will retain a backup and offer a fresh install.");
+            return;
+        }
+
+        Dictionary<string, string> expectedMigrations = new(StringComparer.Ordinal);
+        foreach (string migrationName in AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations)
+        {
+            string migrationPath = Path.Combine(migrationDirectory, migrationName);
+            if (!File.Exists(migrationPath))
+            {
+                add("database.package", AetherXivDatabasePreflightStatus.Blocked,
+                    $"The packaged Database installer is missing required migration {migrationName}.");
+                return;
+            }
+            expectedMigrations[migrationName] = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(migrationPath))).ToLowerInvariant();
+        }
+
+        Dictionary<string, string> recordedMigrations = new(StringComparer.Ordinal);
+        await using (MySqlCommand migrationLedger = connection.CreateCommand())
+        {
+            string[] parameterNames = expectedMigrations.Keys.Select((_, index) => $"@migration{index}").ToArray();
+            migrationLedger.CommandText = $"""
+SELECT migration_name, checksum_sha256
+FROM aether_schema_migrations
+WHERE migration_name IN ({String.Join(",", parameterNames)});
+""";
+            int index = 0;
+            foreach (string migrationName in expectedMigrations.Keys)
+                migrationLedger.Parameters.AddWithValue(parameterNames[index++], migrationName);
+            await using MySqlDataReader migrationReader = await migrationLedger.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await migrationReader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                recordedMigrations[migrationReader.GetString(0)] = migrationReader.GetString(1);
+        }
+
+        string[] changedMigrations = expectedMigrations
+            .Where(pair => recordedMigrations.TryGetValue(pair.Key, out string? checksum)
+                && !String.Equals(pair.Value, checksum, StringComparison.OrdinalIgnoreCase))
+            .Select(pair => pair.Key)
+            .ToArray();
+        if (changedMigrations.Length > 0)
+        {
+            add("database.migrations", AetherXivDatabasePreflightStatus.NeedsRepair,
+                $"Recorded migration checksums do not match the packaged canonical files: {String.Join(", ", changedMigrations)}. "
+                + "The database cannot be safely advanced in place; setup will offer a backed-up fresh install.");
+            return;
+        }
+
+        string[] missingMigrations = expectedMigrations.Keys
+            .Where(name => !recordedMigrations.ContainsKey(name))
+            .ToArray();
+        if (missingMigrations.Length > 0)
         {
             add("database.migrations", AetherXivDatabasePreflightStatus.NeedsMigration,
-                $"Pending direct-core migration: {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}. "
-                + "The packaged updater will back up the database and apply it in place.");
+                $"Pending direct-core migrations: {missingMigrations.Length}/{expectedMigrations.Count}; "
+                + $"latest required is {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}. "
+                + "The packaged updater will back up the database, apply every missing migration, and verify the result in place.");
             return;
         }
         add("database.migrations", AetherXivDatabasePreflightStatus.Passed,
-            $"Verified migration {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}.");
+            $"Verified names and SHA-256 checksums for all {recordedMigrations.Count} required migrations through {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}.");
 
         string[] requiredTables =
         [
@@ -198,13 +307,14 @@ WHERE migration_name='{AetherXivDatabaseCompatibility.LatestDirectCoreMigration}
             "characters_quest_scenario", "characters_quest_completed", "characters_hotbar",
             "server_sessions", "server_zones", "server_zones_privateareas",
             "server_battlenpc_spawn_locations", "server_battlenpc_spawn_audit_pins", "server_battlenpc_groups", "server_battlenpc_pools",
-            "server_battle_commands", "server_player_base_stats", "server_spawn_locations",
+            "server_battle_commands", "server_player_base_stats", "characters_class_attributes", "server_spawn_locations",
             "gamedata_actor_class", "gamedata_actor_appearance", "server_items_modifiers",
             "characters_inventory", "characters_chocobo", "server_npc_spawn_evidence",
             "server_npc_spawn_evidence_catalog",
             "aether_database_compatibility",
-            "launcher_config", "launcher_status", "launcher_news", "launcher_patch_files",
-            "launcher_presentation", "launcher_reel_text"
+            "launcher_config", "launcher_config_plugin_catalogs", "launcher_status", "launcher_news", "launcher_patch_files",
+            "launcher_presentation", "launcher_reel_text", "launcher_runtime_artifacts", "launcher_umbra_framework_artifacts",
+            "launcher_umbra_plugin_repositories", "launcher_umbra_plugins", "launcher_umbra_plugin_blocks"
         ];
         List<string> missing = new();
         foreach (string table in requiredTables)
@@ -221,6 +331,27 @@ WHERE migration_name='{AetherXivDatabaseCompatibility.LatestDirectCoreMigration}
         }
         add("direct-core.schema", AetherXivDatabasePreflightStatus.Passed,
             $"Verified {requiredTables.Length} direct-core and modern launcher tables.");
+
+        int obsoleteTables = await CountAsync(connection, """
+SELECT COUNT(*)
+FROM information_schema.tables
+WHERE table_schema=DATABASE()
+  AND table_name IN (
+    'server_battlenpc_appearance_audit',
+    'server_battlenpc_restoration_evidence',
+    'client_decoded_display_name_stage',
+    'client_decoded_actor_graphic_stage',
+    'client_decoded_actor_class_stage',
+    'client_decode_import_batches');
+""", cancellationToken).ConfigureAwait(false);
+        if (obsoleteTables != 0)
+        {
+            add("direct-core.obsolete-schema", AetherXivDatabasePreflightStatus.NeedsRepair,
+                $"The database still contains {obsoleteTables} obsolete development tables. A canonical rebuild is required.");
+            return;
+        }
+        add("direct-core.obsolete-schema", AetherXivDatabasePreflightStatus.Passed,
+            "Verified that obsolete development/import tables are absent.");
 
         int gridaniaTutorialActorRoles = await CountAsync(connection, """
 SELECT COUNT(*)
@@ -574,6 +705,17 @@ WHERE table_schema=DATABASE() AND (
         await using MySqlCommand command = connection.CreateCommand();
         command.CommandText = sql;
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
+    }
+
+    private static async Task<string?> ScalarStringAsync(
+        MySqlConnection connection,
+        string sql,
+        CancellationToken cancellationToken)
+    {
+        await using MySqlCommand command = connection.CreateCommand();
+        command.CommandText = sql;
+        object? result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        return result is null or DBNull ? null : Convert.ToString(result);
     }
 
     private static ServerEndpoint ParseEndpoint(string raw, string label)

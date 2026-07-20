@@ -1143,10 +1143,21 @@ public sealed partial class MainWindow : Window
             AppendDatabaseInstallerResult("database.update", update);
             if (!update.Succeeded)
             {
-                HeaderStatusText.Text = "Database update failed; backup retained";
-                return false;
+                AppendPreflightStatus(
+                    "[NeedsRepair] database.update: The existing database could not be migrated and verified in place. "
+                    + "Its backup was retained; a fresh canonical database install is required before startup can continue.");
+                result = new AetherXivDatabasePreflightResult(
+                [
+                    new AetherXivDatabasePreflightStep(
+                        "database.update",
+                        AetherXivDatabasePreflightStatus.NeedsRepair,
+                        "In-place migration failed; offer a backed-up canonical rebuild.")
+                ]);
             }
-            result = await RunDatabasePreflightAsync(repair: true, adminCredentials: null, clearStatus: false).ConfigureAwait(true);
+            else
+            {
+                result = await RunDatabasePreflightAsync(repair: true, adminCredentials: null, clearStatus: false).ConfigureAwait(true);
+            }
         }
 
         if (result.RequiresCanonicalRepair)

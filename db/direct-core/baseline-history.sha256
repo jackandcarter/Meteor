@@ -1,0 +1,6 @@
+# Trusted canonical direct-core baselines. A generated baseline hash must be
+# registered here whenever its source-owned SQL changes. Existing databases may
+# advance only from one of these hashes, after all migrations and verification
+# complete successfully.
+4165e4ea7e1c646145e383c236f44f14b423f031b415b6490960aa3cb06555e5  20260716_000001_ffxiv_server_v2-initial
+891e5d41bda91d3f65415dcd60fdf6c14bb44d19dbe7ec1e84745fabfcefbd1f  20260716_000001_ffxiv_server_v2-gridania-actor-roles

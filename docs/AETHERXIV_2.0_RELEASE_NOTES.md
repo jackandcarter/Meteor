@@ -13,6 +13,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Corrected ZiPatch `0x44` handling so hash-selection records apply their payload instead of deleting valid client files.
 - Client memory patches now resolve from the suspended process's actual loaded image base, including the Windows/WOW64 helper path.
 - Gridania's opening tutorial now registers retail-shaped content and temporary-party groups atomically, with correct NPC names and a single active content director during zone-in.
+- Database startup now recognizes trusted earlier 2.0 baselines, verifies every migration checksum and canonical seed/schema contract, and falls back to an explicit backed-up clean-install prompt when in-place convergence is unsafe or fails.
 - Modernized .NET 10 core and tooling.
 - One release layout for the AetherXIV Core app, Launcher, database tools and Umbra.
 - New AetherXIV Core app for starting, stopping and monitoring the full server stack.
@@ -22,7 +23,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 431 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 461 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 

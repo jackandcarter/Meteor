@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import subprocess
 from pathlib import Path
@@ -35,6 +36,22 @@ def main() -> int:
         ],
         check=True,
     )
+
+    baseline_history = root / "db/direct-core/baseline-history.sha256"
+    if not baseline_history.is_file():
+        raise SystemExit(f"Missing trusted baseline history: {baseline_history}")
+    trusted_hashes = {
+        line.split()[0].lower()
+        for line in baseline_history.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+    baseline_hash = hashlib.sha256((output / "ffxiv_server.sql").read_bytes()).hexdigest()
+    if baseline_hash not in trusted_hashes:
+        raise SystemExit(
+            "Generated direct-core baseline is not registered in "
+            f"{baseline_history}: {baseline_hash}"
+        )
+    shutil.copy2(baseline_history, output / baseline_history.name)
 
     migrations = output / "migrations"
     migrations.mkdir(exist_ok=True)

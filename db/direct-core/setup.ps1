@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $baseline = Join-Path $scriptDir "ffxiv_server.sql"
+$baselineHistory = Join-Path $scriptDir "baseline-history.sha256"
 $migrations = Join-Path $scriptDir "migrations"
 $backupDir = if ($env:AETHERXIV_CORE_BACKUP_DIR) { $env:AETHERXIV_CORE_BACKUP_DIR } else { Join-Path $env:LOCALAPPDATA "AetherXIV\backups\database" }
 $dbHost = if ($env:AETHERXIV_DB_HOST) { $env:AETHERXIV_DB_HOST } else { "127.0.0.1" }
@@ -50,6 +51,15 @@ $dump = try { Resolve-DatabaseTool @("mariadb-dump", "mysqldump") } catch { $nul
 
 function Sql-Literal([string]$Value) { return $Value.Replace("\", "\\").Replace("'", "''") }
 function Sql-Identifier([string]$Value) { return $Value.Replace('`', '``') }
+function Test-TrustedBaselineChecksum([string]$Checksum) {
+    foreach ($line in Get-Content $baselineHistory) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith("#")) { continue }
+        $registered = ($trimmed -split '\s+')[0].ToLowerInvariant()
+        if ($registered -eq $Checksum.ToLowerInvariant()) { return $true }
+    }
+    return $false
+}
 function Connection-Args([string]$User, [string]$Password) {
     $result = @("-h", $dbHost, "-P", $dbPort, "-u", $User)
     if ($Password) { $result += "-p$Password" }
@@ -193,14 +203,17 @@ function Test-Database {
         "server_spawn_locations", "gamedata_actor_class", "gamedata_actor_appearance", "server_items_modifiers",
         "characters_inventory", "characters_chocobo", "server_npc_spawn_evidence", "server_npc_spawn_evidence_catalog",
         "aether_database_compatibility",
-        "launcher_config", "launcher_status", "launcher_news", "launcher_patch_files",
-        "launcher_presentation", "launcher_reel_text")
+        "launcher_config", "launcher_config_plugin_catalogs", "launcher_status", "launcher_news", "launcher_patch_files",
+        "launcher_presentation", "launcher_reel_text", "launcher_runtime_artifacts", "launcher_umbra_framework_artifacts",
+        "launcher_umbra_plugin_repositories", "launcher_umbra_plugins", "launcher_umbra_plugin_blocks")
     $missing = @()
     foreach ($table in $required) {
         $count = Invoke-Query $appArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$schema' AND table_name='$table'"
         if ($count -ne "1") { $missing += $table }
     }
     if ($missing.Count) { throw "Database schema is incomplete: $($missing -join ', ')" }
+    $obsoleteTables = Invoke-Query $appArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('server_battlenpc_appearance_audit','server_battlenpc_restoration_evidence','client_decoded_display_name_stage','client_decoded_actor_graphic_stage','client_decoded_actor_class_stage','client_decode_import_batches')" $dbName
+    if ($obsoleteTables -ne "0") { throw "Database still contains $obsoleteTables obsolete development tables." }
     $zones = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_zones" $dbName
     $commands = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_battle_commands" $dbName
     $stats = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_player_base_stats" $dbName
@@ -235,7 +248,7 @@ function Test-CurrentV2Contract {
 }
 
 if ($Check) { Test-Database; exit 0 }
-if (-not (Test-Path $baseline -PathType Leaf) -or -not (Test-Path $migrations -PathType Container)) {
+if (-not (Test-Path $baseline -PathType Leaf) -or -not (Test-Path $baselineHistory -PathType Leaf) -or -not (Test-Path $migrations -PathType Container)) {
     throw "Database package is incomplete."
 }
 
@@ -365,11 +378,21 @@ else {
 try {
     [void](Invoke-Query $adminArgs "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8" $dbName)
     $baselineHash = (Get-FileHash -Algorithm SHA256 $baseline).Hash.ToLowerInvariant()
+    if (-not (Test-TrustedBaselineChecksum $baselineHash)) {
+        throw "The packaged baseline checksum is not registered in the trusted baseline history."
+    }
     $recordedBaseline = Invoke-Query $adminArgs "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1" $dbName
     if ($MigrateOnly -and -not $recordedBaseline) {
         throw "The existing database has no recorded AetherXIV 2 baseline; administrator-assisted repair is required."
     }
-    if ($recordedBaseline -and $recordedBaseline -ne $baselineHash) { throw "Baseline checksum mismatch." }
+    $promoteBaselineChecksum = $false
+    if ($recordedBaseline -and $recordedBaseline -ne $baselineHash) {
+        if (-not (Test-TrustedBaselineChecksum $recordedBaseline)) {
+            throw "The recorded baseline checksum is not a trusted canonical AetherXIV baseline."
+        }
+        Write-Host "Recognized a trusted earlier canonical baseline; pending migrations will advance it in place."
+        $promoteBaselineChecksum = $true
+    }
     if (-not $recordedBaseline) {
         [void](Invoke-Query $adminArgs "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','$baselineHash')" $dbName)
     }
@@ -389,6 +412,10 @@ try {
     }
 
     Test-Database
+    if ($promoteBaselineChecksum) {
+        [void](Invoke-Query $adminArgs "UPDATE aether_schema_migrations SET checksum_sha256='$baselineHash', applied_at=CURRENT_TIMESTAMP WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2'" $dbName)
+        Write-Host "Advanced the trusted baseline ledger after migrations and database verification passed."
+    }
 }
 catch {
     if (-not $MigrateOnly -and -not $baselineImported) {

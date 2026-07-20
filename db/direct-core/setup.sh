@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASELINE_FILE="${SCRIPT_DIR}/ffxiv_server.sql"
+BASELINE_HISTORY_FILE="${SCRIPT_DIR}/baseline-history.sha256"
 MIGRATIONS_DIR="${SCRIPT_DIR}/migrations"
 BACKUP_DIR="${AETHERXIV_CORE_BACKUP_DIR:-${HOME}/.aetherxiv/backups/database}"
 
@@ -113,6 +114,14 @@ sha256_file() {
     return 2
   fi
 }
+is_trusted_baseline_checksum() {
+  local candidate="$1" hash rest
+  while read -r hash rest; do
+    [[ -n "${hash}" && "${hash}" != \#* ]] || continue
+    [[ "${hash}" == "${candidate}" ]] && return 0
+  done < "${BASELINE_HISTORY_FILE}"
+  return 1
+}
 write_sha256_sidecar() {
   local path="$1"
   printf '%s  %s\n' "$(sha256_file "${path}")" "$(basename "${path}")" > "${path}.sha256"
@@ -129,11 +138,19 @@ verify_database() {
     server_player_base_stats characters_class_attributes server_spawn_locations gamedata_actor_class
     gamedata_actor_appearance server_items_modifiers characters_inventory characters_chocobo
     server_npc_spawn_evidence server_npc_spawn_evidence_catalog launcher_config aether_database_compatibility
-    launcher_status launcher_news launcher_patch_files launcher_presentation launcher_reel_text)
+    launcher_config_plugin_catalogs launcher_status launcher_news launcher_patch_files launcher_presentation
+    launcher_reel_text launcher_runtime_artifacts launcher_umbra_framework_artifacts
+    launcher_umbra_plugin_repositories launcher_umbra_plugins launcher_umbra_plugin_blocks)
   for table in "${required[@]}"; do
     [[ "$("${app[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${database_literal}' AND table_name='${table}'")" == 1 ]] || missing+=("${table}")
   done
   ((${#missing[@]} == 0)) || { echo "Database schema is incomplete: ${missing[*]}" >&2; return 21; }
+  local obsolete_tables
+  obsolete_tables="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('server_battlenpc_appearance_audit','server_battlenpc_restoration_evidence','client_decoded_display_name_stage','client_decoded_actor_graphic_stage','client_decoded_actor_class_stage','client_decode_import_batches')")"
+  [[ "${obsolete_tables}" == 0 ]] || {
+    echo "Database still contains ${obsolete_tables} obsolete development tables." >&2
+    return 21
+  }
   local zones commands stats launcher_columns
   zones="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_zones")"
   commands="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_battle_commands")"
@@ -176,7 +193,7 @@ has_current_v2_contract() {
 }
 
 if [[ "${MODE}" == check ]]; then verify_database; exit $?; fi
-[[ -f "${BASELINE_FILE}" && -d "${MIGRATIONS_DIR}" ]] || { echo "Database package is incomplete." >&2; exit 2; }
+[[ -f "${BASELINE_FILE}" && -f "${BASELINE_HISTORY_FILE}" && -d "${MIGRATIONS_DIR}" ]] || { echo "Database package is incomplete." >&2; exit 2; }
 "${admin[@]}" -e "SELECT 1" >/dev/null
 
 db_id="$(identifier "${DB_NAME}")"
@@ -360,20 +377,28 @@ else
 fi
 
 apply_migrations() {
-  "${admin[@]}" "${DB_NAME}" -e "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8"
+  "${admin[@]}" "${DB_NAME}" -e "CREATE TABLE IF NOT EXISTS aether_schema_migrations (migration_name varchar(255) NOT NULL, checksum_sha256 char(64) NOT NULL, applied_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (migration_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8" || return $?
   local baseline_checksum recorded_baseline migration name checksum recorded
   baseline_checksum="$(sha256_file "${BASELINE_FILE}")"
+  is_trusted_baseline_checksum "${baseline_checksum}" || {
+    echo "The packaged baseline checksum is not registered in the trusted baseline history." >&2
+    return 23
+  }
   recorded_baseline="$("${admin[@]}" -N -B "${DB_NAME}" -e "SELECT checksum_sha256 FROM aether_schema_migrations WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2' LIMIT 1")"
   if ((MIGRATE_ONLY == 1)) && [[ -z "${recorded_baseline}" ]]; then
     echo "The existing database has no recorded AetherXIV 2 baseline; an administrator-assisted repair is required." >&2
     return 23
   fi
   if [[ -n "${recorded_baseline}" && "${recorded_baseline}" != "${baseline_checksum}" ]]; then
-    echo "The recorded baseline checksum differs from the packaged canonical baseline." >&2
-    return 23
+    is_trusted_baseline_checksum "${recorded_baseline}" || {
+      echo "The recorded baseline checksum is not a trusted canonical AetherXIV baseline." >&2
+      return 23
+    }
+    echo "Recognized a trusted earlier canonical baseline; pending migrations will advance it in place."
+    BASELINE_CHECKSUM_NEEDS_PROMOTION=1
   fi
   if [[ -z "${recorded_baseline}" ]]; then
-    "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','${baseline_checksum}')"
+    "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('baseline/20260716_000001_ffxiv_server_v2','${baseline_checksum}')" || return $?
   fi
 
   for migration in "${MIGRATIONS_DIR}"/*.sql; do
@@ -389,14 +414,26 @@ apply_migrations() {
       continue
     fi
     echo "Applying ${name}"
-    "${admin[@]}" "${DB_NAME}" < "${migration}"
-    "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('${name}','${checksum}')"
+    if ! "${admin[@]}" "${DB_NAME}" < "${migration}"; then
+      echo "Migration failed and was not recorded as applied: ${name}" >&2
+      return 31
+    fi
+    if ! "${admin[@]}" "${DB_NAME}" -e "INSERT INTO aether_schema_migrations (migration_name,checksum_sha256) VALUES ('${name}','${checksum}')"; then
+      echo "Migration ran but its ledger entry could not be recorded: ${name}" >&2
+      return 31
+    fi
   done
 }
 
+BASELINE_CHECKSUM_NEEDS_PROMOTION=0
 migration_status=0
 apply_migrations || migration_status=$?
 if ((migration_status == 0)) && verify_database; then
+  if ((BASELINE_CHECKSUM_NEEDS_PROMOTION == 1)); then
+    current_baseline_checksum="$(sha256_file "${BASELINE_FILE}")"
+    "${admin[@]}" "${DB_NAME}" -e "UPDATE aether_schema_migrations SET checksum_sha256='${current_baseline_checksum}', applied_at=CURRENT_TIMESTAMP WHERE migration_name='baseline/20260716_000001_ffxiv_server_v2'"
+    echo "Advanced the trusted baseline ledger after migrations and database verification passed."
+  fi
   exit 0
 fi
 
