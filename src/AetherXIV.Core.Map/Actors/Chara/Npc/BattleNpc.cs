@@ -354,7 +354,10 @@ namespace AetherXIV.Core.Map.Actors
                     lastAttacker = lastAttacker.aiContainer.GetController<PetController>().GetPetMaster();
                 }
 
-                if (lastAttacker is Player || (lastAttacker is Ally && lastAttacker.currentParty is Party))
+                Player tutorialRewardPlayer = (zone as PrivateAreaContent)?.GetTutorialRewardPlayer(this, lastAttacker);
+                if (lastAttacker is Player ||
+                    (lastAttacker is Ally && lastAttacker.currentParty is Party) ||
+                    tutorialRewardPlayer != null)
                 {
                     //I think this is, or should be odne in DoBattleAction. Packet capture had the message in the same packet as an attack
                     // <actor> defeat/defeats <target>
@@ -377,7 +380,10 @@ namespace AetherXIV.Core.Map.Actors
                     else
                     {
                         // onDeath(monster, player, killer)
-                        lua.LuaEngine.CallLuaBattleFunction(this, "onDeath", this, lastAttacker, lastAttacker);
+                        Character rewardedPlayer = tutorialRewardPlayer ?? lastAttacker;
+                        lua.LuaEngine.CallLuaBattleFunction(this, "onDeath", this, rewardedPlayer, lastAttacker);
+                        if (tutorialRewardPlayer != null)
+                            BattleUtils.AddBattleBonusEXP(tutorialRewardPlayer, this, actionContainer);
                         //((Player)lastAttacker).QueuePacket(BattleActionX01Packet.BuildPacket(lastAttacker.actorId, 0, 0, new BattleAction(actorId, 30108, 0)));
                     }
                 }

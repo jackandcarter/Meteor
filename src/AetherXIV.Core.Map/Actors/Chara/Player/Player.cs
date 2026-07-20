@@ -735,7 +735,10 @@ namespace AetherXIV.Core.Map.Actors
             }
 
             if (currentContentGroup != null)
+            {
                 currentContentGroup.SendGroupPackets(playerSession);
+                currentContentGroup.StartAfterZoneIn();
+            }
 
             if (currentParty != null)
                 currentParty.SendGroupPackets(playerSession);

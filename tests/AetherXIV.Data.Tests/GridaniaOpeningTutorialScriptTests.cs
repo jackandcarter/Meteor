@@ -15,6 +15,7 @@ public sealed class GridaniaOpeningTutorialScriptTests
             "EngageContentBattleForPlayer",
             "waitForSignal(\"tpOver1000\")",
             "waitForSignal(\"weaponskillUsed\")",
+            "SetBattleNpcMinimumHpLock(0)",
             "IsContentBattleComplete",
             "\"attention\"",
             "kickEventContinue(player, actor, \"noticeEvent\", \"noticeEvent\")",
@@ -41,6 +42,10 @@ public sealed class GridaniaOpeningTutorialScriptTests
         Assert.Contains("SpawnActor(1090384, \"openingstoper\"", script, StringComparison.Ordinal);
         Assert.Contains("director:AddMember(papalymo)", script, StringComparison.Ordinal);
         Assert.Contains("director:AddMember(yda)", script, StringComparison.Ordinal);
+
+        string director = ReadDataScript("directors", "Quest", "QuestDirectorMan0g001.lua");
+        Assert.DoesNotContain("director:StartContentGroup()", director, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddAlliesToPlayerParty", director, StringComparison.Ordinal);
     }
 
     private static void AssertOrdered(string text, params string[] tokens)

@@ -1,4 +1,5 @@
 using AetherXIV.Operator;
+using System.Diagnostics;
 
 namespace AetherXIV.Operator.Tests;
 
@@ -328,6 +329,100 @@ esac
     }
 
     [Fact]
+    public async Task MissingDatabaseInstallsBaselineBeforeAnyCompatibilityOrMigrationCheck()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        string root = CreateTempDirectory();
+        string package = Path.Combine(root, "Database");
+        string migrations = Path.Combine(package, "migrations");
+        string logPath = Path.Combine(root, "mysql-calls.log");
+        Directory.CreateDirectory(migrations);
+        File.Copy(FindRepositoryFile("db", "direct-core", "setup.sh"), Path.Combine(package, "setup.sh"));
+        File.WriteAllText(Path.Combine(package, "ffxiv_server.sql"), "-- minimal test baseline\n");
+
+        string fakeMariaDb = Path.Combine(root, "fake-mariadb");
+        File.WriteAllText(fakeMariaDb, """
+#!/bin/bash
+set -euo pipefail
+query=""
+args=("$@")
+for ((index=0; index<${#args[@]}; index++)); do
+  if [[ "${args[index]}" == "-e" ]]; then
+    query="${args[index+1]}"
+    break
+  fi
+done
+if [[ -z "${query}" ]]; then
+  cat >/dev/null
+  echo "BASELINE_IMPORT" >> "${FAKE_MYSQL_LOG}"
+  exit 0
+fi
+echo "QUERY:${query}" >> "${FAKE_MYSQL_LOG}"
+case "${query}" in
+  *information_schema.schemata*) echo 0 ;;
+  *information_schema.columns*) echo 3 ;;
+  *information_schema.tables*) echo 1 ;;
+  *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
+  *promotionMigration*) echo "60:11:13:0" ;;
+  *"CONCAT(schema_generation"*) echo "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ;;
+  *"SELECT checksum_sha256"*) ;;
+  *"SELECT COUNT(*) FROM server_zones"*) echo 1 ;;
+  *"SELECT COUNT(*) FROM server_battle_commands"*) echo 1 ;;
+  *"SELECT COUNT(*) FROM server_player_base_stats"*) echo 1 ;;
+esac
+""");
+        File.SetUnixFileMode(fakeMariaDb,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        try
+        {
+            ProcessStartInfo startInfo = new("/bin/bash")
+            {
+                WorkingDirectory = package,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            startInfo.ArgumentList.Add(Path.Combine(package, "setup.sh"));
+            startInfo.Environment["MYSQL_BIN"] = fakeMariaDb;
+            startInfo.Environment["MYSQLDUMP_BIN"] = Path.Combine(root, "missing-mysqldump");
+            startInfo.Environment["FAKE_MYSQL_LOG"] = logPath;
+            startInfo.Environment["AETHERXIV_CORE_BACKUP_DIR"] = Path.Combine(root, "backups");
+            startInfo.Environment["AETHERXIV_DB_NAME"] = "ffxiv_server";
+            startInfo.Environment["AETHERXIV_DB_USER"] = "aetherxiv";
+            startInfo.Environment["AETHERXIV_DB_PASSWORD"] = "test-password";
+            startInfo.Environment["AETHERXIV_DB_ADMIN_USER"] = "root";
+            startInfo.Environment["AETHERXIV_DB_ADMIN_PASSWORD"] = "admin-password";
+
+            using Process process = Process.Start(startInfo)!;
+            string output = await process.StandardOutput.ReadToEndAsync();
+            string error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            Assert.True(process.ExitCode == 0, $"stdout:\n{output}\nstderr:\n{error}");
+            Assert.Contains("Importing canonical direct-core baseline", output, StringComparison.Ordinal);
+            Assert.DoesNotContain("Backed up", output, StringComparison.Ordinal);
+
+            string calls = File.ReadAllText(logPath);
+            int createIndex = calls.IndexOf("CREATE DATABASE IF NOT EXISTS", StringComparison.Ordinal);
+            int importIndex = calls.IndexOf("BASELINE_IMPORT", StringComparison.Ordinal);
+            Assert.True(createIndex >= 0 && importIndex > createIndex, calls);
+
+            string beforeImport = calls[..importIndex];
+            Assert.DoesNotContain("aether_database_compatibility", beforeImport, StringComparison.Ordinal);
+            Assert.DoesNotContain("aether_schema_migrations", beforeImport, StringComparison.Ordinal);
+            Assert.DoesNotContain("DROP DATABASE", beforeImport, StringComparison.Ordinal);
+            Assert.Contains("aether_database_compatibility", calls[importIndex..], StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void DatabaseCompatibilityContractIsExplicitAndVersioned()
     {
         Assert.Equal("direct-core", AetherXivDatabaseCompatibility.Key);
@@ -522,6 +617,20 @@ esac
         string path = Path.Combine(Path.GetTempPath(), $"aetherxiv-operator-tests-{Guid.NewGuid():N}");
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private static string FindRepositoryFile(params string[] parts)
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            string candidate = Path.Combine([directory.FullName, .. parts]);
+            if (File.Exists(candidate))
+                return candidate;
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException($"Could not locate repository file: {Path.Combine(parts)}");
     }
 
     private static AetherXivOperatorConfig CreateMinimalWorkspaceConfig()

@@ -93,6 +93,29 @@ namespace AetherXIV.Core.Map.actors.area
             return GridaniaOpeningTutorialPolicy.BuildBattleCompleteSignal(player.actorId);
         }
 
+        /// <summary>
+        /// Resolves the player who owns a Gridania tutorial wolf kill. Yda and
+        /// Papalymo are content allies rather than party members, so their
+        /// final blows still need to credit the sole player in this director.
+        /// </summary>
+        public Player GetTutorialRewardPlayer(BattleNpc defeated, Character killer)
+        {
+            if (defeated == null ||
+                killer == null ||
+                currentDirector == null ||
+                !GridaniaOpeningTutorialPolicy.IsTutorialWolf(GetPrivateAreaName(), defeated.GetBattleNpcId()))
+            {
+                return null;
+            }
+
+            var members = currentDirector.GetMembers();
+            if (!members.Contains(defeated) || !members.Contains(killer))
+                return null;
+
+            Player[] players = currentDirector.GetPlayerMembers().OfType<Player>().ToArray();
+            return players.Length == 1 ? players[0] : null;
+        }
+
         public void CheckDestroy()
         {
             lock (mActorList)
