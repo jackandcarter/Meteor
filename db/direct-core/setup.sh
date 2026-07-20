@@ -79,24 +79,26 @@ if ! MYSQL_BIN="$(resolve_tool "${MYSQL_BIN:-}" mariadb mysql)"; then
   echo "MariaDB/MySQL client is required. Checked PATH and standard Homebrew/MacPorts locations." >&2
   exit 2
 fi
-if ! MYSQLDUMP_BIN="$(resolve_tool "${MYSQLDUMP_BIN:-}" mariadb-dump mysqldump)"; then
-  echo "MariaDB/MySQL dump client is required. Checked PATH and standard Homebrew/MacPorts locations." >&2
-  exit 2
-fi
+MYSQLDUMP_BIN="$(resolve_tool "${MYSQLDUMP_BIN:-}" mariadb-dump mysqldump || true)"
 
 admin=("${MYSQL_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_ADMIN_USER}")
 app=("${MYSQL_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_APP_USER}")
-admin_dump=("${MYSQLDUMP_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_ADMIN_USER}")
-app_dump=("${MYSQLDUMP_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_APP_USER}")
+admin_dump=()
+app_dump=()
+if [[ -n "${MYSQLDUMP_BIN}" ]]; then
+  admin_dump=("${MYSQLDUMP_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_ADMIN_USER}")
+  app_dump=("${MYSQLDUMP_BIN}" -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_APP_USER}")
+  [[ -z "${DB_ADMIN_PASS}" ]] || admin_dump+=("-p${DB_ADMIN_PASS}")
+  [[ -z "${DB_APP_PASS}" ]] || app_dump+=("-p${DB_APP_PASS}")
+fi
 [[ -z "${DB_ADMIN_PASS}" ]] || admin+=("-p${DB_ADMIN_PASS}")
-[[ -z "${DB_ADMIN_PASS}" ]] || admin_dump+=("-p${DB_ADMIN_PASS}")
 [[ -z "${DB_APP_PASS}" ]] || app+=("-p${DB_APP_PASS}")
-[[ -z "${DB_APP_PASS}" ]] || app_dump+=("-p${DB_APP_PASS}")
+dump=()
 if ((MIGRATE_ONLY == 1)); then
   admin=("${app[@]}")
-  dump=("${app_dump[@]}")
+  [[ -z "${MYSQLDUMP_BIN}" ]] || dump=("${app_dump[@]}")
 else
-  dump=("${admin_dump[@]}")
+  [[ -z "${MYSQLDUMP_BIN}" ]] || dump=("${admin_dump[@]}")
 fi
 
 literal() { local value="$1"; value="${value//\\/\\\\}"; value="${value//\'/\'\'}"; printf '%s' "$value"; }
@@ -179,16 +181,24 @@ exists="$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.schema
 LAST_BACKUP_PATH=""
 ORIGINAL_BACKUP_PATH="${AETHERXIV_ORIGINAL_BACKUP_PATH:-}"
 backup_database() {
-  command -v "${MYSQLDUMP_BIN}" >/dev/null 2>&1 || { echo "Database dump client is required before modifying an existing database." >&2; exit 2; }
   mkdir -p "${BACKUP_DIR}"
-  local base_path path suffix=0
+  local base_path path suffix=0 table_count
   base_path="${BACKUP_DIR}/${DB_NAME}-$(date -u +'%Y%m%dT%H%M%SZ')"
   path="${base_path}.sql"
   while [[ -e "${path}" || -e "${path}.sha256" ]]; do
     suffix=$((suffix + 1))
     path="${base_path}-${suffix}.sql"
   done
-  "${dump[@]}" --routines --triggers --single-transaction "${DB_NAME}" > "${path}"
+  table_count="$("${admin[@]}" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db_literal}'")"
+  if [[ "${table_count}" == 0 ]]; then
+    printf '%s\n' "-- AetherXIV backup: ${DB_NAME} existed and contained no tables." > "${path}"
+  else
+    [[ -n "${MYSQLDUMP_BIN}" && -x "${MYSQLDUMP_BIN}" ]] || {
+      echo "MariaDB/MySQL dump client is required to preserve the existing non-empty database before rebuilding it." >&2
+      exit 2
+    }
+    "${dump[@]}" --routines --triggers --single-transaction "${DB_NAME}" > "${path}"
+  fi
   write_sha256_sidecar "${path}"
   LAST_BACKUP_PATH="${path}"
   if [[ -z "${ORIGINAL_BACKUP_PATH}" ]]; then

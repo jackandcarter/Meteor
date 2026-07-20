@@ -32,11 +32,11 @@ function onEventStarted(player, actor, triggerName)
 		callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl002", nil, nil, nil);
 		player:EndEvent();
 
-		-- Normal combat is released only after the player's first attack, so
-		-- the wolves remain alive and targetable during processTtrBtl002.
+		-- Engage after the first attack, but keep the wolves at 1 HP until the
+		-- weaponskill lesson is complete. Releasing them here lets Yda or
+		-- Papalymo kill every target while the client is still waiting for TP.
 		waitForSignal("playerAttack");
 		player:GetZone():EngageContentBattleForPlayer(player);
-		player:GetZone():SetBattleNpcMinimumHpLock(0);
 		closeTutorialWidget(player);
 		showTutorialSuccessWidget(player, 9055);
 		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_TP);
@@ -45,6 +45,7 @@ function onEventStarted(player, actor, triggerName)
 		closeTutorialWidget(player);
 		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_WEAPONSKILLS);
 		waitForSignal("weaponskillUsed");
+		player:GetZone():SetBattleNpcMinimumHpLock(0);
 		player:SetMod(modifiersGlobal.MinimumTpLock, 0);
 		closeTutorialWidget(player);
 		showTutorialSuccessWidget(player, 9065);
@@ -116,10 +117,8 @@ end
 function onCommand(player, command)
 end
 
--- The direct C# runtime passes both values to main. Starting here occurs
--- after the content area has been registered, which is also the first safe
--- moment to populate the client party rows for Yda and Papalymo.
+-- The group is activated by SendZoneInPackets after the player has entered
+-- the private area. Starting it here emits a stale-zone roster before the
+-- instance actors exist on the client.
 function main(director, contentGroup)
-	director:AddAlliesToPlayerParty();
-	director:StartContentGroup();
 end

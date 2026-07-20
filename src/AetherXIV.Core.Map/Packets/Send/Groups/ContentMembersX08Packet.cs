@@ -8,7 +8,10 @@ namespace AetherXIV.Core.Map.packets.send.group
     class ContentMembersX08Packet
     {
         public const ushort OPCODE = 0x0183;
-        public const uint PACKET_SIZE = 0x1B8;
+        // Retail 1.23b sends a 0x98-byte game subpacket (0x78-byte payload).
+        // The inherited 0x1B8 declaration emitted 440 bytes and hard-crashes
+        // the client when the Gridania tutorial content roster is created.
+        public const uint PACKET_SIZE = 0x98;
 
         public static SubPacket buildPacket(uint playerActorID, uint locationCode, ulong sequenceId, List<GroupMember> entries, ref int offset)
         {
@@ -25,11 +28,12 @@ namespace AetherXIV.Core.Map.packets.send.group
                     int max = 8;
                     if (entries.Count-offset < 8)
                         max = entries.Count - offset;
+                    int entryOffset = offset;
                     for (int i = 0; i < max; i++)
                     {
                         binWriter.Seek(0x10 + (0xC * i), SeekOrigin.Begin);
 
-                        GroupMember entry = entries[i];
+                        GroupMember entry = entries[entryOffset + i];
                         binWriter.Write((UInt32)entry.actorId);
                         binWriter.Write((UInt32)1001); //Layout ID
                         binWriter.Write((UInt32)1); //?

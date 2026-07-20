@@ -13,15 +13,6 @@ public static class RuntimePlatformPrerequisites
 {
     private sealed record ProcessResult(int ExitCode, string Output, string Error, bool TimedOut);
 
-    private static readonly string[] LinuxDriverNames =
-    [
-        "winex11.drv.so",
-        "winealsa.drv.so",
-        "winepulse.drv.so",
-        "winegstreamer.so",
-        "winevulkan.so"
-    ];
-
     public static async Task<RuntimePrerequisiteResult> CheckAsync(
         string wineCommand,
         CancellationToken cancellationToken = default)
@@ -225,24 +216,12 @@ public static class RuntimePlatformPrerequisites
         if (File.Exists(wineserver))
             targets.Add(wineserver);
 
-        DirectoryInfo? root = Directory.GetParent(binDirectory);
-        if (root is null || !root.Exists)
-            return targets;
-
-        HashSet<string> wanted = new(LinuxDriverNames, StringComparer.Ordinal);
-        try
-        {
-            foreach (string library in Directory.EnumerateFiles(root.FullName, "*.so", SearchOption.AllDirectories))
-            {
-                if (wanted.Contains(Path.GetFileName(library)))
-                    targets.Add(library);
-            }
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // The executable and wineserver still provide a useful minimum check.
-        }
-
+        // Do not run ldd over Wine's driver modules. Distribution packages
+        // intentionally resolve ntdll.so/win32u.so through Wine's loader at
+        // runtime, so probing the modules directly produces false "not found"
+        // results on otherwise working Arch, SteamOS, Debian, and Fedora Wine.
+        // The loader, wineserver, and the subsequent `wine --version` probe are
+        // the portable checks for host linkage and executability.
         return targets.Distinct(StringComparer.Ordinal).ToList();
     }
 

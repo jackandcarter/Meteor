@@ -46,7 +46,7 @@ function Resolve-DatabaseTool([string[]]$Names) {
 }
 
 $mysql = Resolve-DatabaseTool @("mariadb", "mysql")
-$dump = Resolve-DatabaseTool @("mariadb-dump", "mysqldump")
+$dump = try { Resolve-DatabaseTool @("mariadb-dump", "mysqldump") } catch { $null }
 
 function Sql-Literal([string]$Value) { return $Value.Replace("\", "\\").Replace("'", "''") }
 function Sql-Identifier([string]$Value) { return $Value.Replace('`', '``') }
@@ -92,17 +92,24 @@ function Backup-Database {
         $suffix++
         $path = "$basePath-$suffix.sql"
     }
-    $info = [Diagnostics.ProcessStartInfo]::new($dump)
-    foreach ($argument in $adminArgs) { [void]$info.ArgumentList.Add($argument) }
-    foreach ($argument in @("--routines", "--triggers", "--single-transaction", $dbName)) { [void]$info.ArgumentList.Add($argument) }
-    $info.UseShellExecute = $false
-    $info.RedirectStandardOutput = $true
-    $process = [Diagnostics.Process]::Start($info)
-    $destination = [IO.File]::Create($path)
-    try { $process.StandardOutput.BaseStream.CopyTo($destination) }
-    finally { $destination.Dispose() }
-    $process.WaitForExit()
-    if ($process.ExitCode -ne 0) { throw "Database backup failed." }
+    $tableCount = Invoke-Query $adminArgs "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$dbLiteral'"
+    if ($tableCount -eq "0") {
+        Set-Content -Encoding utf8 $path "-- AetherXIV backup: $dbName existed and contained no tables."
+    }
+    else {
+        if (-not $dump) { throw "MariaDB/MySQL dump client is required to preserve the existing non-empty database before rebuilding it." }
+        $info = [Diagnostics.ProcessStartInfo]::new($dump)
+        foreach ($argument in $adminArgs) { [void]$info.ArgumentList.Add($argument) }
+        foreach ($argument in @("--routines", "--triggers", "--single-transaction", $dbName)) { [void]$info.ArgumentList.Add($argument) }
+        $info.UseShellExecute = $false
+        $info.RedirectStandardOutput = $true
+        $process = [Diagnostics.Process]::Start($info)
+        $destination = [IO.File]::Create($path)
+        try { $process.StandardOutput.BaseStream.CopyTo($destination) }
+        finally { $destination.Dispose() }
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) { throw "Database backup failed." }
+    }
     $hash = (Get-FileHash -Algorithm SHA256 $path).Hash.ToLowerInvariant()
     Set-Content -Encoding ascii "$path.sha256" "$hash  $([IO.Path]::GetFileName($path))"
     $script:LastBackupPath = $path

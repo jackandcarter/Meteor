@@ -25,11 +25,12 @@ namespace AetherXIV.Core.Map.packets.send.group
                     int max = 32;
                     if (entries.Count-offset < 32)
                         max = entries.Count - offset;
+                    int entryOffset = offset;
                     for (int i = 0; i < max; i++)
                     {
                         binWriter.Seek(0x10 + (0xC * i), SeekOrigin.Begin);
 
-                        GroupMember entry = entries[i];
+                        GroupMember entry = entries[entryOffset + i];
                         binWriter.Write((UInt32)entry.actorId);
                         binWriter.Write((UInt32)1001);
                         binWriter.Write((UInt32)1);

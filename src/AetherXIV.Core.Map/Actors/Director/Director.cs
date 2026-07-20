@@ -4,7 +4,6 @@ using AetherXIV.Core.Map.actors.group;
 using AetherXIV.Core.Map.Actors;
 using AetherXIV.Core.Map.lua;
 using AetherXIV.Core.Map.packets.send.actor;
-using AetherXIV.Core.Map.actors.chara.npc;
 using MoonSharp.Interpreter;
 using System;
 using System.Collections.Generic;
@@ -142,79 +141,9 @@ namespace AetherXIV.Core.Map.actors.director
                 contentGroup.Start();
         }
 
-        /// <summary>
-        /// Adds content allies to the player's ordinary party after the
-        /// content area has been registered with the parent zone. Doing this
-        /// during content onCreate is too early for party-row actor lookup.
-        /// </summary>
-        public int AddAlliesToPlayerParty()
-        {
-            int added = 0;
-            int deferredPackets = 0;
-            List<Actor> allies = GetNpcMembers().FindAll(actor => actor is Ally);
-
-            foreach (Player player in GetPlayerMembers())
-            {
-                if (!(player.currentParty is Party party))
-                    continue;
-
-                // During persisted-content reconstruction the player is not
-                // inserted into the restored area until StartDirector returns.
-                // Record the party members now, but let SendZoneInPackets emit
-                // the first party snapshot after every actor is discoverable.
-                bool playerIsWorldVisible = Server.GetWorldManager().GetActorInWorld(player.actorId) != null;
-
-                foreach (Ally ally in allies)
-                {
-                    ally.currentParty = party;
-                    if (party.IsInParty(ally.actorId))
-                        continue;
-
-                    if (playerIsWorldVisible)
-                        party.AddMember(ally.actorId);
-                    else
-                    {
-                        party.members.Add(ally.actorId);
-                        deferredPackets++;
-                    }
-                    added++;
-                }
-            }
-
-            DevDiagnostics.Trace(
-                "director.allies.party.add",
-                "director", actorName,
-                "players", GetPlayerMembers().Count,
-                "allies", allies.Count,
-                "added", added,
-                "deferredPackets", deferredPackets);
-            return added;
-        }
-
         public void EndDirector()
         {
             isDeleting = true;
-
-            // Content NPCs may temporarily occupy the player's party to drive
-            // the retail ally-status widget and shared battle credit. Remove
-            // those transient members before the content actors despawn.
-            List<Actor> directorPlayers = GetPlayerMembers();
-            List<Actor> directorNpcs = GetNpcMembers();
-            foreach (Player player in directorPlayers)
-            {
-                if (!(player.currentParty is Party party))
-                    continue;
-
-                foreach (Actor actor in directorNpcs)
-                {
-                    if (!(actor is Character character) || !party.IsInParty(actor.actorId))
-                        continue;
-
-                    party.RemoveMember(actor.actorId);
-                    if (character.currentParty == party)
-                        character.currentParty = null;
-                }
-            }
 
             if (contentGroup != null)
                 contentGroup.DeleteGroup();

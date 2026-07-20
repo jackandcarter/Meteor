@@ -1354,10 +1354,13 @@ namespace AetherXIV.Core.Map
             {
                 player.currentContentGroup.RemoveMember(player.actorId);
                 player.SetCurrentContentGroup(null);
+            }
 
-                if (oldZone is PrivateAreaContent)
-                    ((PrivateAreaContent)oldZone).CheckDestroy();
-            }                 
+            // EndDirector clears currentContentGroup before the scripted zone
+            // change. Cleanup therefore must depend on the area we actually
+            // left, not on whether group membership still happens to exist.
+            if (oldZone is PrivateAreaContent oldContentArea)
+                oldContentArea.CheckDestroy();
 
             //Send packets
             player.playerSession.QueuePacket(DeleteAllActorsPacket.BuildPacket(player.actorId));

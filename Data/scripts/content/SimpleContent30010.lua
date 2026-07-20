@@ -15,8 +15,9 @@ function onCreate(starterPlayer, contentArea, director)
 	mob2:ChangeState(2);
 	mob3:ChangeState(2);
 
-	-- No actor can die while the client is still running its targeting
-	-- tutorial. The director releases the wolves after the first attack.
+	-- No actor can die while the client is still running its targeting and
+	-- weaponskill lessons. The director releases the wolves after the player
+	-- uses the requested weaponskill.
 	mob1:SetMod(modifiersGlobal.MinimumHpLock, 1);
 	mob2:SetMod(modifiersGlobal.MinimumHpLock, 1);
 	mob3:SetMod(modifiersGlobal.MinimumHpLock, 1);

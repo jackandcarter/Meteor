@@ -90,12 +90,12 @@ public sealed class AetherXivDatabasePreflightService
         {
             await RunDirectCorePreflightAsync(normalized, options, repair, Add, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (repair && IsBootstrapCandidate(ex))
+        catch (Exception ex) when (IsBootstrapCandidate(ex))
         {
             Add(
                 "database.bootstrap",
                 AetherXivDatabasePreflightStatus.NeedsAdminCredentials,
-                "The direct-core database or app account is unavailable. Run the packaged Database setup tool, then retry.");
+                "The direct-core database or app account does not exist or is not accessible. MariaDB administrator credentials are needed once so startup can create the canonical AetherXIV 2 database and application account.");
         }
         catch (Exception ex)
         {

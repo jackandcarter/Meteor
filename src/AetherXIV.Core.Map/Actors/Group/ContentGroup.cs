@@ -46,6 +46,15 @@ namespace AetherXIV.Core.Map.actors.group
             SendGroupPacketsAll(members);
         }
 
+        /// <summary>
+        /// Marks a content group live after its initial roster has already
+        /// been included in the player's zone-in packet stream.
+        /// </summary>
+        public void StartAfterZoneIn()
+        {
+            isStarted = true;
+        }
+
         public void AddMember(Actor actor)
         {
             if (actor == null)

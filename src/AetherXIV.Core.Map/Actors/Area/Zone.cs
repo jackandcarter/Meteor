@@ -165,7 +165,7 @@ namespace AetherXIV.Core.Map.actors.area
 
                 if (!contentAreas.ContainsKey(areaName))
                     contentAreas.Add(areaName, new List<PrivateAreaContent>());
-                PrivateAreaContent contentArea = new PrivateAreaContent(this, classPath, areaName, 1, director, starterPlayer);                
+                PrivateAreaContent contentArea = new PrivateAreaContent(this, areaClassPath, areaName, 1, director, starterPlayer);
                 contentAreas[areaName].Add(contentArea);
                 
                 return contentArea;

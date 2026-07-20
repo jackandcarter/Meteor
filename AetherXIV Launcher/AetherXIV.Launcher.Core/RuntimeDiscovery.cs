@@ -23,8 +23,17 @@ public static class RuntimeDiscovery
 {
     private const string HomebrewWineStableCommand = "/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine";
 
-    public static IReadOnlyList<RuntimeCandidate> Discover() =>
-        Discover(File.Exists, Directory.Exists, _ => Array.Empty<string>(), _ => Array.Empty<string>());
+    public static IReadOnlyList<RuntimeCandidate> Discover()
+    {
+        List<RuntimeCandidate> candidates = Discover(
+            File.Exists,
+            Directory.Exists,
+            _ => Array.Empty<string>(),
+            _ => Array.Empty<string>(),
+            BuildExecutableSearchPath()).ToList();
+        AddUserInstalledWineRunners(candidates);
+        return candidates;
+    }
 
     public static IReadOnlyList<RuntimeCandidate> Discover(Func<string, bool> fileExists, Func<string, bool> directoryExists)
     {
@@ -113,7 +122,7 @@ public static class RuntimeDiscovery
         candidates.Add(new RuntimeCandidate(name, kind, resolvedCommand, bottleOrPrefix, source));
     }
 
-    private static string? ResolveExecutable(
+    public static string? ResolveExecutable(
         string command,
         Func<string, bool> fileExists,
         string? executableSearchPath)
@@ -130,6 +139,75 @@ public static class RuntimeDiscovery
         }
 
         return null;
+    }
+
+    public static string BuildExecutableSearchPath(string? inheritedPath = null)
+    {
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string[] standardDirectories =
+        [
+            "/usr/bin",
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            "/opt/local/bin",
+            string.IsNullOrWhiteSpace(home) ? "" : Path.Combine(home, ".local", "bin"),
+            string.IsNullOrWhiteSpace(home) ? "" : Path.Combine(home, ".nix-profile", "bin")
+        ];
+        string path = inheritedPath ?? Environment.GetEnvironmentVariable("PATH") ?? "";
+        return string.Join(
+            Path.PathSeparator,
+            path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Concat(standardDirectories)
+                .Where(directory => !string.IsNullOrWhiteSpace(directory))
+                .Distinct(StringComparer.Ordinal));
+    }
+
+    private static void AddUserInstalledWineRunners(List<RuntimeCandidate> candidates)
+    {
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(home))
+            return;
+
+        string[] roots =
+        [
+            Path.Combine(home, ".local", "share", "lutris", "runners", "wine"),
+            Path.Combine(home, ".local", "share", "bottles", "runners"),
+            Path.Combine(home, ".steam", "root", "compatibilitytools.d"),
+            Path.Combine(home, ".local", "share", "Steam", "compatibilitytools.d")
+        ];
+        foreach (string root in roots)
+        {
+            if (!Directory.Exists(root))
+                continue;
+
+            try
+            {
+                IEnumerable<string> runnerCommands = new[] { "wine", "wine64" }
+                    .SelectMany(fileName => Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories));
+                foreach (string command in runnerCommands)
+                {
+                    string normalized = Path.GetFullPath(command);
+                    if (candidates.Any(candidate => string.Equals(candidate.Command, normalized, StringComparison.Ordinal)))
+                        continue;
+
+                    string source = root.Contains("lutris", StringComparison.OrdinalIgnoreCase)
+                        ? "Lutris runner"
+                        : root.Contains("bottles", StringComparison.OrdinalIgnoreCase)
+                            ? "Bottles runner"
+                            : "Steam compatibility tool";
+                    candidates.Add(new RuntimeCandidate(
+                        $"{source} ({new FileInfo(normalized).Directory?.Parent?.Name ?? "Wine"})",
+                        WineRuntimeKind.WinePrefix,
+                        normalized,
+                        null,
+                        source));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // One unreadable runner directory must not hide other valid runtimes.
+            }
+        }
     }
 
     private static void AddIfFileExists(

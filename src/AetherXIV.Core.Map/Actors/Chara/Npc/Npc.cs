@@ -73,8 +73,7 @@ namespace AetherXIV.Core.Map.Actors
                 charaWork.parameterSave.hp[0] = 80;
                 charaWork.parameterSave.hpMax[0] = 80;
             }
-            for (int i = 0; i < 32; i++ )
-                charaWork.property[i] = (byte)(((int)actorClass.propertyFlags >> i) & 1);
+            ApplyNpcPropertyFlags(actorClass.propertyFlags);
 
             npcWork.pushCommand = actorClass.pushCommand;
             npcWork.pushCommandSub = actorClass.pushCommandSub;
@@ -121,8 +120,7 @@ namespace AetherXIV.Core.Map.Actors
             this.classPath = actorClass.classPath;
             className = classPath.Substring(classPath.LastIndexOf("/") + 1);
 
-            for (int i = 0; i < 32; i++)
-                charaWork.property[i] = (byte)(((int)actorClass.propertyFlags >> i) & 1);
+            ApplyNpcPropertyFlags(actorClass.propertyFlags);
 
             npcWork.pushCommand = actorClass.pushCommand;
             npcWork.pushCommandSub = actorClass.pushCommandSub;
@@ -134,6 +132,13 @@ namespace AetherXIV.Core.Map.Actors
 
             GenerateActorName((int)actorNumber);
             this.aiContainer = new AIContainer(this, null, new PathFind(this), new TargetFind(null));
+        }
+
+        private void ApplyNpcPropertyFlags(uint propertyFlags)
+        {
+            uint safeFlags = NpcPropertyPolicy.Sanitize(propertyFlags);
+            for (int i = 0; i < 32; i++)
+                charaWork.property[i] = (byte)((safeFlags >> i) & 1);
         }
 
         public SubPacket CreateAddActorPacket()

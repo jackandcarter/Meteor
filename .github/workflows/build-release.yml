@@ -1,5 +1,5 @@
-name: AetherXIV 2.0 Release
-run-name: AetherXIV 2.0 Release
+name: AetherXIV 2.0 Runtime Update
+run-name: AetherXIV 2.0 Runtime Update
 
 on:
   workflow_dispatch:

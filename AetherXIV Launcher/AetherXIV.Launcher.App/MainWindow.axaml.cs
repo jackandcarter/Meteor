@@ -1096,7 +1096,7 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             RuntimeProgressBar.IsIndeterminate = false;
-            ManagedRuntimeStatus.Text = "Runtime installation failed.";
+            ManagedRuntimeStatus.Text = $"Runtime installation failed: {ex.Message}";
             AppendLog($"Runtime installation failed: {ex.Message}");
         }
         finally
@@ -1650,6 +1650,17 @@ public sealed partial class MainWindow : Window
 
     private static WineRuntimeProfile NormalizeRuntimeProfile(WineRuntimeProfile profile)
     {
+        if (!string.IsNullOrWhiteSpace(profile.Command)
+            && !Path.IsPathFullyQualified(profile.Command))
+        {
+            string? resolvedCommand = RuntimeDiscovery.ResolveExecutable(
+                profile.Command,
+                File.Exists,
+                RuntimeDiscovery.BuildExecutableSearchPath());
+            if (!string.IsNullOrWhiteSpace(resolvedCommand))
+                profile = profile with { Command = resolvedCommand };
+        }
+
         if (profile.Kind == WineRuntimeKind.WhiskyBottle
             && !string.IsNullOrWhiteSpace(profile.BottleName)
             && WhiskyRuntimeEnvironment.TryCreateWineProfile(
@@ -2525,7 +2536,9 @@ public sealed partial class MainWindow : Window
 
     private static string FormatRuntimeCandidate(RuntimeCandidate candidate)
     {
-        string value = string.IsNullOrWhiteSpace(candidate.BottleOrPrefix) ? "profile required" : candidate.BottleOrPrefix;
+        string value = string.IsNullOrWhiteSpace(candidate.BottleOrPrefix)
+            ? $"isolated prefix: {RuntimeInstallStore.ManagedPrefixPath}"
+            : candidate.BottleOrPrefix;
         return $"{candidate.Name} | {candidate.Kind} | {candidate.Command} | {value}";
     }
 
