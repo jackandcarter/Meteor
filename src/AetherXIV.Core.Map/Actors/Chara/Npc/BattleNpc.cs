@@ -10,6 +10,7 @@ using AetherXIV.Core.Map.utils;
 using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.actors.chara.ai.utils;
 using AetherXIV.Core.Map.actors.group;
+using AetherXIV.Core.Map.actors.area;
 using AetherXIV.Core.Map.Actors.Chara;
 
 namespace AetherXIV.Core.Map.Actors
@@ -353,7 +354,7 @@ namespace AetherXIV.Core.Map.Actors
                     lastAttacker = lastAttacker.aiContainer.GetController<PetController>().GetPetMaster();
                 }
 
-                if (lastAttacker is Player)
+                if (lastAttacker is Player || (lastAttacker is Ally && lastAttacker.currentParty is Party))
                 {
                     //I think this is, or should be odne in DoBattleAction. Packet capture had the message in the same packet as an attack
                     // <actor> defeat/defeats <target>
@@ -409,6 +410,10 @@ namespace AetherXIV.Core.Map.Actors
                     "zone", zoneId,
                     "lastAttacker", lastAttacker == null ? "0x0" : String.Format("0x{0:X}", lastAttacker.actorId),
                     "lastAttackerName", lastAttacker == null ? "" : (lastAttacker.customDisplayName != null ? lastAttacker.customDisplayName : lastAttacker.actorName));
+
+                if (zone is PrivateAreaContent privateAreaContent)
+                    privateAreaContent.NotifyBattleNpcDefeated(this);
+
                 lua.LuaEngine.GetInstance().OnSignal("mobkill");
             }
             else

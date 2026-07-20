@@ -3,6 +3,8 @@ using AetherXIV.Core.Map.Actors;
 using AetherXIV.Core.Map.lua;
 using AetherXIV.Core.Common;
 using System;
+using System.Linq;
+using AetherXIV.Core.Map.actors.chara.npc;
 
 namespace AetherXIV.Core.Map.actors.area
 {
@@ -11,6 +13,7 @@ namespace AetherXIV.Core.Map.actors.area
     {
         private Director currentDirector;
         private bool isContentFinished = false;
+        private bool battleCompletionSignaled = false;
 
         public static PrivateAreaContent CreateContentArea(String scriptPath)
         {
@@ -45,6 +48,49 @@ namespace AetherXIV.Core.Map.actors.area
                 "zone", zoneName,
                 "privateArea", GetPrivateAreaName(),
                 "privateAreaType", GetPrivateAreaType());
+        }
+
+        /// <summary>
+        /// Completes the Gridania opening battle only after the content area's
+        /// three hostile wolves are dead. The signal is scoped to the owning
+        /// player so an unrelated death elsewhere cannot advance this director.
+        /// </summary>
+        public void NotifyBattleNpcDefeated(BattleNpc defeated)
+        {
+            if (battleCompletionSignaled ||
+                defeated == null ||
+                !GridaniaOpeningTutorialPolicy.IsContentArea(GetPrivateAreaName()) ||
+                defeated is Ally)
+            {
+                return;
+            }
+
+            bool hasLivingHostiles = GetMonsters().Any(monster => !(monster is Ally) && monster.IsAlive());
+            if (hasLivingHostiles)
+                return;
+
+            battleCompletionSignaled = true;
+            foreach (Player player in currentDirector.GetPlayerMembers().OfType<Player>())
+            {
+                string signal = GridaniaOpeningTutorialPolicy.BuildBattleCompleteSignal(player.actorId);
+                DevDiagnostics.Trace(
+                    "tutorial.gridania.battleComplete",
+                    "player", player.customDisplayName,
+                    "actor", String.Format("0x{0:X}", player.actorId),
+                    "privateArea", GetPrivateAreaName(),
+                    "signal", signal);
+                LuaEngine.GetInstance().OnSignal(signal);
+            }
+        }
+
+        public bool IsContentBattleComplete()
+        {
+            return battleCompletionSignaled;
+        }
+
+        public string GetBattleCompleteSignal(Player player)
+        {
+            return GridaniaOpeningTutorialPolicy.BuildBattleCompleteSignal(player.actorId);
         }
 
         public void CheckDestroy()

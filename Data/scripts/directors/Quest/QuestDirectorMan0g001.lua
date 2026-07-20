@@ -3,42 +3,42 @@ require ("tutorial")
 require ("modifiers")
 require ("quests/man/man0g0")
 
---processTtrBtl001: Active Mode Tutorial
---processTtrBtl002: Targetting Tutorial (After active mode done)
+-- Gridania opening battle (Man0g0 / SimpleContent30010).
+-- The ordering here follows the client event contract recovered from the
+-- official trace and the shipped Man0g0 client script. In particular, each
+-- delegate is allowed to finish before the next server-side transition.
 
 function init()
 	return "/Director/Quest/QuestDirectorMan0g001";
 end
 
-function onCreateContentArea(players, director, contentArea, contentGroup)
-	director:StartContentGroup();
-end
-
 function onEventStarted(player, actor, triggerName)
-	man0g0Quest = player:GetQuest("Man0g0");
-	player:SetMod(modifiersGlobal.MinimumHpLock, 1);
-	player:SendMessage(0x20, "", "Starting");
-	startTutorialMode(player);
-	callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl001", nil, nil, nil);
-	player:EndEvent();
-	player:SendMessage(0x20, "", "Waiting for player active");
-	waitForSignal("playerActive");
-	player:SendMessage(0x20, "", "player active");
-	wait(1); --If this isn't here, the scripts bugs out. TODO: Find a better alternative.
-	kickEventContinue(player, actor, "noticeEvent", "noticeEvent");	
-	callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl002", nil, nil, nil);
-	player:SendMessage(0x20, "", "processTtrBtl002 called");
-	player:EndEvent();
+	local man0g0Quest = player:GetQuest("Man0g0");
+	if man0g0Quest == nil then
+		player:EndEvent();
+		return;
+	end
 
-	--Combat portion of tutorial
-	
+	player:SetMod(modifiersGlobal.MinimumHpLock, 1);
+	startTutorialMode(player);
+
 	if player:IsDiscipleOfWar() then
-		player:SendMessage(0x20, "", "Is DoW");
+		-- Active-mode prompt, followed by the enemy-targeting prompt.
+		callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl001", nil, nil, nil);
+		player:EndEvent();
+		waitForSignal("playerActive");
+		wait(1);
+		kickEventContinue(player, actor, "noticeEvent", "noticeEvent");
+		callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl002", nil, nil, nil);
+		player:EndEvent();
+
+		-- Normal combat is released only after the player's first attack, so
+		-- the wolves remain alive and targetable during processTtrBtl002.
 		waitForSignal("playerAttack");
-		player:SetTempVar("gridaniaTutorialAlliesReleased", 1);
-		player:GetZone():EngageAlliesForPlayer(player);
+		player:GetZone():EngageContentBattleForPlayer(player);
+		player:GetZone():SetBattleNpcMinimumHpLock(0);
 		closeTutorialWidget(player);
-		showTutorialSuccessWidget(player, 9055); --Open TutorialSuccessWidget for attacking enemy
+		showTutorialSuccessWidget(player, 9055);
 		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_TP);
 		waitForSignal("tpOver1000");
 		player:SetMod(modifiersGlobal.MinimumTpLock, 1000);
@@ -47,105 +47,79 @@ function onEventStarted(player, actor, triggerName)
 		waitForSignal("weaponskillUsed");
 		player:SetMod(modifiersGlobal.MinimumTpLock, 0);
 		closeTutorialWidget(player);
-		showTutorialSuccessWidget(player, 9065); --Open TutorialSuccessWidget for weapon skill
+		showTutorialSuccessWidget(player, 9065);
 	elseif player:IsDiscipleOfMagic() then
-		player:SendMessage(0x20, "", "Is DoM");
-		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_CASTING);
-		waitForSignal("spellUsed");
-		player:SetTempVar("gridaniaTutorialAlliesReleased", 1);
-		player:GetZone():EngageAlliesForPlayer(player);
+		callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtlMagic001", nil, nil, nil);
+		player:EndEvent();
+		wait(1);
+		kickEventContinue(player, actor, "noticeEvent", "noticeEvent");
+		player:GetZone():EngageContentBattleForPlayer(player);
+		player:GetZone():SetBattleNpcMinimumHpLock(0);
 		closeTutorialWidget(player);
-	elseif player:IsDiscipleOfHand() then
-		waitForSignal("abilityUsed");
-		player:SetTempVar("gridaniaTutorialAlliesReleased", 1);
-		player:GetZone():EngageAlliesForPlayer(player);
-	elseif player:IsDiscipleOfLand() then
-		waitForSignal("abilityUsed");
-		player:SetTempVar("gridaniaTutorialAlliesReleased", 1);
-		player:GetZone():EngageAlliesForPlayer(player);
+		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_DEFEATENEMY);
+	else
+		-- Opening characters should be DoW or DoM. Keep a recoverable path
+		-- for imported characters instead of leaving the content locked.
+		waitForSignal("playerAttack");
+		player:GetZone():EngageContentBattleForPlayer(player);
+		player:GetZone():SetBattleNpcMinimumHpLock(0);
 	end
 
-	player:GetZone():SetBattleNpcMinimumHpLock(0);
-	
-	player:SendMessage(0x20, "", "Waiting for mobkill1");
-	waitForSignal("mobkill"); --Should be wait for mobkill
-	player:SendMessage(0x20, "", "Waiting for mobkill2");
-	waitForSignal("mobkill");
-	player:SendMessage(0x20, "", "Waiting for mobkill3");
-	waitForSignal("mobkill");
-	worldMaster = GetWorldMaster();
-	player:SetMod(modifiersGlobal.MinimumHpLock, 0);
-	player:SendMessage(0x20, "", "Sending data packet 'attention'");
-	player:SendDataPacket("attention", worldMaster, "", 51073, 2);
-	wait(0.5);
-	player:SendMessage(0x20, "", "Disengaging");
-	player:Disengage(0x0000);
-	wait(0.5);
-	player:SendMessage(0x20, "", "NextPhase(10)");
-	man0g0Quest:NextPhase(10);	
-	wait(0.5);
-	player:SendMessage(0x20, "", "ProcessEvent020_1");
-	callClientFunction(player, "delegateEvent", player, man0g0Quest, "processEvent020_1", nil, nil, nil);
+	-- This signal is emitted once by PrivateAreaContent when all three
+	-- hostile members of this player's content group are dead. The state
+	-- check also covers the rare case where the allies land the final blow
+	-- while the player is dismissing the weaponskill tutorial.
+	if not player:GetZone():IsContentBattleComplete() then
+		waitForSignal(player:GetZone():GetBattleCompleteSignal(player));
+	end
+	wait(3);
+	closeTutorialWidget(player);
+	if player:IsDiscipleOfMagic() then
+		showTutorialSuccessWidget(player, 9050);
+	end
 
-	wait(0.5);
-	
-	player:SendMessage(0x20, "", "Changing music");
+	player:SetMod(modifiersGlobal.MinimumHpLock, 0);
+	player:SetMod(modifiersGlobal.MinimumTpLock, 0);
+	player:SendDataPacket("attention", GetWorldMaster(), "", 51073, 2);
+	wait(2);
+	player:Disengage(0x0000);
 	player:ChangeMusic(7);
-	wait(0.5);
-	
-	player:SendMessage(0x20, "", "Kick notice event");
+	player:ChangeState(0);
+
+	-- Reopen noticeEvent before processEvent020_1. Without an active event
+	-- owner, the client drops the post-battle chain immediately.
 	kickEventContinue(player, actor, "noticeEvent", "noticeEvent");
-	wait(0.5);
-	
-	player:SendMessage(0x20, "", "ContentFinished");
-	player:GetZone():ContentFinished();	
-	wait(0.5);
-	player:SendMessage(0x20, "", "End director");
+	callClientFunction(player, "delegateEvent", player, man0g0Quest, "processEvent020_1", nil, nil, nil);
+	man0g0Quest:NextPhase(10);
+	player:EndEvent();
+
+	player:GetZone():ContentFinished();
 	actor:EndDirector();
-	player:SetTempVar("gridaniaTutorialAlliesReleased", 0);
-    --player:EndEvent();
-    --GetWorldManager():DoZoneChange(player, 155, "PrivateAreaMasterPast", 1, 15, 175.38, -1.21, -1156.51, -2.1);
-	--[[
-	IF DoW:
-		OpenWidget (TP)
-		IF TP REACHED:
-			CloseWidget
-			OpenWidget (WS)
-		IF WS USED:
-			Success
-			CloseWidget
-	ELSE MAGIC:
-		OpenWidget (DEFEAT ENEMY)
-	]]
-	
-	player:EndEvent();	
-	
-	wait(0.5);
-	player:SendMessage(0x20, "", "Zone change");
 	GetWorldManager():DoZoneChange(player, 155, "PrivateAreaMasterPast", 1, 15, 175.38, -1.21, -1156.51, -2.1);
-	
 end
 
 function onUpdate(deltaTime, area)
 end
 
 function onTalkEvent(player, npc)
-
 end
 
 function onPushEvent(player, npc)
 end
 
 function onCommandEvent(player, command)
-
 end
 
 function onEventUpdate(player, npc)
 end
 
-function onCommand(player, command)	
+function onCommand(player, command)
 end
 
+-- The direct C# runtime passes both values to main. Starting here occurs
+-- after the content area has been registered, which is also the first safe
+-- moment to populate the client party rows for Yda and Papalymo.
 function main(director, contentGroup)
-    onCreateContentArea(director:GetPlayerMembers(), director, director:GetZone(), contentGroup);
-end;
+	director:AddAlliesToPlayerParty();
+	director:StartContentGroup();
+end

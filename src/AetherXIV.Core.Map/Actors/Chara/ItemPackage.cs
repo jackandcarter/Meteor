@@ -617,6 +617,18 @@ namespace AetherXIV.Core.Map.actors.chara.player
             player.QueuePacket(InventorySetEndPacket.BuildPacket(owner.actorId));            
         }
 
+        // A same-zone private-content reload clears actors, but it does not
+        // clear the client's inventory object table. Re-sending the same
+        // unique item definitions during that reload can make the 1.23b Wine
+        // client abort while the opening cinematic is mounting. Keep the
+        // package topology present without redefining items the client
+        // already owns; equipment links are refreshed separately.
+        public void SendPackageEnvelope(Player player)
+        {
+            player.QueuePacket(InventorySetBeginPacket.BuildPacket(owner.actorId, itemPackageCapacity, itemPackageCode));
+            player.QueuePacket(InventorySetEndPacket.BuildPacket(owner.actorId));
+        }
+
         public void SendUpdate()
         {
             if (owner is Player && !holdingUpdates)

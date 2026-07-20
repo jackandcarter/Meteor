@@ -1506,7 +1506,10 @@ namespace AetherXIV.Core.Map
             //Send packets
             player.playerSession.QueuePacket(DeleteAllActorsPacket.BuildPacket(player.actorId));
             player.playerSession.QueuePacket(_0xE2Packet.BuildPacket(player.actorId, 0x10));
-            player.SendZoneInPackets(this, spawnType);
+            player.SendZoneInPackets(
+                this,
+                spawnType,
+                ZoneInventoryRefreshMode.RetainKnownItemDefinitions);
             player.playerSession.ClearInstance();
             player.SendInstanceUpdate(true);
 

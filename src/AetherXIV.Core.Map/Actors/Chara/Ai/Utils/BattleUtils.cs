@@ -5,6 +5,7 @@ using System.Linq;
 using AetherXIV.Core.Map.Actors;
 using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.actors.chara.npc;
+using AetherXIV.Core.Map.actors.area;
 using AetherXIV.Core.Common;
 
 namespace AetherXIV.Core.Map.actors.chara.ai.utils
@@ -854,6 +855,13 @@ namespace AetherXIV.Core.Map.actors.chara.ai.utils
         //See 1.19 patch notes for exp info.
         public static ushort GetBaseEXP(Player player, BattleNpc mob)
         {
+            if (mob != null &&
+                mob.GetZone() is PrivateAreaContent privateAreaContent &&
+                GridaniaOpeningTutorialPolicy.IsTutorialWolf(privateAreaContent.GetPrivateAreaName(), mob.GetBattleNpcId()))
+            {
+                return GridaniaOpeningTutorialPolicy.WolfExperience;
+            }
+
             //The way EXP seems to work for most enemies is that it gets the lower character's level, gets the base exp for that level, then uses dlvl to modify that exp
             //Less than -19 dlvl gives 0 exp and no message is sent.
             //This equation doesn't seem to work for certain bosses or NMs.

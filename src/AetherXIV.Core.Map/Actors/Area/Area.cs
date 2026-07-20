@@ -523,6 +523,71 @@ namespace AetherXIV.Core.Map.Actors
             return engaged;
         }
 
+        /// <summary>
+        /// Starts an instanced content battle as one encounter. Allies and all
+        /// live enemies receive reciprocal hate up front, allowing normal AI to
+        /// retarget as each enemy dies without a polling Lua script.
+        /// </summary>
+        public int EngageContentBattleForPlayer(Player player)
+        {
+            if (player == null || player.currentContentGroup == null)
+                return 0;
+
+            lock (mActorList)
+            {
+                List<Ally> allies = mActorList.Values
+                    .OfType<Ally>()
+                    .Where(ally => !ally.IsDead() && ally.currentContentGroup == player.currentContentGroup)
+                    .ToList();
+                List<BattleNpc> enemies = mActorList.Values
+                    .OfType<BattleNpc>()
+                    .Where(enemy => !(enemy is Ally) && !enemy.IsDead() && enemy.currentContentGroup == player.currentContentGroup)
+                    .ToList();
+
+                if (enemies.Count == 0)
+                    return 0;
+
+                for (int allyIndex = 0; allyIndex < allies.Count; allyIndex++)
+                {
+                    Ally ally = allies[allyIndex];
+                    ally.neutral = false;
+                    ally.isAutoAttackEnabled = true;
+                    ally.SetMod((uint)Modifier.MovementSpeed, 8);
+
+                    foreach (BattleNpc enemy in enemies)
+                        ally.hateContainer.AddBaseHate(enemy);
+
+                    ally.Engage(enemies[allyIndex % enemies.Count]);
+                }
+
+                for (int enemyIndex = 0; enemyIndex < enemies.Count; enemyIndex++)
+                {
+                    BattleNpc enemy = enemies[enemyIndex];
+                    Character target = allies.Count > 0
+                        ? (Character)allies[enemyIndex % allies.Count]
+                        : player;
+
+                    enemy.neutral = false;
+                    enemy.isAutoAttackEnabled = true;
+                    enemy.hateContainer.AddBaseHate(player);
+                    foreach (Ally ally in allies)
+                        enemy.hateContainer.AddBaseHate(ally);
+                    enemy.Engage(target);
+                }
+
+                DevDiagnostics.Trace(
+                    "director.contentBattle.engage",
+                    "area", zoneName,
+                    "player", String.Format("0x{0:X}", player.actorId),
+                    "playerName", player.customDisplayName,
+                    "allies", allies.Count,
+                    "enemies", enemies.Count,
+                    "contentGroup", player.currentContentGroup.groupIndex);
+
+                return allies.Count + enemies.Count;
+            }
+        }
+
         private Character FindDirectorEnemyForPlayer(Player player)
         {
             foreach (BattleNpc battleNpc in mActorList.Values.OfType<BattleNpc>())
