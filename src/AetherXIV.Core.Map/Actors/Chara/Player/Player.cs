@@ -650,7 +650,10 @@ namespace AetherXIV.Core.Map.Actors
             QueuePacket(SetMapPacket.BuildPacket(actorId, zone.regionId, zone.actorId));
         }
 
-        public void SendZoneInPackets(WorldManager world, ushort spawnType)
+        public void SendZoneInPackets(
+            WorldManager world,
+            ushort spawnType,
+            ZoneInventoryRefreshMode inventoryRefreshMode = ZoneInventoryRefreshMode.Full)
         {
             QueuePacket(SetActorIsZoningPacket.BuildPacket(actorId, false));
             QueuePacket(SetDalamudPacket.BuildPacket(actorId, 0));
@@ -680,12 +683,23 @@ namespace AetherXIV.Core.Map.Actors
 
             #region Inventory & Equipment
             QueuePacket(InventoryBeginChangePacket.BuildPacket(actorId, true));
-            itemPackages[ItemPackage.NORMAL].SendFullPackage(this);
-            itemPackages[ItemPackage.CURRENCY_CRYSTALS].SendFullPackage(this);
-            itemPackages[ItemPackage.KEYITEMS].SendFullPackage(this);
-            itemPackages[ItemPackage.BAZAAR].SendFullPackage(this);
-            itemPackages[ItemPackage.MELDREQUEST].SendFullPackage(this);
-            itemPackages[ItemPackage.LOOT].SendFullPackage(this);
+            bool resendItemDefinitions = ZoneInventoryRefreshPolicy.ShouldResendItemDefinitions(inventoryRefreshMode);
+            ushort[] zoneInPackages =
+            {
+                ItemPackage.NORMAL,
+                ItemPackage.CURRENCY_CRYSTALS,
+                ItemPackage.KEYITEMS,
+                ItemPackage.BAZAAR,
+                ItemPackage.MELDREQUEST,
+                ItemPackage.LOOT
+            };
+            foreach (ushort packageCode in zoneInPackages)
+            {
+                if (resendItemDefinitions)
+                    itemPackages[packageCode].SendFullPackage(this);
+                else
+                    itemPackages[packageCode].SendPackageEnvelope(this);
+            }
             equipment.SendUpdate(this);
             playerSession.QueuePacket(InventoryEndChangePacket.BuildPacket(actorId));
             #endregion
@@ -735,6 +749,8 @@ namespace AetherXIV.Core.Map.Actors
                 "privateArea", privateArea ?? "",
                 "privateAreaType", privateAreaType,
                 "spawnType", spawnType,
+                "inventoryRefreshMode", inventoryRefreshMode.ToString(),
+                "inventoryItemDefinitionsResent", resendItemDefinitions,
                 "selfSpawnPackets", selfSpawnPackets.Count,
                 "areaMasterPackets", areaMasterSpawn.Count,
                 "debugPackets", debugSpawn.Count,
