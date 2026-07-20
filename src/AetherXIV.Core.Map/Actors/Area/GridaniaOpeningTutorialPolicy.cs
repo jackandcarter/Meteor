@@ -25,7 +25,10 @@ namespace AetherXIV.Core.Map.actors.area
 
         public static string BuildBattleCompleteSignal(uint playerActorId)
         {
-            return "battleComplete:" + playerActorId.ToString(CultureInfo.InvariantCulture);
+            return BuildPlayerSignal("battleComplete", playerActorId);
         }
+
+        public static string BuildPlayerSignal(string signal, uint playerActorId) =>
+            signal + ":" + playerActorId.ToString(CultureInfo.InvariantCulture);
     }
 }

@@ -9,12 +9,12 @@ public sealed class GridaniaOpeningTutorialScriptTests
 
         AssertOrdered(script,
             "\"processTtrBtl001\"",
-            "waitForSignal(\"playerActive\")",
+            "GetPlayerSignal(player, \"playerActive\")",
             "\"processTtrBtl002\"",
-            "waitForSignal(\"playerAttack\")",
+            "GetPlayerSignal(player, \"playerAttack\")",
             "EngageContentBattleForPlayer",
-            "waitForSignal(\"tpOver1000\")",
-            "waitForSignal(\"weaponskillUsed\")",
+            "GetPlayerSignal(player, \"tpOver1000\")",
+            "GetPlayerSignal(player, \"weaponskillUsed\")",
             "SetBattleNpcMinimumHpLock(0)",
             "IsContentBattleComplete",
             "\"attention\"",
@@ -42,10 +42,25 @@ public sealed class GridaniaOpeningTutorialScriptTests
         Assert.Contains("SpawnActor(1090384, \"openingstoper\"", script, StringComparison.Ordinal);
         Assert.Contains("director:AddMember(papalymo)", script, StringComparison.Ordinal);
         Assert.Contains("director:AddMember(yda)", script, StringComparison.Ordinal);
+        Assert.Contains("currentParty:AddMember(papalymo.actorId)", script, StringComparison.Ordinal);
+        Assert.Contains("currentParty:AddMember(yda.actorId)", script, StringComparison.Ordinal);
 
         string director = ReadDataScript("directors", "Quest", "QuestDirectorMan0g001.lua");
         Assert.DoesNotContain("director:StartContentGroup()", director, StringComparison.Ordinal);
         Assert.DoesNotContain("AddAlliesToPlayerParty", director, StringComparison.Ordinal);
+
+        string activateCommand = ReadDataScript("commands", "ActivateCommand.lua");
+        Assert.Contains("player:EmitContentProgressSignal(\"playerActive\")", activateCommand, StringComparison.Ordinal);
+        Assert.DoesNotContain("sendSignal(\"playerActive\")", activateCommand, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GridaniaAllyPoolsUseTheirRetailActorClasses()
+    {
+        string sql = File.ReadAllText(Path.Combine(Directory.GetParent(FindDataRoot())!.FullName, "sql", "server_battlenpc_pools.sql"));
+
+        Assert.Contains("VALUES (3,2290006,'yda'", sql, StringComparison.Ordinal);
+        Assert.Contains("VALUES (4,2290005,'papalymo'", sql, StringComparison.Ordinal);
     }
 
     private static void AssertOrdered(string text, params string[] tokens)

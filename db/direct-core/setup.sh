@@ -154,6 +154,12 @@ verify_database() {
     echo "Central Shroud pinspawn contract mismatch: ${central_shroud_pinspawn_contract:-missing}" >&2
     return 29
   }
+  local gridania_tutorial_actors
+  gridania_tutorial_actors="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=3 AND name='yda' AND actorClassId=2290006),':',(SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=4 AND name='papalymo' AND actorClassId=2290005))")"
+  [[ "${gridania_tutorial_actors}" == "1:1" ]] || {
+    echo "Gridania tutorial actor-role contract mismatch: ${gridania_tutorial_actors:-missing}" >&2
+    return 30
+  }
   local contract
   contract="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT CONCAT(schema_generation,':',schema_version,':',compatibility_id,':',baseline_id) FROM aether_database_compatibility WHERE compatibility_key='direct-core' LIMIT 1")"
   [[ "${contract}" == "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ]] || {

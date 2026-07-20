@@ -475,6 +475,7 @@
                       Click="InstallRuntime_Click"
                       ToolTip.Tip="Downloads the pinned AetherXIV Wine package for this platform, verifies its checksum, installs it into Launcher storage, and validates it." />
               <Button x:Name="ValidateRuntimeButton" Content="Validate Runtime" Click="ValidateRuntime_Click" />
+              <Button x:Name="VerifyDependenciesButton" Content="Verify Dependencies" Click="VerifyDependencies_Click" />
               <Button x:Name="ResetPrefixButton" Content="Reset Prefix" Click="ResetPrefix_Click" />
               <Button x:Name="SaveRuntimeButton" Content="Save Runtime Settings" Click="SaveRuntimeSettings_Click" />
             </StackPanel>

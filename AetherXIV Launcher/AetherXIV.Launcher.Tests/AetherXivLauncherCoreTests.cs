@@ -770,6 +770,8 @@ public sealed class AetherXivLauncherCoreTests
             WineRuntimeProfile.VulkanDirect3DConfig,
             runtime.WithGraphicsTarget(ClientGraphicsTarget.WineD3DVulkan).Environment["WINE_D3D_CONFIG"]);
         Assert.False(runtime.WithGraphicsTarget(ClientGraphicsTarget.WineDefault).Environment.ContainsKey("WINE_D3D_CONFIG"));
+        Assert.Equal("renderer=gl", WineRuntimeProfile.DefaultDirect3DConfig);
+        Assert.DoesNotContain("csmt", WineRuntimeProfile.DefaultDirect3DConfig, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1484,6 +1486,31 @@ public sealed class AetherXivLauncherCoreTests
             expected,
             RuntimePlatformPrerequisites.LinuxDependencyGuidance(osRelease),
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("ID=ubuntu\nID_LIKE=debian", "apt-get", "wine64")]
+    [InlineData("ID=arch", "pacman", "wine")]
+    [InlineData("ID=fedora", "dnf", "wine")]
+    public void RuntimeDependencyInstallerBuildsPlatformPackagePlan(
+        string osRelease,
+        string expectedManager,
+        string expectedPackage)
+    {
+        RuntimeDependencyInstallPlan plan = RuntimeDependencyInstaller.CreateLinuxPlan(osRelease, true);
+
+        Assert.True(plan.IsSupported);
+        Assert.Contains(expectedManager, plan.PackageManagerCommand, StringComparison.Ordinal);
+        Assert.Contains(expectedPackage, plan.Arguments);
+        Assert.Equal("/usr/bin/pkexec", plan.ElevationCommand);
+    }
+
+    [Fact]
+    public void RuntimeDependencyInstallerRequiresSupportedDistributionAndPolicyKit()
+    {
+        Assert.False(RuntimeDependencyInstaller.CreateLinuxPlan("ID=gentoo", true).IsSupported);
+        Assert.False(RuntimeDependencyInstaller.CreateLinuxPlan("ID=steamos\nID_LIKE=arch", true).IsSupported);
+        Assert.False(RuntimeDependencyInstaller.CreateLinuxPlan("ID=arch", false).IsSupported);
     }
 
     [Fact]

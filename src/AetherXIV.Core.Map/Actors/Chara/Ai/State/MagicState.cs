@@ -138,7 +138,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai.state
             var targets = spell.targetFind.GetTargets();
 
             if (owner is Player)
-                lua.LuaEngine.GetInstance().OnSignal("spellUsed");
+                owner.EmitContentProgressSignal("spellUsed");
 
             owner.DoBattleCommand(spell, "magic");
         }

@@ -14,6 +14,7 @@ using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.actors.chara.ai.state;
 using AetherXIV.Core.Map.actors.chara.ai.utils;
 using AetherXIV.Core.Map.actors.chara.npc;
+using AetherXIV.Core.Map.actors.area;
 
 namespace AetherXIV.Core.Map.Actors
 {
@@ -806,8 +807,23 @@ namespace AetherXIV.Core.Map.Actors
                     "after", charaWork.parameterTemp.tp);
 
                 if (tpBase >= 1000)
-                    lua.LuaEngine.GetInstance().OnSignal("tpOver1000");
+                    EmitContentProgressSignal("tpOver1000");
             }
+        }
+
+        public void EmitContentProgressSignal(string signal)
+        {
+            if (!(this is Player player))
+                return;
+
+            if (zone is PrivateAreaContent contentArea &&
+                GridaniaOpeningTutorialPolicy.IsContentArea(contentArea.GetPrivateAreaName()))
+            {
+                lua.LuaEngine.GetInstance().OnSignal(contentArea.GetPlayerSignal(player, signal));
+                return;
+            }
+
+            lua.LuaEngine.GetInstance().OnSignal(signal);
         }
 
         public void DelHP(int hp, CommandResultContainer resultContainer = null)
@@ -953,7 +969,7 @@ namespace AetherXIV.Core.Map.Actors
                     //BattleUtils.DoAction(this, chara, action, DamageTakenType.Magic);
                 }
             }
-            lua.LuaEngine.GetInstance().OnSignal("spellUsed");
+            EmitContentProgressSignal("spellUsed");
         }
 
         public virtual void OnWeaponSkill(State state, CommandResult[] actions, BattleCommand skill, ref CommandResult[] errors)

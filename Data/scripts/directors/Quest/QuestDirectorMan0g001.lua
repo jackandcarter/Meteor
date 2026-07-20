@@ -26,7 +26,7 @@ function onEventStarted(player, actor, triggerName)
 		-- Active-mode prompt, followed by the enemy-targeting prompt.
 		callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl001", nil, nil, nil);
 		player:EndEvent();
-		waitForSignal("playerActive");
+		waitForSignal(player:GetZone():GetPlayerSignal(player, "playerActive"));
 		wait(1);
 		kickEventContinue(player, actor, "noticeEvent", "noticeEvent");
 		callClientFunction(player, "delegateEvent", player, man0g0Quest, "processTtrBtl002", nil, nil, nil);
@@ -35,16 +35,16 @@ function onEventStarted(player, actor, triggerName)
 		-- Engage after the first attack, but keep the wolves at 1 HP until the
 		-- weaponskill lesson is complete. Releasing them here lets Yda or
 		-- Papalymo kill every target while the client is still waiting for TP.
-		waitForSignal("playerAttack");
+		waitForSignal(player:GetZone():GetPlayerSignal(player, "playerAttack"));
 		player:GetZone():EngageContentBattleForPlayer(player);
 		closeTutorialWidget(player);
 		showTutorialSuccessWidget(player, 9055);
 		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_TP);
-		waitForSignal("tpOver1000");
+		waitForSignal(player:GetZone():GetPlayerSignal(player, "tpOver1000"));
 		player:SetMod(modifiersGlobal.MinimumTpLock, 1000);
 		closeTutorialWidget(player);
 		openTutorialWidget(player, CONTROLLER_KEYBOARD, TUTORIAL_WEAPONSKILLS);
-		waitForSignal("weaponskillUsed");
+		waitForSignal(player:GetZone():GetPlayerSignal(player, "weaponskillUsed"));
 		player:GetZone():SetBattleNpcMinimumHpLock(0);
 		player:SetMod(modifiersGlobal.MinimumTpLock, 0);
 		closeTutorialWidget(player);
@@ -61,7 +61,7 @@ function onEventStarted(player, actor, triggerName)
 	else
 		-- Opening characters should be DoW or DoM. Keep a recoverable path
 		-- for imported characters instead of leaving the content locked.
-		waitForSignal("playerAttack");
+		waitForSignal(player:GetZone():GetPlayerSignal(player, "playerAttack"));
 		player:GetZone():EngageContentBattleForPlayer(player);
 		player:GetZone():SetBattleNpcMinimumHpLock(0);
 	end

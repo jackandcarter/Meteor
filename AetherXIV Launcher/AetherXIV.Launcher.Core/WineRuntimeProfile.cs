@@ -24,7 +24,7 @@ public sealed record WineRuntimeProfile(
     string? PrefixPath,
     Dictionary<string, string> Environment)
 {
-    public const string DefaultDirect3DConfig = "renderer=gl,csmt=0";
+    public const string DefaultDirect3DConfig = "renderer=gl";
     public const string OpenGLThreadedDirect3DConfig = "renderer=gl,csmt=1";
     public const string VulkanDirect3DConfig = "renderer=vulkan,csmt=0";
 

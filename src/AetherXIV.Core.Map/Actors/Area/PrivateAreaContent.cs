@@ -5,6 +5,7 @@ using AetherXIV.Core.Common;
 using System;
 using System.Linq;
 using AetherXIV.Core.Map.actors.chara.npc;
+using AetherXIV.Core.Map.actors.group;
 
 namespace AetherXIV.Core.Map.actors.area
 {
@@ -42,12 +43,32 @@ namespace AetherXIV.Core.Map.actors.area
 
         public void ContentFinished()
         {
+            RemoveTutorialAlliesFromParty();
             isContentFinished = true;
             DevDiagnostics.Trace(
                 "content.area.finished",
                 "zone", zoneName,
                 "privateArea", GetPrivateAreaName(),
                 "privateAreaType", GetPrivateAreaType());
+        }
+
+        private void RemoveTutorialAlliesFromParty()
+        {
+            if (currentDirector == null || !GridaniaOpeningTutorialPolicy.IsContentArea(GetPrivateAreaName()))
+                return;
+
+            uint[] allyIds = currentDirector.GetMembers()
+                .OfType<Ally>()
+                .Select(ally => ally.actorId)
+                .ToArray();
+            if (allyIds.Length == 0)
+                return;
+
+            foreach (Player player in currentDirector.GetPlayerMembers().OfType<Player>())
+            {
+                if (player.currentParty is Party party)
+                    party.RemoveTransientMembers(allyIds);
+            }
         }
 
         /// <summary>
@@ -93,10 +114,15 @@ namespace AetherXIV.Core.Map.actors.area
             return GridaniaOpeningTutorialPolicy.BuildBattleCompleteSignal(player.actorId);
         }
 
+        public string GetPlayerSignal(Player player, string signal)
+        {
+            return GridaniaOpeningTutorialPolicy.BuildPlayerSignal(signal, player.actorId);
+        }
+
         /// <summary>
         /// Resolves the player who owns a Gridania tutorial wolf kill. Yda and
-        /// Papalymo are content allies rather than party members, so their
-        /// final blows still need to credit the sole player in this director.
+        /// Papalymo are transient NPC party members, so their final blows still
+        /// need to credit the sole player in this director.
         /// </summary>
         public Player GetTutorialRewardPlayer(BattleNpc defeated, Character killer)
         {

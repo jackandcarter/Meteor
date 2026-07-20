@@ -16,5 +16,5 @@ function onEventStarted(player, command, triggerName)
         player.Disengage(0x0000);
 	end		
 	player:endEvent();
-	sendSignal("playerActive");
+	player:EmitContentProgressSignal("playerActive");
 end;

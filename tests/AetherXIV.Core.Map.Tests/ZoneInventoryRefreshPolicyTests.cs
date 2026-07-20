@@ -46,5 +46,9 @@ public sealed class ZoneInventoryRefreshPolicyTests
     {
         Assert.Equal("battleComplete:1157627909",
             GridaniaOpeningTutorialPolicy.BuildBattleCompleteSignal(0x45000005));
+        Assert.Equal("playerAttack:1157627909",
+            GridaniaOpeningTutorialPolicy.BuildPlayerSignal("playerAttack", 0x45000005));
+        Assert.Equal("playerActive:1157627909",
+            GridaniaOpeningTutorialPolicy.BuildPlayerSignal("playerActive", 0x45000005));
     }
 }

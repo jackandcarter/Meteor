@@ -118,9 +118,9 @@ namespace AetherXIV.Core.Map.actors.chara.ai.state
 
             if (owner is Player)
             {
-                lua.LuaEngine.GetInstance().OnSignal("abilityUsed");
+                owner.EmitContentProgressSignal("abilityUsed");
                 if (skill.targetFind.GetTargets().Count > 0)
-                    lua.LuaEngine.GetInstance().OnSignal("playerAttack");
+                    owner.EmitContentProgressSignal("playerAttack");
             }
 
             owner.DoBattleCommand(skill, "ability");

@@ -56,6 +56,50 @@ function Connection-Args([string]$User, [string]$Password) {
     return $result
 }
 
+function ConvertTo-ProcessArgument([string]$Argument) {
+    if ($null -eq $Argument -or $Argument.Length -eq 0) { return '""' }
+    if ($Argument -notmatch '[\s"]') { return $Argument }
+
+    $builder = New-Object Text.StringBuilder
+    [void]$builder.Append('"')
+    $backslashes = 0
+    foreach ($character in $Argument.ToCharArray()) {
+        if ($character -eq '\') {
+            $backslashes++
+            continue
+        }
+        if ($character -eq '"') {
+            [void]$builder.Append(('\' * (($backslashes * 2) + 1)))
+            [void]$builder.Append('"')
+            $backslashes = 0
+            continue
+        }
+        if ($backslashes -gt 0) {
+            [void]$builder.Append(('\' * $backslashes))
+            $backslashes = 0
+        }
+        [void]$builder.Append($character)
+    }
+    if ($backslashes -gt 0) { [void]$builder.Append(('\' * ($backslashes * 2))) }
+    [void]$builder.Append('"')
+    return $builder.ToString()
+}
+
+function New-DatabaseProcessInfo([string]$Executable, [string[]]$Arguments) {
+    $info = New-Object Diagnostics.ProcessStartInfo
+    $info.FileName = $Executable
+    $hasArgumentList = $null -ne $info.PSObject.Properties['ArgumentList']
+    $forceLegacyArguments = $env:AETHERXIV_FORCE_LEGACY_PROCESS_ARGUMENTS -eq '1'
+    if ($hasArgumentList -and -not $forceLegacyArguments) {
+        foreach ($argument in $Arguments) { [void]$info.ArgumentList.Add($argument) }
+    }
+    else {
+        $info.Arguments = (($Arguments | ForEach-Object { ConvertTo-ProcessArgument $_ }) -join ' ')
+    }
+    $info.UseShellExecute = $false
+    return $info
+}
+
 $adminArgs = Connection-Args $adminUser $adminPass
 $appArgs = Connection-Args $appUser $appPass
 if ($MigrateOnly) { $adminArgs = $appArgs }
@@ -70,12 +114,10 @@ function Invoke-Query([string[]]$Arguments, [string]$Sql, [string]$Database = ""
 }
 
 function Invoke-SqlFile([string]$Path, [string]$Database) {
-    $info = [Diagnostics.ProcessStartInfo]::new($mysql)
-    foreach ($argument in $adminArgs) { [void]$info.ArgumentList.Add($argument) }
-    [void]$info.ArgumentList.Add($Database)
-    $info.UseShellExecute = $false
+    $info = New-DatabaseProcessInfo $mysql (@($adminArgs) + @($Database))
     $info.RedirectStandardInput = $true
     $process = [Diagnostics.Process]::Start($info)
+    if ($null -eq $process) { throw "Could not start the database client for SQL import: $Path" }
     $source = [IO.File]::OpenRead($Path)
     try { $source.CopyTo($process.StandardInput.BaseStream) }
     finally { $source.Dispose(); $process.StandardInput.Close() }
@@ -98,12 +140,10 @@ function Backup-Database {
     }
     else {
         if (-not $dump) { throw "MariaDB/MySQL dump client is required to preserve the existing non-empty database before rebuilding it." }
-        $info = [Diagnostics.ProcessStartInfo]::new($dump)
-        foreach ($argument in $adminArgs) { [void]$info.ArgumentList.Add($argument) }
-        foreach ($argument in @("--routines", "--triggers", "--single-transaction", $dbName)) { [void]$info.ArgumentList.Add($argument) }
-        $info.UseShellExecute = $false
+        $info = New-DatabaseProcessInfo $dump (@($adminArgs) + @("--routines", "--triggers", "--single-transaction", $dbName))
         $info.RedirectStandardOutput = $true
         $process = [Diagnostics.Process]::Start($info)
+        if ($null -eq $process) { throw "Could not start the database dump client for backup." }
         $destination = [IO.File]::Create($path)
         try { $process.StandardOutput.BaseStream.CopyTo($destination) }
         finally { $destination.Dispose() }
@@ -130,15 +170,11 @@ function Restore-OriginalDatabase {
 }
 
 function Export-PlayerData([string]$Path, [string[]]$Tables) {
-    $info = [Diagnostics.ProcessStartInfo]::new($dump)
-    foreach ($argument in $adminArgs) { [void]$info.ArgumentList.Add($argument) }
-    foreach ($argument in @("--single-transaction", "--no-create-info", "--complete-insert", "--replace", "--hex-blob", "--skip-triggers", $dbName)) {
-        [void]$info.ArgumentList.Add($argument)
-    }
-    foreach ($table in $Tables) { [void]$info.ArgumentList.Add($table) }
-    $info.UseShellExecute = $false
+    $arguments = @($adminArgs) + @("--single-transaction", "--no-create-info", "--complete-insert", "--replace", "--hex-blob", "--skip-triggers", $dbName) + @($Tables)
+    $info = New-DatabaseProcessInfo $dump $arguments
     $info.RedirectStandardOutput = $true
     $process = [Diagnostics.Process]::Start($info)
+    if ($null -eq $process) { throw "Could not start the database dump client for player-data preservation." }
     $destination = [IO.File]::Create($Path)
     try { $process.StandardOutput.BaseStream.CopyTo($destination) }
     finally { $destination.Dispose() }
@@ -179,6 +215,10 @@ function Test-Database {
     $centralShroudPinspawnContract = Invoke-Query $appArgs "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_spawn_audit_pins WHERE zoneId=150 AND createdByCharacterName='Akhebica Loha' AND promotionNote LIKE 'Source dump pin #%'),':',(SELECT COUNT(*) FROM server_battlenpc_spawn_audit_pins WHERE zoneId=150 AND createdByCharacterName='Akhebica Loha' AND isPromoted=1 AND enemyName='Star Marmot' AND promotionMigration='20260718_000013_central_shroud_pinspawn_restore'),':',(SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE s.bnpcId IN (1500001,1500002,1500034,1500035,1500039,1500041,1500042,1500051,1500055,1500056,1500057,1500058,1500060) AND g.zoneId=150 AND g.minLevel=3 AND g.maxLevel=4 AND g.hp=99 AND g.mp=130 AND p.actorClassId IN (2104009,2104028) AND p.genusId=12),':',(SELECT COUNT(*) FROM server_battlenpc_spawn_audit_pins WHERE zoneId=150 AND promotionNote LIKE 'Source dump pin #%' AND isPromoted=1 AND enemyName<>'Star Marmot'))" $dbName
     if ($centralShroudPinspawnContract -ne "60:11:13:0") {
         throw "Central Shroud pinspawn contract mismatch: $centralShroudPinspawnContract"
+    }
+    $gridaniaTutorialActors = Invoke-Query $appArgs "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=3 AND name='yda' AND actorClassId=2290006),':',(SELECT COUNT(*) FROM server_battlenpc_pools WHERE poolId=4 AND name='papalymo' AND actorClassId=2290005))" $dbName
+    if ($gridaniaTutorialActors -ne "1:1") {
+        throw "Gridania tutorial actor-role contract mismatch: $gridaniaTutorialActors"
     }
     $contract = Invoke-Query $appArgs "SELECT CONCAT(schema_generation,':',schema_version,':',compatibility_id,':',baseline_id) FROM aether_database_compatibility WHERE compatibility_key='direct-core' LIMIT 1" $dbName
     if ($contract -ne "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline") {

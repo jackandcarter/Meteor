@@ -18,5 +18,21 @@
             this.isOnline = isOnline;
             this.name = name == null ? "" : name;
         }
+
+        public static GroupMember ForActor(
+            uint actorId,
+            uint displayNameId,
+            string customDisplayName,
+            bool isRecipient)
+        {
+            bool hasCustomName = !System.String.IsNullOrWhiteSpace(customDisplayName);
+            return new GroupMember(
+                actorId,
+                hasCustomName ? -1 : unchecked((int)displayNameId),
+                0,
+                !isRecipient,
+                true,
+                hasCustomName ? customDisplayName : "");
+        }
     }
 }

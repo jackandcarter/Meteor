@@ -3372,7 +3372,7 @@ namespace AetherXIV.Core.Map.Actors
                 ((BattleNpc)target).hateContainer.UpdateHate(this, action.enmity);
             }
 
-            LuaEngine.GetInstance().OnSignal("playerAttack");
+            EmitContentProgressSignal("playerAttack");
         }
 
         public override void OnCast(State state, CommandResult[] actions, BattleCommand spell, ref CommandResult[] errors)

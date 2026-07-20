@@ -177,6 +177,14 @@ public static class RuntimePlatformPrerequisites
         }
 
         List<string> targets = FindLinuxRuntimeTargets(wineCommand);
+        if (targets.Count == 0)
+        {
+            return new RuntimePrerequisiteResult(
+                false,
+                $"The selected Wine runtime executable was not found: {wineCommand}",
+                Array.Empty<string>(),
+                Array.Empty<string>());
+        }
         HashSet<string> missing = new(StringComparer.Ordinal);
         foreach (string target in targets)
         {

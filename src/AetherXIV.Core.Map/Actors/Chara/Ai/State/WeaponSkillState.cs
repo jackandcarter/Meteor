@@ -151,7 +151,7 @@ namespace AetherXIV.Core.Map.actors.chara.ai.state
             isCompleted = true;
 
             if (owner is Player)
-                lua.LuaEngine.GetInstance().OnSignal("weaponskillUsed");
+                owner.EmitContentProgressSignal("weaponskillUsed");
 
             owner.DoBattleCommand(skill, "weaponskill");
             owner.statusEffects.RemoveStatusEffectsByFlags((uint) StatusEffectFlags.LoseOnAttacking);

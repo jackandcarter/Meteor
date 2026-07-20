@@ -1166,6 +1166,133 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void VerifyDependencies_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (runtimeBusy)
+            return;
+
+        if (!platform.RequiresCompatibilityRuntime)
+        {
+            ManagedRuntimeStatus.Text = "Windows native runtime dependencies are ready.";
+            return;
+        }
+
+        SetRuntimeBusy(true);
+        RuntimeProgressBar.IsIndeterminate = true;
+        try
+        {
+            WineRuntimeProfile runtimeProfile = ReadRuntimeProfile();
+            RuntimePrerequisiteResult result = await RuntimePlatformPrerequisites.CheckAsync(runtimeProfile.Command);
+            AppendLog($"Runtime dependency verification: {result.Message}");
+            foreach (string warning in result.Warnings)
+                AppendLog($"Runtime dependency warning: {warning}");
+
+            if (result.IsReady)
+            {
+                ManagedRuntimeStatus.Text = result.Warnings.Count == 0
+                    ? result.Message
+                    : $"{result.Message} {string.Join(" ", result.Warnings)}";
+                RuntimeProgressBar.Value = 100;
+                return;
+            }
+
+            ManagedRuntimeStatus.Text = result.Message;
+            RuntimeProgressBar.Value = 0;
+            if (!OperatingSystem.IsLinux() || result.MissingLibraries.Count == 0)
+                return;
+
+            RuntimeDependencyInstallPlan plan = RuntimeDependencyInstaller.CreateCurrentLinuxPlan();
+            if (!plan.IsSupported)
+            {
+                ManagedRuntimeStatus.Text = $"{result.Message} {plan.Description}";
+                AppendLog(plan.Description);
+                return;
+            }
+
+            bool install = await ConfirmDependencyInstallAsync(result, plan);
+            if (!install)
+            {
+                AppendLog("Runtime dependency installation was declined.");
+                return;
+            }
+
+            ManagedRuntimeStatus.Text = "Installing required runtime dependencies...";
+            AppendLog(plan.Description);
+            RuntimeDependencyInstallResult installResult = await RuntimeDependencyInstaller.InstallAsync(plan);
+            AppendLog(installResult.Message);
+            if (!installResult.Succeeded)
+            {
+                ManagedRuntimeStatus.Text = installResult.Message;
+                return;
+            }
+
+            ManagedRuntimeStatus.Text = "Dependency installation completed; verifying again...";
+            result = await RuntimePlatformPrerequisites.CheckAsync(runtimeProfile.Command);
+            ManagedRuntimeStatus.Text = result.Message;
+            RuntimeProgressBar.Value = result.IsReady ? 100 : 0;
+            AppendLog($"Runtime dependency recheck: {result.Message}");
+        }
+        catch (Exception ex)
+        {
+            ManagedRuntimeStatus.Text = $"Dependency verification failed: {ex.Message}";
+            AppendLog(ManagedRuntimeStatus.Text);
+        }
+        finally
+        {
+            RuntimeProgressBar.IsIndeterminate = false;
+            SetRuntimeBusy(false);
+            UpdateRuntimeUiState();
+        }
+    }
+
+    private async Task<bool> ConfirmDependencyInstallAsync(
+        RuntimePrerequisiteResult result,
+        RuntimeDependencyInstallPlan plan)
+    {
+        Button installButton = new() { Content = "Install", HorizontalAlignment = HorizontalAlignment.Stretch };
+        Button cancelButton = new() { Content = "Cancel", HorizontalAlignment = HorizontalAlignment.Stretch };
+        Window dialog = new()
+        {
+            Title = "Install Runtime Dependencies",
+            Width = 560,
+            Height = 300,
+            MinWidth = 500,
+            MinHeight = 270,
+            Background = Background,
+            Foreground = Foreground,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(18),
+                Spacing = 14,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "Required runtime dependencies are missing.",
+                        FontSize = 20,
+                        FontWeight = Avalonia.Media.FontWeight.SemiBold
+                    },
+                    new TextBlock
+                    {
+                        Text = $"Missing: {string.Join(", ", result.MissingLibraries)}\n\n{plan.Description}. Your system will show an administrator authentication prompt. Verification resumes automatically after installation.",
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                        Foreground = Avalonia.Media.Brushes.LightGray
+                    },
+                    new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 10,
+                        Children = { installButton, cancelButton }
+                    }
+                }
+            }
+        };
+        installButton.Click += (_, _) => dialog.Close(true);
+        cancelButton.Click += (_, _) => dialog.Close(false);
+        return await dialog.ShowDialog<bool>(this);
+    }
+
     private void SaveRuntimeSettings_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         SaveCurrentProfile();
@@ -2435,6 +2562,7 @@ public sealed partial class MainWindow : Window
             && platform.RequiresCompatibilityRuntime
             && ReadRuntimeMode() == RuntimeSelectionMode.AutomaticManaged;
         ValidateRuntimeButton.IsEnabled = !isBusy;
+        VerifyDependenciesButton.IsEnabled = !isBusy;
         ResetPrefixButton.IsEnabled = !isBusy;
         RuntimeModeBox.IsEnabled = !isBusy;
         DetectedRuntimeBox.IsEnabled = !isBusy;
@@ -2471,6 +2599,7 @@ public sealed partial class MainWindow : Window
 
         InstallRuntimeButton.IsEnabled = !isBusy && automatic;
         ValidateRuntimeButton.IsEnabled = !isBusy;
+        VerifyDependenciesButton.IsEnabled = !isBusy;
         ResetPrefixButton.IsEnabled = !isBusy;
         LaunchHelperModeBox.IsEnabled = !isBusy;
         GraphicsTargetBox.IsEnabled = !isBusy && platform.RequiresCompatibilityRuntime;

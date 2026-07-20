@@ -15,6 +15,11 @@ function onCreate(starterPlayer, contentArea, director)
 	mob2:ChangeState(2);
 	mob3:ChangeState(2);
 
+	-- The 1.23b party HUD reads group 10001, not the content group. NPC
+	-- party rows use their localized display-name IDs and no custom name.
+	starterPlayer.currentParty:AddMember(papalymo.actorId);
+	starterPlayer.currentParty:AddMember(yda.actorId);
+
 	-- No actor can die while the client is still running its targeting and
 	-- weaponskill lessons. The director releases the wolves after the player
 	-- uses the requested weaponskill.

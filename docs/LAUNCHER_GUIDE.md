@@ -142,6 +142,8 @@ archive layout, and Wine executable path. Use:
 - **Install Runtime** to download, verify, extract, and validate the pinned
   managed Wine package;
 - **Scan Runtimes** after installation to detect recognized local Wine paths;
+- **Verify Dependencies** to check the selected runtime's platform libraries
+  without recreating its prefix;
 - **Validate Runtime** to test the runtime, prefix, and helper.
 
 The managed install is stored in Launcher application data and does not run
@@ -154,10 +156,23 @@ Validation also checks host prerequisites before Wine starts. On Apple silicon,
 the Launcher runs an Intel-process probe that causes macOS to offer its normal
 Rosetta installation prompt when Rosetta is absent. The Launcher waits up to ten
 minutes for that Apple-managed installation before continuing. It never accepts
-the Rosetta license silently. On Linux, validation checks the managed Wine
-executable, Wine server, and its X11, audio, GStreamer, and Vulkan drivers with
-`ldd`. Missing library names and distribution-family guidance are shown in the
-Runtime status and Launch Log.
+the Rosetta license silently. On Linux, validation checks the selected Wine
+loader and Wine server with `ldd`, then validates Wine itself and the bundled
+launch helper. Wine driver modules are intentionally left to Wine's loader;
+probing them directly reports Wine's own `ntdll.so` and `win32u.so` as missing
+on otherwise valid distribution installs. Real missing host library names and
+distribution-family guidance are shown in the Runtime status and Launch Log.
+**Verify Dependencies** offers an explicit
+administrator-authenticated install on supported Debian/Ubuntu, Arch, and
+Fedora-family systems, then automatically repeats verification. It does not
+install anything unless the user accepts the prompt. SteamOS remains on the
+persistent-environment guidance path because changing its immutable system
+image would not survive an operating-system update.
+
+The recommended OpenGL compatibility target forces WineD3D's OpenGL renderer
+but leaves Wine's supported command-stream default enabled. The threaded mode
+forces that setting explicitly; Wine default leaves the complete WineD3D
+configuration untouched; and WineD3D Vulkan remains an experimental fallback.
 
 Automatic detection recognizes Wine Stable at its standard macOS application
 path and `wine` or `wine64` executables available on `PATH`. Detected Wine uses

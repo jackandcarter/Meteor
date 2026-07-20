@@ -340,6 +340,7 @@ esac
         string logPath = Path.Combine(root, "mysql-calls.log");
         Directory.CreateDirectory(migrations);
         File.Copy(FindRepositoryFile("db", "direct-core", "setup.sh"), Path.Combine(package, "setup.sh"));
+        File.Copy(FindRepositoryFile("db", "direct-core", "setup.ps1"), Path.Combine(package, "setup.ps1"));
         File.WriteAllText(Path.Combine(package, "ffxiv_server.sql"), "-- minimal test baseline\n");
 
         string fakeMariaDb = Path.Combine(root, "fake-mariadb");
@@ -366,6 +367,7 @@ case "${query}" in
   *information_schema.tables*) echo 1 ;;
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
   *promotionMigration*) echo "60:11:13:0" ;;
+  *server_battlenpc_pools*) echo "1:1" ;;
   *"CONCAT(schema_generation"*) echo "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ;;
   *"SELECT checksum_sha256"*) ;;
   *"SELECT COUNT(*) FROM server_zones"*) echo 1 ;;
@@ -415,6 +417,47 @@ esac
             Assert.DoesNotContain("aether_schema_migrations", beforeImport, StringComparison.Ordinal);
             Assert.DoesNotContain("DROP DATABASE", beforeImport, StringComparison.Ordinal);
             Assert.Contains("aether_database_compatibility", calls[importIndex..], StringComparison.Ordinal);
+
+            string? pwsh = FindExecutableOnPath("pwsh");
+            if (pwsh is not null)
+            {
+                string fakePowerShellMariaDb = Path.Combine(root, "mariadb");
+                File.Copy(fakeMariaDb, fakePowerShellMariaDb);
+                File.SetUnixFileMode(fakePowerShellMariaDb,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                File.WriteAllText(logPath, "");
+
+                ProcessStartInfo powerShellStart = new(pwsh)
+                {
+                    WorkingDirectory = package,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false
+                };
+                powerShellStart.ArgumentList.Add("-NoLogo");
+                powerShellStart.ArgumentList.Add("-NoProfile");
+                powerShellStart.ArgumentList.Add("-File");
+                powerShellStart.ArgumentList.Add(Path.Combine(package, "setup.ps1"));
+                powerShellStart.Environment["PATH"] = root + Path.PathSeparator + powerShellStart.Environment["PATH"];
+                powerShellStart.Environment["FAKE_MYSQL_LOG"] = logPath;
+                powerShellStart.Environment["AETHERXIV_FORCE_LEGACY_PROCESS_ARGUMENTS"] = "1";
+                powerShellStart.Environment["AETHERXIV_CORE_BACKUP_DIR"] = Path.Combine(root, "backup path with spaces");
+                powerShellStart.Environment["AETHERXIV_DB_NAME"] = "ffxiv_server";
+                powerShellStart.Environment["AETHERXIV_DB_USER"] = "aetherxiv";
+                powerShellStart.Environment["AETHERXIV_DB_PASSWORD"] = "test-password";
+                powerShellStart.Environment["AETHERXIV_DB_ADMIN_USER"] = "root";
+                powerShellStart.Environment["AETHERXIV_DB_ADMIN_PASSWORD"] = "admin-password";
+
+                using Process powerShellProcess = Process.Start(powerShellStart)!;
+                string powerShellOutput = await powerShellProcess.StandardOutput.ReadToEndAsync();
+                string powerShellError = await powerShellProcess.StandardError.ReadToEndAsync();
+                await powerShellProcess.WaitForExitAsync();
+
+                Assert.True(powerShellProcess.ExitCode == 0,
+                    $"stdout:\n{powerShellOutput}\nstderr:\n{powerShellError}");
+                Assert.Contains("Importing canonical direct-core baseline", powerShellOutput, StringComparison.Ordinal);
+                Assert.Contains("BASELINE_IMPORT", File.ReadAllText(logPath), StringComparison.Ordinal);
+            }
         }
         finally
         {
@@ -430,7 +473,7 @@ esac
         Assert.Equal(1u, AetherXivDatabaseCompatibility.SchemaVersion);
         Assert.Equal("aetherxiv-direct-core-v2", AetherXivDatabaseCompatibility.CompatibilityId);
         Assert.Contains("baseline", AetherXivDatabaseCompatibility.BaselineId, StringComparison.Ordinal);
-        Assert.Equal("20260719_000015_hall_of_flames_push_circle.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
+        Assert.Equal("20260720_000016_gridania_tutorial_actor_roles.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
         Assert.Equal("zone-service-npcs-1.23b", AetherXivDatabaseCompatibility.NpcServiceCatalogId);
         Assert.Equal(64, AetherXivDatabaseCompatibility.NpcServiceCatalogHash.Length);
     }
@@ -631,6 +674,17 @@ esac
         }
 
         throw new FileNotFoundException($"Could not locate repository file: {Path.Combine(parts)}");
+    }
+
+    private static string? FindExecutableOnPath(string name)
+    {
+        foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+        {
+            string candidate = Path.Combine(directory, name);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+        return null;
     }
 
     private static AetherXivOperatorConfig CreateMinimalWorkspaceConfig()

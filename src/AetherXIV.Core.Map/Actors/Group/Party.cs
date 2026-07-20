@@ -1,5 +1,6 @@
 ﻿using AetherXIV.Core.Map.actors.group.Work;
 using AetherXIV.Core.Map.packets.send.group;
+using AetherXIV.Core.Map.Actors;
 using System.Collections.Generic;
 
 namespace AetherXIV.Core.Map.actors.group
@@ -55,20 +56,42 @@ namespace AetherXIV.Core.Map.actors.group
         public override List<GroupMember> BuildMemberList(uint id)
         {
             List<GroupMember> groupMembers = new List<GroupMember>();
-            groupMembers.Add(new GroupMember(id, -1, 0, false, true, Server.GetWorldManager().GetActorInWorld(id).customDisplayName));
+            var recipient = Server.GetWorldManager().GetActorInWorld(id);
+            if (recipient != null)
+                groupMembers.Add(BuildMember(recipient, true));
             foreach (uint charaId in members)
             {                
                 var chara = Server.GetWorldManager().GetActorInWorld(charaId);
                 if (charaId != id && chara != null)
-                    groupMembers.Add(new GroupMember(charaId, -1, 0, false, true, chara.customDisplayName));
+                    groupMembers.Add(BuildMember(chara, false));
             }
             return groupMembers;
         }
 
+        private static GroupMember BuildMember(Actor actor, bool isRecipient)
+        {
+            return GroupMember.ForActor(
+                actor.actorId,
+                actor.displayNameId,
+                actor.customDisplayName,
+                isRecipient);
+        }
+
         public void AddMember(uint memberId)
         {
-            members.Add(memberId);
+            if (!members.Contains(memberId))
+                members.Add(memberId);
             SendGroupPacketsAll(members);
+        }
+
+        public void RemoveTransientMembers(IEnumerable<uint> memberIds)
+        {
+            bool changed = false;
+            foreach (uint memberId in memberIds)
+                changed |= members.Remove(memberId);
+
+            if (changed)
+                SendGroupPacketsAll(members);
         }
 
         public void RemoveMember(uint memberId)
