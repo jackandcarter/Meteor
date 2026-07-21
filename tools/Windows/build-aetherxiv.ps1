@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 $rootDir = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 if ($Configuration -notin @("Debug", "Release")) { throw "Configuration must be Debug or Release." }
 $OutputRoot = Join-Path $rootDir "bin\build\$Configuration\Windows"
+$buildNumber = (Get-Content -Raw (Join-Path $rootDir "build-number.txt")).Trim()
 
 $dotnet = if ($env:DOTNET_BIN) { $env:DOTNET_BIN } else { "dotnet" }
 $python = $null
@@ -219,6 +220,19 @@ else {
     --output-dir (Join-Path $OutputRoot "Database")
 if ($LASTEXITCODE -ne 0) { throw "Database package creation failed." }
 
+$mapCorePath = Join-Path $OutputRoot "servers\map\AetherXIV.Core.Map.dll"
+$mapCoreHash = (Get-FileHash -Algorithm SHA256 $mapCorePath).Hash.ToLowerInvariant()
+@(
+    "schema=aetherxiv.build.manifest.v1"
+    "built_at_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
+    "configuration=$Configuration"
+    "product_version=2.0"
+    "build_number=$buildNumber"
+    "server_rid=$ServerRid"
+    "map_core_sha256=$mapCoreHash"
+    "map_core_path=servers/map/AetherXIV.Core.Map.dll"
+) | Set-Content -Encoding utf8 (Join-Path $OutputRoot "build-manifest.txt")
+
 if ($Configuration -eq "Release") {
     Get-ChildItem -Path $OutputRoot -Recurse -File -Filter *.pdb | Remove-Item -Force
 }
@@ -238,6 +252,7 @@ if ($forbiddenReleaseFiles.Count -gt 0) {
 }
 
 $requiredReleaseFiles = @(
+    "build-manifest.txt",
     "servers\map\AetherXIV.Core.Map.exe",
     "servers\world\AetherXIV.Core.World.exe",
     "servers\lobby\AetherXIV.Core.Lobby.exe",

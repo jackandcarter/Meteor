@@ -192,8 +192,8 @@ verify_database() {
     return 29
   }
   local gridania_tutorial_actors
-  gridania_tutorial_actors="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE (s.bnpcId=6 AND s.customDisplayName='yda' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006) OR (s.bnpcId=7 AND s.customDisplayName='papalymo' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005)")"
-  [[ "${gridania_tutorial_actors}" == "2" ]] || {
+  gridania_tutorial_actors="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE (s.bnpcId=6 AND s.customDisplayName='' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006) OR (s.bnpcId=7 AND s.customDisplayName='' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005)),':',(SELECT COUNT(*) FROM server_battlenpc_spawn_locations WHERE bnpcId IN (3,4,5,6,7) AND customDisplayName=''))")"
+  [[ "${gridania_tutorial_actors}" == "2:5" ]] || {
     echo "Gridania tutorial actor-role contract mismatch: ${gridania_tutorial_actors:-missing}" >&2
     return 30
   }

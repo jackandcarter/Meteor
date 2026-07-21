@@ -7,6 +7,7 @@ using AetherXIV.Core.Map.packets.send.group;
 using AetherXIV.Core.Map.packets.send.groups;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AetherXIV.Core.Map.actors.group
 {
@@ -16,6 +17,8 @@ namespace AetherXIV.Core.Map.actors.group
         private Director director;
         private List<uint> members = new List<uint>();
         private bool isStarted = false;
+        private bool isDeleting = false;
+        private bool isDeleted = false;
 
         public ContentGroup(ulong groupIndex, Director director, uint[] initialMembers) : base(groupIndex)
         {
@@ -72,10 +75,33 @@ namespace AetherXIV.Core.Map.actors.group
         
         public void RemoveMember(uint memberId)
         {
-            members.Remove(memberId);
+            if (isDeleting || isDeleted || !members.Remove(memberId))
+                return;
+
+            Actor actor = director == null ? null : director.GetZone().FindActorInArea(memberId);
+            if (actor is Character character)
+                ClearMemberContentGroup(character);
+
             if (isStarted)
                 SendGroupPacketsAll(members);
             CheckDestroy();
+        }
+
+        private void ClearMemberContentGroup(Character character)
+        {
+            if (character == null || character.currentContentGroup != this)
+                return;
+
+            // Players need the current-content work update. Removed NPCs must
+            // be cleared silently so teardown does not reference them after
+            // their 0x00CB RemoveActor packet.
+            if (character is Player)
+                character.SetCurrentContentGroup(null);
+            else
+            {
+                character.currentContentGroup = null;
+                character.charaWork.currentContentGroup = 0;
+            }
         }
 
         public override List<GroupMember> BuildMemberList(uint id)
@@ -147,6 +173,10 @@ namespace AetherXIV.Core.Map.actors.group
 
         public void DeleteGroup()
         {
+            if (isDeleting || isDeleted)
+                return;
+
+            isDeleting = true;
             DevDiagnostics.Trace(
                 "content.group.delete",
                 "groupIndex", groupIndex,
@@ -155,23 +185,35 @@ namespace AetherXIV.Core.Map.actors.group
                 "director", director == null ? "0x0" : String.Format("0x{0:X}", director.actorId),
                 "directorName", director == null ? "" : director.actorName);
 
-            SendDeletePackets(members);
-            for (int i = 0; i < members.Count; i++)
+            uint[] deletingMembers = members.ToArray();
+            SendDeletePackets(deletingMembers);
+            foreach (uint memberId in deletingMembers)
             {
-                Session s = Server.GetServer().GetSession(members[i]);
-                if (s != null)
-                    s.GetActor().SetCurrentContentGroup(null);
-                Actor a = director.GetZone().FindActorInArea(members[i]);
-                if (a is Npc)
-                    ((Npc)a).Despawn();
-                members.Remove(members[i]);
-                i--;
+                Session session = Server.GetServer().GetSession(memberId);
+                if (session != null)
+                    ClearMemberContentGroup(session.GetActor());
+
+                Actor actor = director == null ? null : director.GetZone().FindActorInArea(memberId);
+                if (actor is Character character)
+                    ClearMemberContentGroup(character);
+                if (actor is Npc npc)
+                {
+                    npc.OnDespawn();
+                    npc.Despawn();
+                }
             }
+
+            members.Clear();
             Server.GetWorldManager().DeleteContentGroup(groupIndex);
+            isDeleted = true;
+            isDeleting = false;
         }
 
         public void CheckDestroy()
         {
+            if (isDeleting || isDeleted)
+                return;
+
             bool foundSession = false;
             foreach (uint memberId in members)
             {

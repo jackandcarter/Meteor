@@ -262,8 +262,8 @@ function Test-Database {
     if ($centralShroudPinspawnContract -ne "60:11:13:0") {
         throw "Central Shroud pinspawn contract mismatch: $centralShroudPinspawnContract"
     }
-    $gridaniaTutorialActors = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE (s.bnpcId=6 AND s.customDisplayName='yda' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006) OR (s.bnpcId=7 AND s.customDisplayName='papalymo' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005)" $dbName
-    if ($gridaniaTutorialActors -ne "2") {
+    $gridaniaTutorialActors = Invoke-Query $appArgs "SELECT CONCAT((SELECT COUNT(*) FROM server_battlenpc_spawn_locations s JOIN server_battlenpc_groups g ON g.groupId=s.groupId JOIN server_battlenpc_pools p ON p.poolId=g.poolId WHERE (s.bnpcId=6 AND s.customDisplayName='' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006) OR (s.bnpcId=7 AND s.customDisplayName='' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005)),':',(SELECT COUNT(*) FROM server_battlenpc_spawn_locations WHERE bnpcId IN (3,4,5,6,7) AND customDisplayName=''))" $dbName
+    if ($gridaniaTutorialActors -ne "2:5") {
         throw "Gridania tutorial actor-role contract mismatch: $gridaniaTutorialActors"
     }
     $contract = Invoke-Query $appArgs "SELECT CONCAT(schema_generation,':',schema_version,':',compatibility_id,':',baseline_id) FROM aether_database_compatibility WHERE compatibility_key='direct-core' LIMIT 1" $dbName

@@ -88,6 +88,12 @@
         <StackPanel Spacing="2">
           <TextBlock Text="AetherXIV Core" FontSize="24" FontWeight="SemiBold" />
           <TextBlock x:Name="HeaderStatusText" Text="Services stopped" Foreground="{StaticResource MutedTextBrush}" />
+          <TextBlock x:Name="ProductVersionText"
+                     Text="v2.0"
+                     Cursor="Hand"
+                     PointerPressed="ProductVersionText_PointerPressed"
+                     ToolTip.Tip="Click to show the build number"
+                     Foreground="{StaticResource MutedTextBrush}" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button x:Name="StartStackButton" Classes="primary" Content="Start Stack" Click="StartStack_Click" />

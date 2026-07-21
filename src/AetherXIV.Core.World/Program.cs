@@ -27,8 +27,8 @@ namespace AetherXIV.Core.World
             Log = LogManager.GetCurrentClassLogger();
 
             Log.Info("==================================");
-            Log.Info("AetherXIV Core v1.3: World Server");
-            Log.Info("Version: 1.3");
+            Log.Info("AetherXIV Core v2.0: World Server");
+            Log.Info("Version: 2.0 (build 21985)");
             Log.Info("==================================");
 
 #if DEBUG

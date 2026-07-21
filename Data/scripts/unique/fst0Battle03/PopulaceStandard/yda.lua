@@ -40,7 +40,10 @@ function onEventStarted(player, npc, triggerName)
 					--player:AddDirector(director);		
 					director:StartDirector(false);
 					
-					player:KickEvent(director, "noticeEvent", true);
+					-- DeleteAllActors in the same-zone content reload invalidates the
+					-- director until the client acknowledges the rebuilt actor set.
+					-- Park the opening event and release it from RX 0x0007.
+					player:DeferContentKickEvent(director, "noticeEvent", true);
 					player:SetLoginDirector(director);		
 					
 					print("Content area and director made");

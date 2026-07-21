@@ -8,6 +8,7 @@ if [[ ! -x "${DOTNET_BIN}" ]]; then
 fi
 
 CONFIGURATION="${AETHERXIV_BUILD_CONFIGURATION:-Release}"
+BUILD_NUMBER="$(tr -d '[:space:]' < "${ROOT_DIR}/build-number.txt")"
 if (($# > 0)); then
   CONFIGURATION="$1"
   shift
@@ -203,7 +204,7 @@ write_info_plist() {
   <key>CFBundleShortVersionString</key>
   <string>2.0.0</string>
   <key>CFBundleVersion</key>
-  <string>2.0.0</string>
+  <string>${BUILD_NUMBER}</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSHighResolutionCapable</key>
@@ -263,6 +264,8 @@ write_build_manifest() {
     printf 'schema=aetherxiv.build.manifest.v1\n'
     printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
     printf 'configuration=%s\n' "${CONFIGURATION}"
+    printf 'product_version=2.0\n'
+    printf 'build_number=%s\n' "${BUILD_NUMBER}"
     printf 'server_rid=%s\n' "${SERVER_RID}"
     printf 'map_core_sha256=%s\n' "$(shasum -a 256 "${map_core_path}" | awk '{print $1}')"
     printf 'map_core_path=%s\n' "AetherXIV Core.app/Contents/Resources/servers/map/AetherXIV.Core.Map.dll"

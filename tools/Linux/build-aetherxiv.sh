@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOTNET_BIN="${DOTNET_BIN:-dotnet}"
 CONFIGURATION="${AETHERXIV_BUILD_CONFIGURATION:-Release}"
+BUILD_NUMBER="$(tr -d '[:space:]' < "${ROOT_DIR}/build-number.txt")"
 if (($# > 0)); then
   CONFIGURATION="$1"
   shift
@@ -170,6 +171,21 @@ build_umbra_bootstrap() {
   cp -R "${LAUNCHER_ROOT}/Umbra/assets" "${framework_dir}/Assets"
 }
 
+write_build_manifest() {
+  local manifest_path="${OUTPUT_ROOT}/build-manifest.txt"
+  local map_core_path="${OUTPUT_ROOT}/servers/map/AetherXIV.Core.Map.dll"
+  {
+    printf 'schema=aetherxiv.build.manifest.v1\n'
+    printf 'built_at_utc=%s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    printf 'configuration=%s\n' "${CONFIGURATION}"
+    printf 'product_version=2.0\n'
+    printf 'build_number=%s\n' "${BUILD_NUMBER}"
+    printf 'server_rid=%s\n' "${SERVER_RID}"
+    printf 'map_core_sha256=%s\n' "$(sha256sum "${map_core_path}" | awk '{print $1}')"
+    printf 'map_core_path=%s\n' "servers/map/AetherXIV.Core.Map.dll"
+  } > "${manifest_path}"
+}
+
 check_build_prerequisites
 reset_output_root
 
@@ -205,6 +221,7 @@ build_umbra_bootstrap
 python3 "${ROOT_DIR}/tools/Universal/create-direct-core-database-package.py" \
   --repo-root "${ROOT_DIR}" \
   --output-dir "${OUTPUT_ROOT}/Database"
+write_build_manifest
 
 if [[ "${CONFIGURATION}" == Release ]]; then
   find "${OUTPUT_ROOT}" -type f -name '*.pdb' -delete

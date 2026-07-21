@@ -289,7 +289,11 @@
 
           <Border Grid.Row="2" Background="#05060B" BorderBrush="#26365D" BorderThickness="0,1,0,0" Padding="40,0">
             <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
-              <TextBlock Text="v2.0"
+              <TextBlock x:Name="ProductVersionText"
+                         Text="v2.0"
+                         Cursor="Hand"
+                         PointerPressed="ProductVersionText_PointerPressed"
+                         ToolTip.Tip="Click to show the build number"
                          Foreground="{StaticResource MutedTextBrush}"
                          FontWeight="SemiBold"
                          VerticalAlignment="Center" />

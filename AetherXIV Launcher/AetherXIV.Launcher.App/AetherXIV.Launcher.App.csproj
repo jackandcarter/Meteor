@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AetherXIV.Launcher.Core\AetherXIV.Launcher.Core.csproj" />
+    <Compile Include="..\..\src\AetherXIV.Core\AetherXivBuildInfo.cs" Link="Shared\AetherXivBuildInfo.cs" />
   </ItemGroup>
 
   <ItemGroup>

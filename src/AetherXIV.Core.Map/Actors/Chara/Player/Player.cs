@@ -247,6 +247,9 @@ namespace AetherXIV.Core.Map.Actors
 
         private List<Director> ownedDirectors = new List<Director>();
         private Director loginInitDirector = null;
+        private Actor deferredContentKickOwner = null;
+        private string deferredContentKickEventName = null;
+        private object[] deferredContentKickParameters = null;
 
         List<ushort> hotbarSlotsToUpdate = new List<ushort>();
 
@@ -726,7 +729,9 @@ namespace AetherXIV.Core.Map.Actors
 
             int ownedDirectorSpawnPackets = 0;
             int ownedDirectorInitPackets = 0;
-            IEnumerable<Director> zoneInDirectors = ownedDirectors;
+            int ownedDirectorEventStatusPackets = 0;
+            IEnumerable<Director> zoneInDirectors = ownedDirectors
+                .Where(director => director.zoneId == zoneId && !director.IsDeleted());
             if (zone is PrivateAreaContent contentArea)
             {
                 Director activeContentDirector = contentArea.GetContentDirector();
@@ -737,10 +742,13 @@ namespace AetherXIV.Core.Map.Actors
             {
                 List<SubPacket> directorSpawnPackets = director.GetSpawnPackets();
                 List<SubPacket> directorInitPackets = director.GetInitPackets();
+                List<SubPacket> directorEventStatusPackets = director.GetSetEventStatusPackets();
                 ownedDirectorSpawnPackets += directorSpawnPackets.Count;
                 ownedDirectorInitPackets += directorInitPackets.Count;
+                ownedDirectorEventStatusPackets += directorEventStatusPackets.Count;
                 QueuePackets(directorSpawnPackets);
                 QueuePackets(directorInitPackets);
+                QueuePackets(directorEventStatusPackets);
             }
 
             if (currentContentGroup != null)
@@ -772,10 +780,72 @@ namespace AetherXIV.Core.Map.Actors
                 "zoneInDirectorCount", sentDirectors.Length,
                 "ownedDirectorSpawnPackets", ownedDirectorSpawnPackets,
                 "ownedDirectorInitPackets", ownedDirectorInitPackets,
+                "ownedDirectorEventStatusPackets", ownedDirectorEventStatusPackets,
                 "hasContentGroup", currentContentGroup != null,
                 "hasParty", currentParty != null);
+        }
 
-            SendInstanceUpdate();
+        /// <summary>
+        /// Commits the actors instantiated by a zone bootstrap using the
+        /// retail 0x0006, chunked 0x0008, 0x0007 keep-list sequence.
+        /// </summary>
+        public void SendZoneInstanceSnapshot(WorldManager world)
+        {
+            if (world == null || zone == null)
+                return;
+
+            List<uint> actorIds = new List<uint>();
+            HashSet<uint> seenActorIds = new HashSet<uint>();
+            Action<uint> addActorId = id =>
+            {
+                if (id != 0 && seenActorIds.Add(id))
+                    actorIds.Add(id);
+            };
+
+            addActorId(actorId);
+            addActorId(zone.actorId);
+            addActorId(world.GetDebugActor().actorId);
+            addActorId(world.GetActor().actorId);
+
+            Director weatherDirector = zone.GetWeatherDirector();
+            if (weatherDirector != null)
+                addActorId(weatherDirector.actorId);
+
+            IEnumerable<Director> zoneInDirectors = ownedDirectors
+                .Where(director => director.zoneId == zoneId && !director.IsDeleted());
+            if (zone is PrivateAreaContent contentArea)
+            {
+                Director activeContentDirector = contentArea.GetContentDirector();
+                zoneInDirectors = ownedDirectors.Where(director => director == activeContentDirector);
+            }
+
+            foreach (Director director in zoneInDirectors)
+                addActorId(director.actorId);
+
+            foreach (Actor actor in playerSession.actorInstanceList)
+            {
+                if (actor != null)
+                    addActorId(actor.actorId);
+            }
+
+            QueuePacket(ServerZoneInstanceBeginPacket.BuildPacket(actorId));
+            for (int offset = 0; offset < actorIds.Count; offset += ServerZoneInstanceActorsPacket.MAXIMUM_ACTORS)
+            {
+                int count = Math.Min(ServerZoneInstanceActorsPacket.MAXIMUM_ACTORS, actorIds.Count - offset);
+                QueuePacket(ServerZoneInstanceActorsPacket.BuildPacket(actorId, actorIds.GetRange(offset, count)));
+            }
+            QueuePacket(ServerZoneInstanceEndPacket.BuildPacket(actorId));
+
+            DevDiagnostics.Trace(
+                "zone.instance.snapshot",
+                "player", customDisplayName,
+                "zone", zoneId,
+                "zoneActor", String.Format("0x{0:X}", zone.actorId),
+                "privateArea", privateArea ?? "",
+                "privateAreaType", privateAreaType,
+                "actorCount", actorIds.Count,
+                "chunkCount", (actorIds.Count + ServerZoneInstanceActorsPacket.MAXIMUM_ACTORS - 1) / ServerZoneInstanceActorsPacket.MAXIMUM_ACTORS,
+                "actorIds", String.Join(",", actorIds.Select(id => String.Format("0x{0:X8}", id))));
         }
 
         private void SendRemoveInventoryPackets(List<ushort> slots)
@@ -2337,7 +2407,8 @@ namespace AetherXIV.Core.Map.Actors
         public void SendDirectorPackets(Director director)
         {
             QueuePackets(director.GetSpawnPackets());
-            QueuePackets(director.GetInitPackets());        
+            QueuePackets(director.GetInitPackets());
+            QueuePackets(director.GetSetEventStatusPackets());
         }
 
         public void RemoveDirector(Director director)
@@ -2346,6 +2417,8 @@ namespace AetherXIV.Core.Map.Actors
             {
                 QueuePacket(RemoveActorPacket.BuildPacket(director.actorId));
                 ownedDirectors.Remove(director);
+                if (loginInitDirector == director)
+                    loginInitDirector = null;
                 director.RemoveMember(this);
             }
         }
@@ -2498,6 +2571,58 @@ namespace AetherXIV.Core.Map.Actors
             SubPacket spacket = KickEventPacket.BuildPacket(actorId, actor.actorId, eventName, 5, lParams);
             spacket.DebugPrintSubPacket();
             QueuePacket(spacket);
+        }
+
+        /// <summary>
+        /// Parks a content-director event until the client acknowledges the
+        /// same-zone actor reload. A KickEvent sent before that acknowledgement
+        /// is discarded because DeleteAllActors has invalidated its owner.
+        /// </summary>
+        public void DeferContentKickEvent(Actor actor, string eventName, params object[] parameters)
+        {
+            if (actor == null || String.IsNullOrEmpty(eventName))
+                return;
+
+            deferredContentKickOwner = actor;
+            deferredContentKickEventName = eventName;
+            deferredContentKickParameters = parameters == null ? new object[0] : (object[])parameters.Clone();
+            DevDiagnostics.Trace(
+                "event.kick.content.deferred",
+                "player", customDisplayName,
+                "actor", String.Format("0x{0:X}", actorId),
+                "owner", String.Format("0x{0:X}", actor.actorId),
+                "ownerName", actor.GetName(),
+                "eventName", eventName);
+        }
+
+        public void ReleaseDeferredContentKickEvent()
+        {
+            Actor owner = deferredContentKickOwner;
+            string eventName = deferredContentKickEventName;
+            object[] parameters = deferredContentKickParameters;
+
+            deferredContentKickOwner = null;
+            deferredContentKickEventName = null;
+            deferredContentKickParameters = null;
+
+            if (owner == null || String.IsNullOrEmpty(eventName))
+                return;
+
+            DevDiagnostics.Trace(
+                "event.kick.content.release",
+                "player", customDisplayName,
+                "actor", String.Format("0x{0:X}", actorId),
+                "owner", String.Format("0x{0:X}", owner.actorId),
+                "ownerName", owner.GetName(),
+                "eventName", eventName);
+            KickEvent(owner, eventName, parameters ?? new object[0]);
+        }
+
+        public void ClearDeferredContentKickEvent()
+        {
+            deferredContentKickOwner = null;
+            deferredContentKickEventName = null;
+            deferredContentKickParameters = null;
         }
 
         public void KickEventSpecial(Actor actor, uint unknown, string eventName, params object[] parameters)
@@ -3163,9 +3288,27 @@ namespace AetherXIV.Core.Map.Actors
 
             if (target.isMovingToSpawn)
             {
-                // That command cannot be performed on the current target.
-                SendGameMessage(Server.GetWorldManager().GetActor(), 32547, 0x20);
-                return false;
+                // A player may resume the closed Gridania tutorial encounter
+                // after an older server process or reconnect left a wolf on
+                // the generic world-mob return path. Clear the stale path;
+                // the attack/retaliation flow will establish combat normally.
+                if (target is BattleNpc tutorialNpc &&
+                    GridaniaOpeningTutorialPolicy.IsLiveContentCombat(tutorialNpc, this))
+                {
+                    tutorialNpc.isMovingToSpawn = false;
+                    tutorialNpc.aiContainer.pathFind.Clear();
+                    DevDiagnostics.Trace(
+                        "battle.target.returnCancelled",
+                        "player", String.Format("0x{0:X}", actorId),
+                        "target", String.Format("0x{0:X}", tutorialNpc.actorId),
+                        "content", GridaniaOpeningTutorialPolicy.ContentAreaName);
+                }
+                else
+                {
+                    // That command cannot be performed on the current target.
+                    SendGameMessage(Server.GetWorldManager().GetActor(), 32547, 0x20);
+                    return false;
+                }
             }
 
             // enemy only

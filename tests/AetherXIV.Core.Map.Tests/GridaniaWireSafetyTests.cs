@@ -1,5 +1,8 @@
 using AetherXIV.Core.Map.Actors;
+using AetherXIV.Core.Map.Actors.Chara;
 using AetherXIV.Core.Map.actors.group;
+using AetherXIV.Core.Map.packets.send.actor;
+using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.packets.send.group;
 
 namespace AetherXIV.Core.Map.Tests;
@@ -95,6 +98,72 @@ public sealed class GridaniaWireSafetyTests
         Assert.Equal(0x8000000000420002ul, second);
         Assert.NotEqual(first, second);
         Assert.Equal(solo, Party.BuildClientGroupIndex(0x42, 1, 3, solo));
+    }
+
+    [Fact]
+    public void ZoneInstanceSnapshotPacketsMatchRetailWireShapes()
+    {
+        const uint playerId = 0x45000001;
+        uint[] actors =
+        [
+            playerId,
+            0x44880002,
+            0x5FF80002,
+            0x5FF80001,
+            0x44880044,
+            0x44880001,
+            0x448800EC,
+            0x44880090
+        ];
+
+        AetherXIV.Core.Common.SubPacket begin = ServerZoneInstanceBeginPacket.BuildPacket(playerId);
+        AetherXIV.Core.Common.SubPacket body = ServerZoneInstanceActorsPacket.BuildPacket(playerId, actors);
+        AetherXIV.Core.Common.SubPacket end = ServerZoneInstanceEndPacket.BuildPacket(playerId);
+
+        Assert.Equal((ushort)0x0003, begin.header.type);
+        Assert.Equal((ushort)0x0006, begin.gameMessage.opcode);
+        Assert.Equal(0x28, begin.header.subpacketSize);
+        Assert.Equal((ushort)0x0003, body.header.type);
+        Assert.Equal((ushort)0x0008, body.gameMessage.opcode);
+        Assert.Equal(0x50, body.header.subpacketSize);
+        Assert.Equal(8u, BitConverter.ToUInt32(body.data, 0));
+        Assert.Equal(actors, Enumerable.Range(0, actors.Length)
+            .Select(index => BitConverter.ToUInt32(body.data, 4 + index * sizeof(uint)))
+            .ToArray());
+        Assert.Equal((ushort)0x0003, end.header.type);
+        Assert.Equal((ushort)0x0007, end.gameMessage.opcode);
+        Assert.Equal(0x28, end.header.subpacketSize);
+    }
+
+    [Fact]
+    public void ZoneInstanceActorPacketRejectsInvalidChunks()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ServerZoneInstanceActorsPacket.BuildPacket(1, Array.Empty<uint>()));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ServerZoneInstanceActorsPacket.BuildPacket(1, Enumerable.Range(1, 9).Select(id => (uint)id).ToArray()));
+    }
+
+    [Fact]
+    public void BattleNpcNameplatesStartInRetailPassiveState()
+    {
+        Assert.Equal(1, NpcWork.HATE_TYPE_PASSIVE);
+        Assert.NotEqual(NpcWork.HATE_TYPE_NONE, NpcWork.HATE_TYPE_PASSIVE);
+    }
+
+    [Fact]
+    public void EnmityIndicatorMatchesRetailCombatTraceShape()
+    {
+        AetherXIV.Core.Common.SubPacket packet = SetEnmityIndicatorPacket.BuildPacket(
+            0x44D035D5,
+            0x029B2941,
+            100);
+
+        Assert.Equal((ushort)0x0195, packet.gameMessage.opcode);
+        Assert.Equal(0x28, packet.header.subpacketSize);
+        Assert.Equal(0x029B2941u, BitConverter.ToUInt32(packet.data, 0));
+        Assert.Equal((ushort)100, BitConverter.ToUInt16(packet.data, 4));
+        Assert.Equal((ushort)0, BitConverter.ToUInt16(packet.data, 6));
     }
 
     private sealed class TestGroup(ulong groupIndex, uint typeId, int memberCount) : Group(groupIndex)

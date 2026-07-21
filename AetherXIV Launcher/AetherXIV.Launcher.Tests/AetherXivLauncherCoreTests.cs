@@ -1117,23 +1117,42 @@ public sealed class AetherXivLauncherCoreTests
     }
 
     [Fact]
-    public void LegacyPatchApplierDoesNotDeleteFileForEmptyFirstHashMode()
+    public void LegacyPatchApplierDeletesRetailBodylessDeleteEntryIdempotently()
     {
         string root = CreateTempDirectory();
         string targetPath = Path.Combine(root, "client", "script", "staticactors.bin");
         Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-        byte[] expected = Encoding.ASCII.GetBytes("keep me");
-        File.WriteAllBytes(targetPath, expected);
+        byte[] source = Encoding.ASCII.GetBytes("delete me");
+        File.WriteAllBytes(targetPath, source);
         string patchPath = Path.Combine(CreateTempDirectory(), "first-hash-empty.patch");
 
-        WritePatchFileChunks(
+        WritePatchDeletion(
             patchPath,
             "client/script/staticactors.bin",
-            (0x44, [], false, (uint)expected.Length));
+            source);
 
         LegacyPatchApplier.ApplyPatchFile(root, patchPath);
+        LegacyPatchApplier.ApplyPatchFile(root, patchPath);
 
-        Assert.Equal(expected, File.ReadAllBytes(targetPath));
+        Assert.False(File.Exists(targetPath));
+    }
+
+    [Fact]
+    public void LegacyPatchApplierRefusesToDeleteModifiedSourceFile()
+    {
+        string root = CreateTempDirectory();
+        string targetPath = Path.Combine(root, "client", "script", "staticactors.bin");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+        File.WriteAllText(targetPath, "locally modified");
+        string patchPath = Path.Combine(CreateTempDirectory(), "delete-mismatch.patch");
+
+        WritePatchDeletion(
+            patchPath,
+            "client/script/staticactors.bin",
+            Encoding.ASCII.GetBytes("retail source"));
+
+        Assert.Throws<InvalidDataException>(() => LegacyPatchApplier.ApplyPatchFile(root, patchPath));
+        Assert.Equal("locally modified", File.ReadAllText(targetPath));
     }
 
     [Fact]
@@ -2000,6 +2019,28 @@ public sealed class AetherXivLauncherCoreTests
             WriteUInt32BigEndian(body, newFileSize);
             body.Write(storedPayload);
         }
+
+        WritePatchChunk(stream, "ETRY", body.ToArray());
+    }
+
+    private static void WritePatchDeletion(string patchPath, string relativePath, byte[] source)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(patchPath)!);
+        using FileStream stream = File.Create(patchPath);
+        stream.Write([0x91, (byte)'Z', (byte)'I', (byte)'P', (byte)'A', (byte)'T', (byte)'C', (byte)'H', 0x0D, 0x0A, 0x1A, 0x0A]);
+
+        using MemoryStream body = new();
+        byte[] pathBytes = Encoding.UTF8.GetBytes(relativePath);
+        WriteUInt32BigEndian(body, (uint)pathBytes.Length);
+        body.Write(pathBytes);
+        WriteUInt32BigEndian(body, 1);
+        WriteUInt32LittleEndian(body, 0x44);
+        body.Write(SHA1.HashData(source));
+        body.Write(new byte[0x14]);
+        WriteUInt32LittleEndian(body, 0x4E);
+        WriteUInt32BigEndian(body, 0);
+        WriteUInt32BigEndian(body, (uint)source.Length);
+        WriteUInt32BigEndian(body, 0);
 
         WritePatchChunk(stream, "ETRY", body.ToArray());
     }

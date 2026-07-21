@@ -190,6 +190,76 @@ namespace AetherXIV.Core.Map.Actors
             owner.SendGameMessage(owner, Server.GetWorldManager().GetActor(), 25236, 0x20, (object)GetQuestId());
         }
 
+        public void OnNotice(Player player)
+        {
+            LuaEngine.GetInstance().CallLuaFunctionForReturn(player ?? owner, this, "onNotice", true);
+        }
+
+        public void NewNpcLsMsg(uint from)
+        {
+            if (!TryGetNpcLinkshellIndex(from, out uint npcLsId))
+                return;
+
+            SetQuestData("npcLsFrom", from);
+            SetQuestData("npcLsMessageStep", 1u);
+            owner.SetNpcLS(npcLsId, Player.NPCLS_ALERT);
+            owner.SendGameMessage(Server.GetWorldManager().GetActor(), 25119, 0x20, (object)from);
+            SaveData();
+        }
+
+        public void ReadNpcLsMsg()
+        {
+            uint from = GetQuestDataUInt32("npcLsFrom");
+            if (!TryGetNpcLinkshellIndex(from, out uint npcLsId))
+                return;
+
+            uint step = GetQuestDataUInt32("npcLsMessageStep");
+            SetQuestData("npcLsMessageStep", step + 1u);
+            owner.SetNpcLS(npcLsId, Player.NPCLS_ACTIVE);
+            SaveData();
+        }
+
+        public void EndOfNpcLsMsgs()
+        {
+            uint from = GetQuestDataUInt32("npcLsFrom");
+            if (TryGetNpcLinkshellIndex(from, out uint npcLsId))
+                owner.SetNpcLS(npcLsId, Player.NPCLS_INACTIVE);
+
+            SetQuestData("npcLsFrom", 0u);
+            SetQuestData("npcLsMessageStep", 0u);
+            SaveData();
+        }
+
+        private uint GetQuestDataUInt32(string key)
+        {
+            object value = GetQuestData(key);
+            if (value == null)
+                return 0;
+
+            try
+            {
+                return Convert.ToUInt32(value);
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
+        private static bool TryGetNpcLinkshellIndex(uint from, out uint npcLsId)
+        {
+            // Quest scripts use one-based linkpearl identifiers while
+            // playerWork.npcLinkshellChat is a zero-based 64-entry array.
+            if (from == 0 || from > 64)
+            {
+                npcLsId = 0;
+                return false;
+            }
+
+            npcLsId = from - 1;
+            return true;
+        }
+
         private string PlayerName()
         {
             if (owner == null)

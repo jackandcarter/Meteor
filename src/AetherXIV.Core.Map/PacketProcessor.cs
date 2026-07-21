@@ -244,6 +244,8 @@ namespace AetherXIV.Core.Map
                             "timestampRaw", zoneInCompletePacket.timestamp,
                             "unknown", zoneInCompletePacket.unknown,
                             "invalidPacket", zoneInCompletePacket.invalidPacket);
+                        if (!zoneInCompletePacket.invalidPacket)
+                            session.GetActor().ReleaseDeferredContentKickEvent();
                         break;
                     //Update Position
                     case 0x00CA:

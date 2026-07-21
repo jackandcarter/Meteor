@@ -24,7 +24,7 @@ public static class AetherXivDatabaseCompatibility
     public const string CompatibilityId = "aetherxiv-direct-core-v2";
     public const string BaselineId = "20260716_000001_ffxiv_server_v2_baseline";
     public const string GuildleveContentMigration = "20260716_000005_guildleve_content_contract.sql";
-    public const string LatestDirectCoreMigration = "20260720_000017_gridania_tutorial_spawn_contract.sql";
+    public const string LatestDirectCoreMigration = "20260720_000018_gridania_tutorial_nameplates.sql";
     public static readonly IReadOnlyList<string> RequiredDirectCoreMigrations =
     [
         "20260627_battlenpc_spawn_audit_pins.sql",
@@ -45,7 +45,8 @@ public static class AetherXivDatabaseCompatibility
         "20260718_000014_hall_of_flames_exit_runtime.sql",
         "20260719_000015_hall_of_flames_push_circle.sql",
         "20260720_000016_gridania_tutorial_actor_roles.sql",
-        "20260720_000017_gridania_tutorial_spawn_contract.sql"
+        "20260720_000017_gridania_tutorial_spawn_contract.sql",
+        "20260720_000018_gridania_tutorial_nameplates.sql"
     ];
     public const string NpcServiceCatalogId = "zone-service-npcs-1.23b";
     public const string NpcServiceCatalogVersion = "2026.07.19.1";
@@ -358,17 +359,20 @@ SELECT COUNT(*)
 FROM server_battlenpc_spawn_locations s
 JOIN server_battlenpc_groups g ON g.groupId=s.groupId
 JOIN server_battlenpc_pools p ON p.poolId=g.poolId
-WHERE (s.bnpcId=6 AND s.customDisplayName='yda' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006)
-   OR (s.bnpcId=7 AND s.customDisplayName='papalymo' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005);
+WHERE ((s.bnpcId=6 AND s.customDisplayName='' AND g.scriptName='yda' AND p.name='yda' AND p.actorClassId=2290006)
+    OR (s.bnpcId=7 AND s.customDisplayName='' AND g.scriptName='papalymo' AND p.name='papalymo' AND p.actorClassId=2290005))
+  AND (SELECT COUNT(*)
+       FROM server_battlenpc_spawn_locations
+       WHERE bnpcId IN (3,4,5,6,7) AND customDisplayName='')=5;
 """, cancellationToken).ConfigureAwait(false);
         if (gridaniaTutorialActorRoles != 2)
         {
             add("gridania-tutorial.actor-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
-                "The Gridania tutorial spawn IDs 6 and 7 are missing, reversed, or stale. Run the packaged Database setup tool.");
+                "The Gridania tutorial actor roles or localized nameplates are missing, reversed, or stale. Run the packaged Database setup tool.");
             return;
         }
         add("gridania-tutorial.actor-contract", AetherXivDatabasePreflightStatus.Passed,
-            "Verified Gridania tutorial spawn 6 as Yda and spawn 7 as Papalymo.");
+            "Verified Gridania tutorial roles and localized nameplates.");
 
         int guildleveSearchPointContract = await CountAsync(connection, """
 SELECT COUNT(*)

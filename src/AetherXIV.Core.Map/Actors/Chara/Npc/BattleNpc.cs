@@ -139,22 +139,19 @@ namespace AetherXIV.Core.Map.Actors
         //HATE_TYPE_NONE is for passive
         //HATE_TYPE_ENGAGED is for aggroed mobs
         //HATE_TYPE_ENGAGED_PARTY is for claimed mobs, client uses occupancy group to determine if mob is claimed by player's party
-        //for now i'm just going to assume that occupancygroup will be BattleNpc's currentparties when they're in combat, 
-        //so if party isn't null, they're claimed.
+        // HATE_TYPE_ENGAGED_PARTY requires the separate occupancy-group wire
+        // contract. This server does not emit that claim wiring, so sending 3
+        // can make the client render an enemy as claimed by another party.
         public SubPacket GetHateTypePacket(Player player)
         {
-            npcWork.hateType = NpcWork.HATE_TYPE_NONE;
+            // The retail spawn value is passive/white (1), including for
+            // hostile BattleNpcs. Values 2/3 are live engagement states; 0
+            // leaves the client on the grey/uninitialised nameplate path.
+            npcWork.hateType = NpcWork.HATE_TYPE_PASSIVE;
             if (player != null)
             {
                 if (aiContainer.IsEngaged())
-                {
                     npcWork.hateType = NpcWork.HATE_TYPE_ENGAGED;
-
-                    if (this.currentParty != null)
-                    {
-                        npcWork.hateType = NpcWork.HATE_TYPE_ENGAGED_PARTY;
-                    }
-                }
             }
             var propPacketUtil = new ActorPropertyPacketUtil("npcWork/hate", this);
             propPacketUtil.AddProperty("npcWork.hateType");
@@ -557,7 +554,14 @@ namespace AetherXIV.Core.Map.Actors
 
         public override void OnDespawn()
         {
+            // Retail removes a defeated content actor before publishing the
+            // smaller 30006 roster. Keep the group reference across the base
+            // removal packet, then shrink non-respawning private content.
+            ContentGroup contentGroup = currentContentGroup;
             base.OnDespawn();
+
+            if (contentGroup != null && zone is PrivateAreaContent && respawnTime == 0)
+                contentGroup.RemoveMember(actorId);
         }
 
         public uint GetBattleNpcId()

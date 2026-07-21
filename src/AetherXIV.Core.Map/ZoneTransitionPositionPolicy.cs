@@ -8,7 +8,11 @@ namespace AetherXIV.Core.Map
     // position near the server-issued spawn may acknowledge the transition.
     static class ZoneTransitionPositionPolicy
     {
-        public const float ArrivalTolerance = 8.0f;
+        // Captured 1.23b same-zone private-area transitions can acknowledge
+        // from the unload position before applying the server spawn. Gridania's
+        // opening tutorial is 8.66 units from that spawn, so retain a modest
+        // local tolerance while still rejecting positions from another scene.
+        public const float ArrivalTolerance = 12.0f;
 
         public static bool IsDestinationConsistent(
             bool hasExpectedPosition,

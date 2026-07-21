@@ -85,6 +85,16 @@ for configuration in "${configurations[@]}"; do
     [[ -z "${TARGET_PLATFORM}" || "${platform}" == "${TARGET_PLATFORM}" ]] || continue
     platform_root="${configuration_root}/${platform}"
     [[ -d "${platform_root}" ]] || continue
+    verify_file "${platform_root}/build-manifest.txt"
+    grep -Fxq 'product_version=2.0' "${platform_root}/build-manifest.txt" || {
+      echo "Build manifest has the wrong product version: ${platform_root}" >&2
+      exit 9
+    }
+    expected_build_number="$(tr -d '[:space:]' < "${ROOT_DIR}/build-number.txt")"
+    grep -Fxq "build_number=${expected_build_number}" "${platform_root}/build-manifest.txt" || {
+      echo "Build manifest has the wrong build number: ${platform_root}" >&2
+      exit 9
+    }
     verify_file "${platform_root}/Database/ffxiv_server.sql"
     verify_file "${platform_root}/Database/ffxiv_server.sql.sha256"
     verify_file "${platform_root}/Database/baseline-history.sha256"
@@ -100,6 +110,7 @@ for configuration in "${configurations[@]}"; do
     verify_file "${platform_root}/Database/migrations/20260718_000013_central_shroud_pinspawn_restore.sql"
     verify_file "${platform_root}/Database/migrations/20260720_000016_gridania_tutorial_actor_roles.sql"
     verify_file "${platform_root}/Database/migrations/20260720_000017_gridania_tutorial_spawn_contract.sql"
+    verify_file "${platform_root}/Database/migrations/20260720_000018_gridania_tutorial_nameplates.sql"
     grep -q 'CREATE TABLE IF NOT EXISTS server_battlenpc_spawn_audit_pins' \
       "${platform_root}/Database/ffxiv_server.sql" || {
         echo "Database baseline omits pinspawn persistence: ${platform_root}" >&2
@@ -140,6 +151,8 @@ for configuration in "${configurations[@]}"; do
     map_suffix=""; [[ "${platform}" == Windows ]] && map_suffix=".exe"
     verify_file "${map_root}/AetherXIV.Core.Map${map_suffix}"
     verify_file "${map_root}/scripts/player.lua"
+    verify_file "${map_root}/scripts/commands/ArrowReloadCommand.lua"
+    verify_file "${map_root}/scripts/directors/AfterQuestWarpDirector.lua"
     verify_file "${map_root}/staticactors.bin"
     verify_file "${map_root}/scripts.manifest.json"
     verify_file "${map_root}/navmesh/wil0Field01.snb"

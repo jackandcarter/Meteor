@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using AetherXIV.Core;
 using AetherXIV.Operator;
 using System.Text;
 
@@ -29,6 +30,7 @@ public sealed partial class MainWindow : Window
     private AetherXivServiceSupervisor supervisor;
     private bool operationInProgress;
     private bool mirrorPreflightToServiceLogs;
+    private bool showBuildNumber;
 
     public MainWindow()
     {
@@ -60,6 +62,16 @@ public sealed partial class MainWindow : Window
 
             supervisor.Dispose();
         };
+    }
+
+    private void ProductVersionText_PointerPressed(
+        object? sender,
+        Avalonia.Input.PointerPressedEventArgs e)
+    {
+        showBuildNumber = !showBuildNumber;
+        ProductVersionText.Text = showBuildNumber
+            ? AetherXivBuildInfo.BuildText
+            : AetherXivBuildInfo.VersionText;
     }
 
     private AetherXivServiceSupervisor CreateSupervisor(AetherXivOperatorConfig nextConfig)

@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using AetherXIV.Core;
 using AetherXIV.Launcher.Core;
 using Ellipse = Avalonia.Controls.Shapes.Ellipse;
 
@@ -50,6 +51,7 @@ public sealed partial class MainWindow : Window
     private IReadOnlyDictionary<string, LauncherReelText> homeReelText = new Dictionary<string, LauncherReelText>();
     private bool homeReelTextEnabled;
     private int homeReelIndex;
+    private bool showBuildNumber;
 
     private const int ServerPresetLocalhost = 0;
     private const int ServerPresetDemiDevUnit = 1;
@@ -90,6 +92,16 @@ public sealed partial class MainWindow : Window
             SaveCurrentProfile();
         };
         _ = InitializeAsync();
+    }
+
+    private void ProductVersionText_PointerPressed(
+        object? sender,
+        Avalonia.Input.PointerPressedEventArgs e)
+    {
+        showBuildNumber = !showBuildNumber;
+        ProductVersionText.Text = showBuildNumber
+            ? AetherXivBuildInfo.BuildText
+            : AetherXivBuildInfo.VersionText;
     }
 
     private void LoadHomeReelImages()

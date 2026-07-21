@@ -125,6 +125,7 @@ namespace AetherXIV.Core.Map.actors.director
                 {
                     p.QueuePackets(GetSpawnPackets());
                     p.QueuePackets(GetInitPackets());
+                    p.QueuePackets(GetSetEventStatusPackets());
                 }
             }
 

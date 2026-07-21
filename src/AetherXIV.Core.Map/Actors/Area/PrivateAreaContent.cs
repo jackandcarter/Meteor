@@ -66,6 +66,7 @@ namespace AetherXIV.Core.Map.actors.area
 
             foreach (Player player in currentDirector.GetPlayerMembers().OfType<Player>())
             {
+                player.ClearDeferredContentKickEvent();
                 if (player.currentParty is Party party)
                     party.RemoveTransientMembers(allyIds);
             }

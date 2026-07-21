@@ -274,6 +274,10 @@ public static class LegacyPatchApplier
         uint itemCount = ReadUInt32BigEndian(input);
         uint? expectedFileSize = null;
         byte[]? expectedHash = null;
+        byte[]? finalSourceHash = null;
+        byte finalEntryMode = 0;
+        uint finalPreviousFileSize = 0;
+        bool wrotePayload = false;
 
         ReportProgress(
             progress,
@@ -290,14 +294,22 @@ public static class LegacyPatchApplier
             if (entryMode is not (0x41 or 0x44 or 0x4D))
                 throw new InvalidDataException($"Unknown ZiPatch entry mode 0x{entryMode:X2}.");
 
-            ReadExact(input, 0x14);
+            byte[] sourceHash = ReadExact(input, 0x14);
             byte[] destinationHash = ReadExact(input, 0x14);
 
             byte compressionMode = ReadFourByteMode(input, "compression mode");
             uint compressedSize = ReadUInt32BigEndian(input);
-            ReadUInt32BigEndian(input);
+            uint previousFileSize = ReadUInt32BigEndian(input);
             uint newFileSize = ReadUInt32BigEndian(input);
-            expectedFileSize = newFileSize;
+
+            if (index == itemCount - 1)
+            {
+                finalEntryMode = entryMode;
+                finalPreviousFileSize = previousFileSize;
+                finalSourceHash = sourceHash;
+                expectedFileSize = newFileSize;
+                expectedHash = destinationHash;
+            }
 
             if (index != itemCount - 1 && compressedSize != 0)
                 throw new InvalidDataException($"Non-final ZiPatch entry contains file data: {displayPath}.");
@@ -305,59 +317,83 @@ public static class LegacyPatchApplier
             if (compressedSize == 0)
                 continue;
 
-            expectedHash = destinationHash;
-            using FileStream output = CreateOutputFile(filePath);
+            string temporaryPath = CreateTemporaryOutputPath(filePath);
+            try
+            {
+                using (FileStream output = File.Create(temporaryPath))
+                {
+                    if (compressionMode == 0x4E)
+                    {
+                        using LimitedReadStream limitedInput = new(
+                            input,
+                            compressedSize,
+                            bytesRead => ReportProgress(
+                                progress,
+                                context,
+                                input.Position,
+                                $"Writing {displayPath}: {FormatByteCount(bytesRead)}/{FormatByteCount(compressedSize)} raw chunk {index + 1}/{itemCount}",
+                                false));
+                        CopyToWithCancellation(limitedInput, output, cancellationToken);
+                        limitedInput.SkipRemaining();
+                    }
+                    else if (compressionMode == 0x5A)
+                    {
+                        using LimitedReadStream limitedInput = new(
+                            input,
+                            compressedSize,
+                            bytesRead => ReportProgress(
+                                progress,
+                                context,
+                                input.Position,
+                                $"Writing {displayPath}: {FormatByteCount(bytesRead)}/{FormatByteCount(compressedSize)} compressed chunk {index + 1}/{itemCount}",
+                                false));
+                        using ZLibStream zlib = new(limitedInput, CompressionMode.Decompress);
+                        CopyToWithCancellation(zlib, output, cancellationToken);
+                        limitedInput.SkipRemaining();
+                    }
+                    else
+                    {
+                        throw new InvalidDataException($"Unknown ZiPatch compression mode 0x{compressionMode:X2}.");
+                    }
+                }
 
-            if (compressionMode == 0x4E)
-            {
-                using LimitedReadStream limitedInput = new(
-                    input,
-                    compressedSize,
-                    bytesRead => ReportProgress(
-                        progress,
-                        context,
-                        input.Position,
-                        $"Writing {displayPath}: {FormatByteCount(bytesRead)}/{FormatByteCount(compressedSize)} raw chunk {index + 1}/{itemCount}",
-                        false));
-                CopyToWithCancellation(limitedInput, output, cancellationToken);
-                limitedInput.SkipRemaining();
+                ValidatePatchedFile(temporaryPath, displayPath, newFileSize, destinationHash);
+                File.Move(temporaryPath, filePath, true);
+                wrotePayload = true;
             }
-            else if (compressionMode == 0x5A)
+            finally
             {
-                using LimitedReadStream limitedInput = new(
-                    input,
-                    compressedSize,
-                    bytesRead => ReportProgress(
-                        progress,
-                        context,
-                        input.Position,
-                        $"Writing {displayPath}: {FormatByteCount(bytesRead)}/{FormatByteCount(compressedSize)} compressed chunk {index + 1}/{itemCount}",
-                        false));
-                using ZLibStream zlib = new(limitedInput, CompressionMode.Decompress);
-                CopyToWithCancellation(zlib, output, cancellationToken);
-                limitedInput.SkipRemaining();
-            }
-            else
-            {
-                throw new InvalidDataException($"Unknown ZiPatch compression mode 0x{compressionMode:X2}.");
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
             }
         }
 
-        if (expectedFileSize.HasValue && File.Exists(filePath))
+        // Mode 0x44 is the ZiPatch delete form when the terminal item has
+        // no body and transitions a real source file to size zero.  Both the
+        // original Seventh Umbral implementation and its Garlemald port skip
+        // body-less items, but retail patch D2010.09.19.0000 uses exactly
+        // this record shape for thousands of removals.
+        bool deleteFile = finalEntryMode == 0x44
+            && !wrotePayload
+            && expectedFileSize == 0
+            && finalPreviousFileSize != 0;
+        if (deleteFile)
         {
-            long actualSize = new FileInfo(filePath).Length;
-            if (actualSize != expectedFileSize.Value)
-                throw new InvalidDataException(
-                    $"Patched file size differs from manifest for {displayPath}: expected {expectedFileSize.Value}, got {actualSize}.");
+            if (File.Exists(filePath))
+            {
+                ValidateSourceFileForDeletion(
+                    filePath,
+                    displayPath,
+                    finalPreviousFileSize,
+                    finalSourceHash!);
+                File.Delete(filePath);
+            }
+            messages?.Add($"Deleted file: {filePath}");
+            return;
         }
 
-        if (expectedHash is not null && !IsAllZero(expectedHash) && File.Exists(filePath))
-        {
-            using FileStream verifyInput = File.OpenRead(filePath);
-            byte[] actualHash = SHA1.HashData(verifyInput);
-            if (!actualHash.SequenceEqual(expectedHash))
-                throw new InvalidDataException($"Patched file hash differs from manifest for {displayPath}.");
-        }
+        if (wrotePayload && expectedFileSize.HasValue && expectedHash is not null)
+            ValidatePatchedFile(filePath, displayPath, expectedFileSize.Value, expectedHash);
     }
 
     private static string ReadPatchPath(Stream stream, string clientRoot)
@@ -377,10 +413,53 @@ public static class LegacyPatchApplier
         return fullPath;
     }
 
-    private static FileStream CreateOutputFile(string filePath)
+    private static string CreateTemporaryOutputPath(string filePath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-        return File.Create(filePath);
+        return Path.Combine(
+            Path.GetDirectoryName(filePath)!,
+            $".{Path.GetFileName(filePath)}.aetherxiv-{Guid.NewGuid():N}.tmp");
+    }
+
+    private static void ValidatePatchedFile(
+        string filePath,
+        string displayPath,
+        uint expectedFileSize,
+        byte[] expectedHash)
+    {
+        long actualSize = new FileInfo(filePath).Length;
+        if (actualSize != expectedFileSize)
+            throw new InvalidDataException(
+                $"Patched file size differs from manifest for {displayPath}: expected {expectedFileSize}, got {actualSize}.");
+
+        if (!IsAllZero(expectedHash))
+        {
+            using FileStream verifyInput = File.OpenRead(filePath);
+            byte[] actualHash = SHA1.HashData(verifyInput);
+            if (!actualHash.SequenceEqual(expectedHash))
+                throw new InvalidDataException($"Patched file hash differs from manifest for {displayPath}.");
+        }
+    }
+
+    private static void ValidateSourceFileForDeletion(
+        string filePath,
+        string displayPath,
+        uint expectedFileSize,
+        byte[] expectedHash)
+    {
+        long actualSize = new FileInfo(filePath).Length;
+        if (actualSize != expectedFileSize)
+            throw new InvalidDataException(
+                $"File scheduled for deletion differs from the patch source for {displayPath}: expected size {expectedFileSize}, got {actualSize}.");
+
+        if (!IsAllZero(expectedHash))
+        {
+            using FileStream verifyInput = File.OpenRead(filePath);
+            byte[] actualHash = SHA1.HashData(verifyInput);
+            if (!actualHash.SequenceEqual(expectedHash))
+                throw new InvalidDataException(
+                    $"File scheduled for deletion differs from the patch source for {displayPath}.");
+        }
     }
 
     private static byte ReadFourByteMode(Stream stream, string label)

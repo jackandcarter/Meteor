@@ -38,8 +38,8 @@ namespace AetherXIV.Core.Map
             DevDiagnostics.Configure("Map", args);
 
             Log.Info("==================================");
-            Log.Info("AetherXIV Core v1.3: Map Server");
-            Log.Info("Version: 1.3");
+            Log.Info("AetherXIV Core v2.0: Map Server");
+            Log.Info("Version: 2.0 (build 21985)");
             Log.Info("==================================");
 
             try

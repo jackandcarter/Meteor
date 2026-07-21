@@ -3,6 +3,7 @@
     class NpcWork
     {
         public static byte HATE_TYPE_NONE = 0;
+        public static byte HATE_TYPE_PASSIVE = 1;
         public static byte HATE_TYPE_ENGAGED = 2;
         public static byte HATE_TYPE_ENGAGED_PARTY = 3;
 

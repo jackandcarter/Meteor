@@ -50,6 +50,21 @@ public sealed class ZoneTransitionPositionPolicyTests
     }
 
     [Fact]
+    public void CapturedGridaniaPrivateAreaAcknowledgementIsAccepted()
+    {
+        Assert.True(ZoneTransitionPositionPolicy.IsDestinationConsistent(
+            hasExpectedPosition: true,
+            currentZoneId: 166,
+            expectedZoneId: 166,
+            expectedX: 362.4087f,
+            expectedY: 4.0f,
+            expectedZ: -703.8168f,
+            receivedX: 354.3533f,
+            receivedY: 3.750001f,
+            receivedZ: -700.6393f));
+    }
+
+    [Fact]
     public void WrongCurrentZoneCannotAcknowledgeTransition()
     {
         Assert.False(ZoneTransitionPositionPolicy.IsDestinationConsistent(
@@ -77,5 +92,21 @@ public sealed class ZoneTransitionPositionPolicyTests
             receivedX: 23.069f,
             receivedY: 0.0f,
             receivedZ: 5.685f));
+    }
+
+    [Fact]
+    public void SameZonePrivateAreaFlipUsesResidentGeometryReload()
+    {
+        Assert.Equal(
+            ZoneTransitionReloadRecipe.ResidentGeometry,
+            ZoneTransitionReloadPolicy.Select(155, 155));
+    }
+
+    [Fact]
+    public void CrossZoneTutorialReturnUsesFullMapReload()
+    {
+        Assert.Equal(
+            ZoneTransitionReloadRecipe.FullMap,
+            ZoneTransitionReloadPolicy.Select(166, 155));
     }
 }

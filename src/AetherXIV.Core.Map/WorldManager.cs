@@ -1362,12 +1362,37 @@ namespace AetherXIV.Core.Map
             if (oldZone is PrivateAreaContent oldContentArea)
                 oldContentArea.CheckDestroy();
 
-            //Send packets
-            player.playerSession.QueuePacket(DeleteAllActorsPacket.BuildPacket(player.actorId));
-            player.playerSession.QueuePacket(_0xE2Packet.BuildPacket(player.actorId, 0x2));
-            player.SendZoneInPackets(this, spawnType);
-            player.playerSession.ClearInstance();
-            player.SendInstanceUpdate();
+            // Same-zone public/private and private/private changes replace
+            // resident geometry. Retail uses the content-style forced reload
+            // for that family: wipe, 0x00E2(0x10), then an immediate bundle
+            // without a trailing keep-list commit. A 0x00E2(0x02) full-map
+            // reload cannot finish when the destination map is already
+            // resident, leaving the client under the Now Loading veil.
+            ZoneTransitionReloadRecipe reloadRecipe =
+                ZoneTransitionReloadPolicy.Select(currentZoneId, destinationZoneId);
+            if (reloadRecipe == ZoneTransitionReloadRecipe.ResidentGeometry)
+            {
+                player.playerSession.QueuePacket(DeleteAllActorsPacket.BuildPacket(player.actorId));
+                player.playerSession.QueuePacket(_0xE2Packet.BuildPacket(player.actorId, 0x10));
+                player.SendZoneInPackets(
+                    this,
+                    spawnType,
+                    ZoneInventoryRefreshMode.RetainKnownItemDefinitions);
+                player.playerSession.ClearInstance();
+                player.SendInstanceUpdate(true);
+            }
+            else
+            {
+                // Genuine map loads retain the player until the trailing
+                // 0x0006 -> 0x0008 -> 0x0007 keep-list commit. A bare wipe
+                // before this bundle dereferences the destination scene from
+                // a deleted player object.
+                player.playerSession.QueuePacket(_0xE2Packet.BuildPacket(player.actorId, 0x2));
+                player.SendZoneInPackets(this, spawnType);
+                player.playerSession.ClearInstance();
+                player.SendInstanceUpdate(true);
+                player.SendZoneInstanceSnapshot(this);
+            }
 
             player.playerSession.LockUpdates(false);
             DevDiagnostics.Trace(
@@ -1376,6 +1401,7 @@ namespace AetherXIV.Core.Map
                 "zone", player.zoneId,
                 "privateArea", player.privateArea ?? "",
                 "privateAreaType", player.privateAreaType,
+                "reloadRecipe", reloadRecipe.ToString(),
                 "areaActorCount", player.zone == null ? 0 : player.zone.GetActorCount(),
                 "instanceActorCount", player.playerSession.actorInstanceList.Count);
 
@@ -1611,7 +1637,6 @@ namespace AetherXIV.Core.Map
             //Send packets            
             if (!isLogin)
             {
-                player.playerSession.QueuePacket(DeleteAllActorsPacket.BuildPacket(player.actorId));
                 player.playerSession.QueuePacket(_0xE2Packet.BuildPacket(player.actorId, 0x2));
             }
 
@@ -1620,6 +1645,8 @@ namespace AetherXIV.Core.Map
 
             player.playerSession.ClearInstance();
             player.SendInstanceUpdate(true);
+            if (!isLogin)
+                player.SendZoneInstanceSnapshot(this);
 
             player.playerSession.LockUpdates(false);
             DevDiagnostics.Trace(
@@ -1727,6 +1754,7 @@ namespace AetherXIV.Core.Map
             Director director = contentArea.GetContentDirector();
             director.StartDirector(false);
             player.SetLoginDirector(director);
+            player.DeferContentKickEvent(director, "noticeEvent", true);
             restoredArea = contentArea;
             reason = "persisted-private-content-reconstructed";
             return true;

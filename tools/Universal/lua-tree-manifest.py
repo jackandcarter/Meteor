@@ -35,7 +35,7 @@ def collect(scripts_root: Path) -> dict[str, str]:
     return {
         path.relative_to(scripts_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(scripts_root.rglob("*"))
-        if path.is_file()
+        if path.is_file() and path.name != ".DS_Store"
     }
 
 

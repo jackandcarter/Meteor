@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AetherXIV.Core.Common;
 using AetherXIV.Core.Map.Actors;
 using AetherXIV.Core.Map.packets.send.actor;
+using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.actors.area;
 using AetherXIV.Core.Map.utils;
 using AetherXIV.Core.Map.actors.chara.ai.state;
@@ -59,7 +60,16 @@ namespace AetherXIV.Core.Map.actors.chara.ai.controllers
 
         public bool TryDeaggro()
         {
-            if (owner.hateContainer.GetMostHatedTarget() == null || !owner.aiContainer.GetTargetFind().CanTarget(owner.target as Character))
+            Character hatedTarget = owner.hateContainer.GetMostHatedTarget();
+
+            // SimpleContent30010 owns a closed encounter rather than a world
+            // spawn. The generic distance leash can trip while the first wolf
+            // chases the player/allies, making it untargetable and allowing it
+            // to heal while the director waits forever for battleComplete.
+            if (GridaniaOpeningTutorialPolicy.IsLiveContentCombat(owner, hatedTarget))
+                return false;
+
+            if (hatedTarget == null || !owner.aiContainer.GetTargetFind().CanTarget(owner.target as Character))
             {
                 return true;
             }
@@ -529,8 +539,14 @@ namespace AetherXIV.Core.Map.actors.chara.ai.controllers
                 owner.currentLockedTarget = target?.actorId ?? Actor.INVALID_ACTORID;
                 owner.currentTarget = target?.actorId ?? Actor.INVALID_ACTORID;
 
-                 foreach (var player in owner.zone.GetActorsAroundActor<Player>(owner, 50))
+                foreach (var player in owner.zone.GetActorsAroundActor<Player>(owner, 50))
+                {
                     player.QueuePacket(owner.GetHateTypePacket(player));
+                    player.QueuePacket(SetEnmityIndicatorPacket.BuildPacket(
+                        owner.actorId,
+                        target?.actorId ?? SetEnmityIndicatorPacket.NO_ENMITY_TARGET,
+                        target == null ? (ushort)0 : (ushort)100));
+                }
 
                 base.ChangeTarget(target);
             }

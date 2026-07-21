@@ -32,8 +32,8 @@ namespace AetherXIV.Core.Lobby
             DevDiagnostics.Configure("Lobby", args);
 
             Log.Info("==================================");
-            Log.Info("AetherXIV Core v1.3: Lobby Server");
-            Log.Info("Version: 1.3");
+            Log.Info("AetherXIV Core v2.0: Lobby Server");
+            Log.Info("Version: 2.0 (build 21985)");
             Log.Info("==================================");
 
             try
