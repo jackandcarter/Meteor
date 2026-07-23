@@ -197,6 +197,12 @@ verify_database() {
     echo "Gridania tutorial actor-role contract mismatch: ${gridania_tutorial_actors:-missing}" >&2
     return 30
   }
+  local gridania_man0g1_guild_contract
+  gridania_man0g1_guild_contract="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT CONCAT((SELECT COUNT(*) FROM server_zones_privateareas WHERE parentZoneId=155 AND privateAreaName='PrivateAreaMasterPast' AND privateAreaType=0),':',(SELECT COUNT(*) FROM gamedata_actor_class WHERE id IN (1000028,1000033,1000372,1000460,1000513,1000737,1001072,1700030) AND classPath='/Chara/Npc/Populace/PopulaceStandard' AND propertyFlags=19),':',(SELECT COUNT(*) FROM server_spawn_locations WHERE id BETWEEN 1021 AND 1032 AND ((id=1022 AND uniqueId='conjurers_guild_scene_entry' AND zoneId=206) OR (id<>1022))))")"
+  [[ "${gridania_man0g1_guild_contract}" == "1:8:12" ]] || {
+    echo "Gridania Man0g1 guild contract mismatch: ${gridania_man0g1_guild_contract:-missing}" >&2
+    return 31
+  }
   local contract
   contract="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT CONCAT(schema_generation,':',schema_version,':',compatibility_id,':',baseline_id) FROM aether_database_compatibility WHERE compatibility_key='direct-core' LIMIT 1")"
   [[ "${contract}" == "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ]] || {

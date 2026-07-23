@@ -192,8 +192,8 @@ namespace
     OverlayVertex OverlayVertices[OverlayMaxVertices]{};
     DWORD OverlayVertexCount = 0;
     DWORD OverlayStartTicks = 0;
-    bool SettingsWindowOpen = false;
     bool PluginInstallerOpen = false;
+    bool PluginManagerSettingsRequestPending = false;
     bool UmbraDockExpanded = true;
     bool LastMouseDown = false;
     bool LastInsertDown = false;
@@ -781,6 +781,15 @@ namespace
         return pressed;
     }
 
+    void OpenUmbraPluginManagerSettings()
+    {
+        PluginInstallerOpen = true;
+        PluginManagerSettingsRequestPending = true;
+        UmbraLibrarySection = 4;
+        UmbraDockExpanded = true;
+        UmbraDockLastInteractionTicks = GetTickCount();
+    }
+
     void UpdateOverlayInput()
     {
         ResolveUser32Input();
@@ -805,26 +814,12 @@ namespace
         }
 
         if (IsKeyPressed(VK_INSERT, LastInsertDown))
-        {
-            SettingsWindowOpen = !SettingsWindowOpen;
-            if (SettingsWindowOpen)
-                PluginInstallerOpen = false;
-            UmbraDockExpanded = true;
-            UmbraDockLastInteractionTicks = GetTickCount();
-        }
+            OpenUmbraPluginManagerSettings();
         if (IsKeyPressed(VK_F9, LastF9Down))
-        {
-            SettingsWindowOpen = !SettingsWindowOpen;
-            if (SettingsWindowOpen)
-                PluginInstallerOpen = false;
-            UmbraDockExpanded = true;
-            UmbraDockLastInteractionTicks = GetTickCount();
-        }
+            OpenUmbraPluginManagerSettings();
         if (IsKeyPressed(VK_F10, LastF10Down))
         {
             PluginInstallerOpen = !PluginInstallerOpen;
-            if (PluginInstallerOpen)
-                SettingsWindowOpen = false;
             UmbraDockExpanded = true;
             UmbraDockLastInteractionTicks = GetTickCount();
         }
@@ -1028,25 +1023,6 @@ namespace
             OverlayAddPanel(rect, D3DCOLOR_ARGB(220, 12, 18, 24), border);
             OverlayAddText(rect.x + 12, rect.y + 10, messages[index], 2, D3DCOLOR_ARGB(255, 238, 246, 250));
         }
-    }
-
-    void DrawSettingsWindow()
-    {
-        OverlayRect rect{ 8, 48, 370, 176 };
-        OverlayRect closeRect{ rect.x + rect.width - 28, rect.y + 8, 18, 18 };
-        OverlayAddPanel(rect, D3DCOLOR_ARGB(232, 10, 18, 25), D3DCOLOR_ARGB(240, 0, 204, 255));
-        OverlayAddText(rect.x + 14, rect.y + 14, "UMBRA SETTINGS", 2, D3DCOLOR_ARGB(255, 236, 250, 255));
-        OverlayAddPanel(closeRect, D3DCOLOR_ARGB(220, 35, 46, 54), D3DCOLOR_ARGB(210, 100, 120, 132));
-        OverlayAddText(closeRect.x + 5, closeRect.y + 4, "X", 1, D3DCOLOR_ARGB(255, 240, 245, 248));
-
-        OverlayAddText(rect.x + 18, rect.y + 48, "DEBUG LOGGING: ON", 2, D3DCOLOR_ARGB(245, 182, 231, 255));
-        OverlayAddText(rect.x + 18, rect.y + 72, "DEV UI: ON", 2, D3DCOLOR_ARGB(245, 182, 231, 255));
-        OverlayAddText(rect.x + 18, rect.y + 96, "SAFE MODE: OFF", 2, D3DCOLOR_ARGB(245, 182, 231, 255));
-        OverlayAddText(rect.x + 18, rect.y + 120, "DX9 HOOK: READY", 2, D3DCOLOR_ARGB(245, 182, 231, 255));
-        OverlayAddText(rect.x + 18, rect.y + 144, "IMGUI: PENDING", 2, D3DCOLOR_ARGB(245, 210, 218, 132));
-
-        if (MouseClicked && IsRectHot(closeRect))
-            SettingsWindowOpen = false;
     }
 
     void DrawPluginInstallerWindow()
@@ -1872,7 +1848,7 @@ namespace
         if (ImGui::Begin("##UmbraDock", nullptr, flags))
         {
             dockHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-            if (DrawUmbraDockButton("##UmbraRoot", 0, "Umbra", SettingsWindowOpen || PluginInstallerOpen || UmbraDeveloperBarVisible, ImVec2(39.0f, 39.0f)))
+            if (DrawUmbraDockButton("##UmbraRoot", 0, "Umbra", PluginInstallerOpen || UmbraDeveloperBarVisible, ImVec2(39.0f, 39.0f)))
             {
                 UmbraDockExpanded = !UmbraDockExpanded;
                 UmbraDockLastInteractionTicks = now;
@@ -1884,18 +1860,11 @@ namespace
                 if (DrawUmbraDockButton("##UmbraPluginsButton", 2, "Plugin Manager", PluginInstallerOpen, ImVec2(34.0f, 34.0f)))
                 {
                     PluginInstallerOpen = !PluginInstallerOpen;
-                    if (PluginInstallerOpen)
-                        SettingsWindowOpen = false;
                     UmbraDockLastInteractionTicks = now;
                 }
                 ImGui::SameLine();
-                if (DrawUmbraDockButton("##UmbraSettingsButton", 1, "Umbra Settings", SettingsWindowOpen, ImVec2(34.0f, 34.0f)))
-                {
-                    SettingsWindowOpen = !SettingsWindowOpen;
-                    if (SettingsWindowOpen)
-                        PluginInstallerOpen = false;
-                    UmbraDockLastInteractionTicks = now;
-                }
+                if (DrawUmbraDockButton("##UmbraSettingsButton", 1, "Plugin Manager Settings", PluginInstallerOpen, ImVec2(34.0f, 34.0f)))
+                    OpenUmbraPluginManagerSettings();
                 if (DevUiEnabled)
                 {
                     ImGui::SameLine();
@@ -1912,10 +1881,9 @@ namespace
         ImGui::PopStyleColor(2);
         ImGui::PopStyleVar(2);
 
-        if (dockHovered || SettingsWindowOpen || PluginInstallerOpen || UmbraDeveloperBarVisible)
+        if (dockHovered || PluginInstallerOpen || UmbraDeveloperBarVisible)
             UmbraDockLastInteractionTicks = now;
         if (UmbraDockExpanded
-            && !SettingsWindowOpen
             && !PluginInstallerOpen
             && !UmbraDeveloperBarVisible
             && now - UmbraDockLastInteractionTicks > UmbraDockCollapseMs)
@@ -2010,11 +1978,7 @@ namespace
                     RefreshUmbraDeveloperLog(true);
                 ImGui::Separator();
                 if (ImGui::MenuItem("Open Umbra Settings"))
-                {
-                    SettingsWindowOpen = true;
-                    UmbraSettingsSection = 2;
-                    PluginInstallerOpen = false;
-                }
+                    OpenUmbraPluginManagerSettings();
                 if (ImGui::MenuItem("Save Developer Preferences"))
                     SaveUmbraAppearanceSettings();
                 ImGui::Separator();
@@ -2093,7 +2057,11 @@ namespace
     {
         const UmbraTheme& theme = GetUmbraTheme();
         float width = ImGui::GetContentRegionAvail().x;
-        bool pressed = ImGui::InvisibleButton(id, ImVec2(width, 42.0f));
+        ImVec2 textSize = ImGui::CalcTextSize(label);
+        float height = textSize.y + 20.0f;
+        if (height < 42.0f)
+            height = 42.0f;
+        bool pressed = ImGui::InvisibleButton(id, ImVec2(width, height));
         bool hovered = ImGui::IsItemHovered();
         ImVec2 min = ImGui::GetItemRectMin();
         ImVec2 max = ImGui::GetItemRectMax();
@@ -2105,8 +2073,9 @@ namespace
                 : ImVec4(theme.frameHovered.x, theme.frameHovered.y, theme.frameHovered.z, 0.58f)), 8.0f);
             drawList->AddRect(min, max, ColorU32(selected ? theme.accent : theme.border), 8.0f, 0, selected ? 1.3f : 1.0f);
         }
-        DrawUmbraSdkIcon(drawList, icon, ImVec2(min.x + 20.0f, min.y + 21.0f), 18.0f, ColorU32(selected ? theme.accentHover : theme.mutedText));
-        drawList->AddText(ImVec2(min.x + 42.0f, min.y + 12.0f), ColorU32(selected ? theme.text : theme.mutedText), label);
+        float centerY = min.y + height * 0.5f;
+        DrawUmbraSdkIcon(drawList, icon, ImVec2(min.x + 20.0f, centerY), 18.0f, ColorU32(selected ? theme.accentHover : theme.mutedText));
+        drawList->AddText(ImVec2(min.x + 42.0f, centerY - textSize.y * 0.5f), ColorU32(selected ? theme.text : theme.mutedText), label);
         return pressed;
     }
 
@@ -2319,40 +2288,28 @@ namespace
             UmbraDeveloperBarVisible = true;
     }
 
-    void DrawUmbraImGuiSettingsWindow()
+    void DrawUmbraEmbeddedSettingsContent()
     {
         if (InterlockedCompareExchange(&UmbraSettingsWindowRenderedLogged, 1, 0) == 0)
-            AppendDx9LogLiteral(L"umbra_settings_window_rendered=true");
-        ImGuiIO& io = ImGui::GetIO();
+            AppendDx9LogLiteral(L"umbra_settings_content_rendered=true");
         const UmbraThemeTuning& tuning = GetUmbraThemeTuning();
-        float desiredWidth = 820.0f * tuning.uiScale;
-        float desiredHeight = 650.0f * tuning.uiScale;
-        float maximumWidth = io.DisplaySize.x - 36.0f;
-        float maximumHeight = io.DisplaySize.y - 48.0f;
-        if (maximumWidth < 320.0f) maximumWidth = 320.0f;
-        if (maximumHeight < 280.0f) maximumHeight = 280.0f;
-        float minimumWidth = 680.0f * tuning.uiScale;
-        float minimumHeight = 500.0f * tuning.uiScale;
-        if (minimumWidth > maximumWidth) minimumWidth = maximumWidth;
-        if (minimumHeight > maximumHeight) minimumHeight = maximumHeight;
-        if (desiredWidth > maximumWidth) desiredWidth = maximumWidth;
-        if (desiredHeight > maximumHeight) desiredHeight = maximumHeight;
-        if (desiredWidth < minimumWidth) desiredWidth = minimumWidth;
-        if (desiredHeight < minimumHeight) desiredHeight = minimumHeight;
-        ImGui::SetNextWindowPos(ImVec2(18.0f, 58.0f), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(desiredWidth, desiredHeight), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(minimumWidth, minimumHeight), ImVec2(maximumWidth, maximumHeight));
-        if (!ImGui::Begin("Umbra Settings", &SettingsWindowOpen, ImGuiWindowFlags_NoSavedSettings))
-        {
-            ImGui::End();
-            return;
-        }
-
         const UmbraTheme& theme = GetUmbraTheme();
-        DrawUmbraWindowGradient();
-        DrawUmbraWindowAccent(theme);
+        ImGui::PushFont(nullptr, 24.0f);
+        ImGui::TextUnformatted("Umbra Settings");
+        ImGui::PopFont();
+        ImGui::TextColored(theme.mutedText, "Configure framework behavior, appearance, developer tools and diagnostics.");
+        ImGui::Spacing();
+
+        float contentHeight = ImGui::GetContentRegionAvail().y;
+        if (contentHeight < 1.0f)
+            contentHeight = 1.0f;
+        const ImGuiStyle& style = ImGui::GetStyle();
+        float longestLabelWidth = ImGui::CalcTextSize("Diagnostics").x;
+        float sidebarWidth = 42.0f + longestLabelWidth + 16.0f + style.WindowPadding.x * 2.0f;
+        if (sidebarWidth < 190.0f)
+            sidebarWidth = 190.0f;
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(theme.titleBg.x, theme.titleBg.y, theme.titleBg.z, 0.86f * tuning.windowOpacity));
-        if (ImGui::BeginChild("##UmbraSettingsSidebar", ImVec2(178.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding))
+        if (ImGui::BeginChild("##UmbraEmbeddedSettingsSidebar", ImVec2(sidebarWidth, contentHeight), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding))
         {
             ImGui::PushFont(nullptr, 21.0f);
             ImGui::TextUnformatted("Settings");
@@ -2367,7 +2324,7 @@ namespace
         ImGui::EndChild();
         ImGui::PopStyleColor();
         ImGui::SameLine(0.0f, 12.0f);
-        if (ImGui::BeginChild("##UmbraSettingsContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding))
+        if (ImGui::BeginChild("##UmbraEmbeddedSettingsContent", ImVec2(0.0f, contentHeight), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding))
         {
             if (UmbraSettingsSection == 1)
                 DrawUmbraAppearanceSettings();
@@ -2379,7 +2336,6 @@ namespace
                 DrawUmbraGeneralSettings();
         }
         ImGui::EndChild();
-        ImGui::End();
     }
 
     bool DrawUmbraLibraryButton(
@@ -2652,33 +2608,7 @@ namespace
 
     void DrawUmbraLibrarySettingsContent()
     {
-        const UmbraTheme& theme = GetUmbraTheme();
-        ImGui::PushFont(nullptr, 24.0f);
-        ImGui::TextUnformatted("Plugin Settings");
-        ImGui::PopFont();
-        ImGui::TextColored(theme.mutedText, "Configure the framework UI and development features.");
-        ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, theme.childBg);
-        if (ImGui::BeginChild("##UmbraSettingsCard", ImVec2(0.0f, 230.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding))
-        {
-            ImGui::PushFont(nullptr, 19.0f);
-            ImGui::TextUnformatted("Interface & development");
-            ImGui::PopFont();
-            ImGui::Separator();
-            DrawUmbraLibraryToggle("##LibraryDebug", "Debug logging", &DebugLoggingEnabled);
-            DrawUmbraLibraryToggle("##LibraryDevUi", "Developer UI", &DevUiEnabled);
-            RefreshDevBridgeControlState(false);
-            bool devBridge = DevBridgeEnabled;
-            DrawUmbraLibraryToggle("##LibraryDevBridge", "Umbra Dev Bridge", &devBridge);
-            if (devBridge != DevBridgeEnabled)
-                WriteDevBridgeControlState(devBridge);
-            ImGui::Separator();
-            ImGui::SetNextItemWidth(-1.0f);
-            if (ImGui::Combo("##LibraryTheme", &UmbraThemeIndex, GetUmbraThemeNames(), GetUmbraThemeCount()))
-                ConfigureUmbraImGuiStyle();
-        }
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
+        DrawUmbraEmbeddedSettingsContent();
     }
 
     void DrawUmbraLibraryRepositoriesContent()
@@ -2985,8 +2915,9 @@ namespace
             if (viewport != nullptr)
             {
                 renderEvent.viewportWidth = viewport->Width;
-            renderEvent.viewportHeight = viewport->Height;
-            renderEvent.reserved = PluginInstallerOpen ? 1u : 0u;
+                renderEvent.viewportHeight = viewport->Height;
+                renderEvent.reserved = (PluginInstallerOpen ? 1u : 0u)
+                    | (PluginManagerSettingsRequestPending ? 2u : 0u);
             }
 
             ManagedRenderThreadId = GetCurrentThreadId();
@@ -3010,6 +2941,8 @@ namespace
                 ManagedUiWindowDepth--;
             }
             InterlockedExchange(&ManagedUiCallbackActive, 0);
+            if (result == 0)
+                PluginManagerSettingsRequestPending = false;
         }
 
         if (result == 0 && InterlockedCompareExchange(&ManagedRenderBridgeReadyLogged, 1, 0) == 0)
@@ -3061,8 +2994,6 @@ namespace
         DrawUmbraImGuiDock();
         DrawUmbraImGuiToasts(viewport);
         DrawUmbraDeveloperLogWindow();
-        if (SettingsWindowOpen)
-            DrawUmbraImGuiSettingsWindow();
         if (diagnoseFirstFrame)
             AppendDx9LogLiteral(L"umbra_imgui_first_frame_stage=native_ui_drawn");
         int managedResult = NotifyManagedRenderEvent(UmbraRenderFrame, &viewport);
@@ -3106,7 +3037,7 @@ namespace
         OverlayRect settingsIcon{ 8, 8, 32, 32 };
         OverlayRect pluginsIcon{ 48, 8, 32, 32 };
         if (MouseClicked && IsRectHot(settingsIcon))
-            SettingsWindowOpen = !SettingsWindowOpen;
+            OpenUmbraPluginManagerSettings();
         if (MouseClicked && IsRectHot(pluginsIcon))
             PluginInstallerOpen = !PluginInstallerOpen;
 
@@ -3141,12 +3072,10 @@ namespace
             OverlayAddRect(10.0f, 10.0f, 20.0f, 20.0f, D3DCOLOR_ARGB(230, 0, 180, 255));
         }
 
-        DrawIcon(settingsIcon, "S", SettingsWindowOpen, IsRectHot(settingsIcon));
+        DrawIcon(settingsIcon, "S", PluginInstallerOpen, IsRectHot(settingsIcon));
         DrawIcon(pluginsIcon, "P", PluginInstallerOpen, IsRectHot(pluginsIcon));
         OverlayAddText(90, 18, "UMBRA", 2, D3DCOLOR_ARGB(235, 220, 236, 244));
         DrawBottomRightToasts(static_cast<int>(viewport.Width), static_cast<int>(viewport.Height));
-        if (SettingsWindowOpen)
-            DrawSettingsWindow();
         if (PluginInstallerOpen)
             DrawPluginInstallerWindow();
         OverlayFlush(device);
@@ -4731,6 +4660,14 @@ extern "C" __declspec(dllexport) void __stdcall UmbraUiArtwork(const char* seed,
     drawList->AddRectFilled(ImVec2(min.x + 5.0f, min.y + 5.0f), ImVec2(max.x - 5.0f, max.y - 5.0f), ColorU32(ImVec4(accent.x, accent.y, accent.z, 0.28f)), 8.0f);
     drawList->AddRect(min, max, ColorU32(ImVec4(accent.x, accent.y, accent.z, 0.90f)), 11.0f, 0, 1.5f);
     DrawUmbraSdkIcon(drawList, icon, ImVec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f), size * 0.46f, ColorU32(ImVec4(0.96f, 0.94f, 1.0f, 1.0f)));
+}
+
+extern "C" __declspec(dllexport) void __stdcall UmbraUiDrawSettingsContent()
+{
+    if (!IsManagedUiCallAvailable() || ManagedUiWindowDepth <= 0)
+        return;
+
+    DrawUmbraEmbeddedSettingsContent();
 }
 
 extern "C" __declspec(dllexport) void __stdcall UmbraUiSetPluginManagerOpen(int isOpen)

@@ -48,6 +48,134 @@
       "PushCommand": 0,
       "PushCommandPriority": 0,
       "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000028,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 1100010,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene Swethyna variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000033,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 2000010,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene O-App-Pesi variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000372,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 1000141,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene Ingram variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000460,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 2200149,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene Hetzkin variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000513,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 1500077,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene Gugula variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000737,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 1100121,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene Biddy variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1001072,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 1400050,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "Quest-scene Challinie variant restored as a standard populace actor.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1700030,
+      "ClassPath": "/Chara/Npc/Populace/PopulaceStandard",
+      "DisplayNameId": 1300064,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}",
+      "PropertyFlags": 19,
+      "Provenance": { "Notes": "The quest-specific Soileine variant is used in both the public guild and instance-13 cast.", "SourceRef": "quest:110006 phase:15; instance:13; zone:206", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" },
+      "PushCommand": 0,
+      "PushCommandPriority": 0,
+      "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000237, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1500021,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Instance 14/15 Fufucha actor restored from the client quest layouts.", "SourceRef": "quest:110006 instances:14,15", "SourceType": "reviewed-1x-quest-and-instance-layout", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000238, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1000029,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"emoteId\":107,\"conditionName\":\"emoteDefault1\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Powle's Instance 14 clap target restored from the client quest phase.", "SourceRef": "quest:110006 phase:50 actor:1000238", "SourceType": "reviewed-1x-client-quest-phase", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000239, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1100025,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"emoteId\":105,\"conditionName\":\"emoteDefault1\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Sansa's Instance 14 bow target restored from the client quest phase.", "SourceRef": "quest:110006 phase:50 actor:1000239", "SourceType": "reviewed-1x-client-quest-phase", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000409, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1200068,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"emoteId\":106,\"conditionName\":\"emoteDefault1\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Nicollaux's Instance 14 cheer target restored from the client quest phase.", "SourceRef": "quest:110006 phase:50 actor:1000409", "SourceType": "reviewed-1x-client-quest-phase", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000410, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1300028,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"emoteId\":108,\"conditionName\":\"emoteDefault1\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Aunillie's Instance 14 beckon target restored from the client quest phase.", "SourceRef": "quest:110006 phase:50 actor:1000410", "SourceType": "reviewed-1x-client-quest-phase", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000411, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1100294,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"emoteId\":122,\"conditionName\":\"emoteDefault1\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Elyn's Instance 14 lookout target restored from the client quest phase.", "SourceRef": "quest:110006 phase:50 actor:1000411", "SourceType": "reviewed-1x-client-quest-phase", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1000412, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 1000414,
+      "EventConditions": "{\"talkEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"conditionName\":\"talkDefault\"}],\"noticeEventConditions\":[{\"unknown1\":0,\"unknown2\":1,\"conditionName\":\"noticeEvent\"}],\"emoteEventConditions\":[{\"unknown1\":4,\"unknown2\":0,\"emoteId\":101,\"conditionName\":\"emoteDefault1\"}]}", "PropertyFlags": 19,
+      "Provenance": { "Notes": "Ryd's Instance 14 surprised target restored from the client quest phase.", "SourceRef": "quest:110006 phase:50 actor:1000412", "SourceType": "reviewed-1x-client-quest-phase", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
+    },
+    {
+      "ActorClassId": 1090201, "ClassPath": "/Chara/Npc/Populace/PopulaceStandard", "DisplayNameId": 0,
+      "EventConditions": "{\"pushWithCircleEventConditions\":[{\"conditionName\":\"pushDefault\",\"radius\":4.0,\"secondaryRadius\":4.0,\"outwards\":false,\"silent\":false,\"isDisabled\":true,\"flags\":0,\"unknown2\":0,\"useSourceActorId\":true}]}", "PropertyFlags": 1,
+      "Provenance": { "Notes": "Quest-owned Instance 15 children approach trigger, following sequential Man0g1 trigger identity 1090200/1090201/1090202.", "SourceRef": "quest:110006 instance:15 continuation actor:1090201", "SourceType": "reviewed-1x-quest-flow-and-working-runtime", "Status": "RepoConfirmed" }, "PushCommand": 0, "PushCommandPriority": 0, "PushCommandSub": 0
     }
   ],
   "actorAppearances": [
@@ -98,6 +226,38 @@
       "Throwing": 0,
       "Voice": 0,
       "Waist": 0
+    },
+    {
+      "ActorClassId": 1000028, "Base": 2, "Size": 2, "HairStyle": 8, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 6, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 0, "FaceIrisSize": 0, "FaceEyeShape": 0, "FaceNose": 0, "FaceFeatures": 0, "FaceMouth": 0, "Ears": 0, "HairColor": 12, "SkinColor": 12, "EyeColor": 12, "Voice": 0, "MainHand": 168821810, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 19499, "Body": 12800, "Legs": 8384, "Hands": 14656, "Feet": 13665, "Waist": 0, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1000028", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1000033, "Base": 21, "Size": 1, "HairStyle": 2, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 1, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 4, "FaceIrisSize": 0, "FaceEyeShape": 0, "FaceNose": 3, "FaceFeatures": 2, "FaceMouth": 0, "Ears": 0, "HairColor": 4, "SkinColor": 14, "EyeColor": 3, "Voice": 0, "MainHand": 347081758, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 0, "Body": 1921, "Legs": 0, "Hands": 0, "Feet": 0, "Waist": 0, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1000033", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1000372, "Base": 1, "Size": 3, "HairStyle": 5, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 1, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 2, "FaceIrisSize": 0, "FaceEyeShape": 5, "FaceNose": 3, "FaceFeatures": 1, "FaceMouth": 3, "Ears": 1, "HairColor": 25, "SkinColor": 14, "EyeColor": 7, "Voice": 0, "MainHand": 0, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 7360, "Body": 35268, "Legs": 5348, "Hands": 5344, "Feet": 4259, "Waist": 177152, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1000372", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1000460, "Base": 9, "Size": 2, "HairStyle": 4, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 1, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 0, "FaceIrisSize": 0, "FaceEyeShape": 4, "FaceNose": 4, "FaceFeatures": 3, "FaceMouth": 3, "Ears": 2, "HairColor": 69, "SkinColor": 58, "EyeColor": 61, "Voice": 0, "MainHand": 0, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 7360, "Body": 35268, "Legs": 5348, "Hands": 5344, "Feet": 4259, "Waist": 177152, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1000460", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1000513, "Base": 6, "Size": 2, "HairStyle": 1, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 4, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 2, "FaceIrisSize": 1, "FaceEyeShape": 1, "FaceNose": 3, "FaceFeatures": 0, "FaceMouth": 3, "Ears": 3, "HairColor": 66, "SkinColor": 51, "EyeColor": 65, "Voice": 0, "MainHand": 347081798, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 7392, "Body": 35136, "Legs": 2147, "Hands": 5282, "Feet": 5408, "Waist": 0, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1000513", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1000737, "Base": 2, "Size": 2, "HairStyle": 9, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 3, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 1, "FaceIrisSize": 1, "FaceEyeShape": 1, "FaceNose": 4, "FaceFeatures": 1, "FaceMouth": 1, "Ears": 0, "HairColor": 8, "SkinColor": 11, "EyeColor": 11, "Voice": 0, "MainHand": 331351052, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 11339, "Body": 7587, "Legs": 3107, "Hands": 5282, "Feet": 4288, "Waist": 176128, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1000737", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1001072, "Base": 5, "Size": 2, "HairStyle": 1, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 8, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 1, "FaceIrisSize": 1, "FaceEyeShape": 3, "FaceNose": 5, "FaceFeatures": 2, "FaceMouth": 2, "Ears": 1, "HairColor": 70, "SkinColor": 53, "EyeColor": 55, "Voice": 0, "MainHand": 347079711, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 9664, "Body": 7712, "Legs": 2144, "Hands": 5280, "Feet": 5348, "Waist": 0, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1001072", "SourceType": "client-seed", "Status": "RepoConfirmed" }
+    },
+    {
+      "ActorClassId": 1700030, "Base": 4, "Size": 2, "HairStyle": 8, "HairHighlightColor": 0, "HairVariation": 0, "FaceType": 8, "Characteristics": 0, "CharacteristicsColor": 0, "FaceEyebrows": 4, "FaceIrisSize": 0, "FaceEyeShape": 5, "FaceNose": 2, "FaceFeatures": 1, "FaceMouth": 3, "Ears": 0, "HairColor": 16, "SkinColor": 14, "EyeColor": 11, "Voice": 0, "MainHand": 347081798, "OffHand": 0, "SpMainHand": 0, "SpOffHand": 0, "Throwing": 0, "Pack": 0, "Pouch": 0, "Head": 7392, "Body": 35136, "Legs": 2147, "Hands": 5282, "Feet": 5408, "Waist": 0, "Neck": 0, "LeftEar": 0, "RightEar": 0, "LeftIndex": 0, "RightIndex": 0, "LeftFinger": 0, "RightFinger": 0,
+      "Provenance": { "Notes": "Canonical quest-scene appearance.", "SourceRef": "gamedata_actor_appearance:1700030", "SourceType": "client-seed", "Status": "RepoConfirmed" }
     }
   ],
   "staticActorSpawns": [
@@ -146,6 +306,78 @@
       "SpawnId": 1020,
       "UniqueId": "hall_of_flames_exit",
       "ZoneId": { "Value": 233 }
+    },
+    {
+      "ActorClassId": 1700030, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -330.92, "PositionY": 8.0, "PositionZ": -1682.7, "PrivateAreaLevel": 0, "PrivateAreaName": "",
+      "Provenance": { "Notes": "Public conjurers' guild quest variant.", "SourceRef": "quest:110006 phase:15; zone:206", "SourceType": "reviewed-1x-quest-and-zone-layout", "Status": "RepoConfirmed" },
+      "Rotation": 0.0, "SpawnId": 1021, "UniqueId": "soileine_man0g1", "ZoneId": { "Value": 206 }
+    },
+    {
+      "ActorClassId": 1099046, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -340.62, "PositionY": 8.09, "PositionZ": -1684.69, "PrivateAreaLevel": 0, "PrivateAreaName": "",
+      "Provenance": { "Notes": "Three-unit conjurers' guild scene-entry push trigger.", "SourceRef": "quest:110006 phase:15; zone:206", "SourceType": "reviewed-1x-quest-and-zone-layout", "Status": "RepoConfirmed" },
+      "Rotation": 1.17, "SpawnId": 1022, "UniqueId": "conjurers_guild_scene_entry", "ZoneId": { "Value": 206 }
+    },
+    {
+      "ActorClassId": 1000009, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -350.5, "PositionY": 6.24, "PositionZ": -1693.2, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Yda cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": -2.2, "SpawnId": 1023, "UniqueId": "man0g1_yda", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000010, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -351.5, "PositionY": 6.24, "PositionZ": -1692.6, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Papalymo cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": -2.9, "SpawnId": 1024, "UniqueId": "man0g1_papalymo", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000033, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -351.5, "PositionY": 6.24, "PositionZ": -1694.2, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 O-App-Pesi cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 0.2, "SpawnId": 1025, "UniqueId": "man0g1_o_app_pesi", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1700030, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -330.92, "PositionY": 8.0, "PositionZ": -1682.7, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Soileine cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 0.0, "SpawnId": 1026, "UniqueId": "man0g1_soileine", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000460, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -329.0, "PositionY": 8.0, "PositionZ": -1682.7, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Hetzkin cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 0.0, "SpawnId": 1027, "UniqueId": "man0g1_hetzkin", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000513, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -355.5, "PositionY": 6.82, "PositionZ": -1686.3, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Gugula cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 2.8, "SpawnId": 1028, "UniqueId": "man0g1_gugula", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000737, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -342.09, "PositionY": 8.0, "PositionZ": -1674.76, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Biddy cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 1.31, "SpawnId": 1029, "UniqueId": "man0g1_biddy", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000028, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -352.5, "PositionY": 6.24, "PositionZ": -1694.0, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Swethyna cast placement and scene exit owner.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 1.0, "SpawnId": 1030, "UniqueId": "man0g1_swethyna", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1000372, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -333.3, "PositionY": 8.0, "PositionZ": -1669.6, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Ingram cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": 2.99, "SpawnId": 1031, "UniqueId": "man0g1_ingram", "ZoneId": { "Value": 155 }
+    },
+    {
+      "ActorClassId": 1001072, "ActorState": 0, "AnimationId": 0, "CustomDisplayName": null, "MapObjectInstanceId": null, "MapObjectLayoutId": null,
+      "PositionX": -325.62, "PositionY": 8.0, "PositionZ": -1676.6, "PrivateAreaLevel": 0, "PrivateAreaName": "PrivateAreaMasterPast",
+      "Provenance": { "Notes": "Instance-13 Challinie cast placement.", "SourceRef": "quest:110006 instance:13", "SourceType": "reviewed-1x-instance-layout", "Status": "RepoConfirmed" },
+      "Rotation": -1.55, "SpawnId": 1032, "UniqueId": "man0g1_challinie", "ZoneId": { "Value": 155 }
     }
   ]
 }

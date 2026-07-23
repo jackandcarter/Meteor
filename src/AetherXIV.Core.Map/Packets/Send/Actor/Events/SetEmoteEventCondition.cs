@@ -20,7 +20,12 @@ namespace AetherXIV.Core.Map.packets.send.actor.events
                 using (BinaryWriter binWriter = new BinaryWriter(mem))
                 {
                     EventConditionDiagnostics.TraceEmote(sourceActorId, condition);
-                    binWriter.Write((Byte)condition.unknown1); //4
+                    // Retail 0x016C body: u8 kind, u8 opaque, u16 emote id,
+                    // then the fixed condition name. Omitting unknown2 shifts
+                    // the id/name and makes the client treat a matching quest
+                    // emote as an ordinary EmoteStandardCommand.
+                    binWriter.Write((Byte)4);
+                    binWriter.Write((Byte)condition.unknown2);
                     binWriter.Write((UInt16)condition.emoteId); //82, 76, 6E
                     binWriter.Write(Encoding.ASCII.GetBytes(condition.conditionName), 0, Encoding.ASCII.GetByteCount(condition.conditionName) >= 0x24 ? 0x24 : Encoding.ASCII.GetByteCount(condition.conditionName));
                 }

@@ -4,11 +4,55 @@ using AetherXIV.Core.Map.actors.group;
 using AetherXIV.Core.Map.packets.send.actor;
 using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.packets.send.group;
+using MoonSharp.Interpreter;
+using MoonSharp.Interpreter.Interop;
 
 namespace AetherXIV.Core.Map.Tests;
 
 public sealed class GridaniaWireSafetyTests
 {
+    [Fact]
+    public void QuestRuntimeExposesSequenceAndFourPersistentCounters()
+    {
+        Quest quest = new(0xA0F00000 | 110006u, "Man0g1");
+        QuestData data = quest.GetData();
+
+        Assert.Equal(0u, quest.GetSequence());
+        Assert.Equal(quest.GetSequence(), quest.getSequence());
+        data.SetCounter(0, 5);
+        data.SetCounter(3, ushort.MaxValue);
+        Assert.Equal(6u, data.IncCounter(0));
+        Assert.Equal(ushort.MaxValue - 1u, data.DecCounter(3));
+        Assert.Equal(0u, data.GetCounter(4));
+    }
+
+    [Fact]
+    public void QuestRuntimeMethodsBindWithTheLuaSignaturesUsedByStoryScripts()
+    {
+        UserData.RegistrationPolicy = InteropRegistrationPolicy.Automatic;
+        Quest quest = new(0xA0F00000 | 110006u, "Man0g1");
+        Script script = new();
+        script.Globals["quest"] = DynValue.FromObject(script, quest);
+
+        script.DoString("quest:SetENpc(1000230, 2); quest:GetData():SetCounter(1, 15)");
+
+        Assert.Equal(15u, quest.GetData().GetCounter(1));
+    }
+
+    [Fact]
+    public void LuaStoryScriptsEnumerateClrActorListsInsteadOfIndexingThemAsLuaArrays()
+    {
+        UserData.RegistrationPolicy = InteropRegistrationPolicy.Automatic;
+        Script script = new();
+        script.Globals["actors"] = DynValue.FromObject(script, new List<int> { 3, 5 });
+
+        DynValue sum = script.DoString("local total = 0; for actor in actors do total = total + actor end; return total");
+
+        Assert.Equal(8d, sum.Number);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            script.DoString("return actors[#actors]"));
+    }
+
     [Fact]
     public void ContentRosterX08MatchesRetailPacketSizeAndOffset()
     {

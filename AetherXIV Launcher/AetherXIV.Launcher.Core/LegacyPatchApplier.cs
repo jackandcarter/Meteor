@@ -370,8 +370,8 @@ public static class LegacyPatchApplier
 
         // Mode 0x44 is the ZiPatch delete form when the terminal item has
         // no body and transitions a real source file to size zero.  Both the
-        // original Seventh Umbral implementation and its Garlemald port skip
-        // body-less items, but retail patch D2010.09.19.0000 uses exactly
+        // earlier community implementations skip body-less items, but retail
+        // patch D2010.09.19.0000 uses exactly
         // this record shape for thousands of removals.
         bool deleteFile = finalEntryMode == 0x44
             && !wrotePayload

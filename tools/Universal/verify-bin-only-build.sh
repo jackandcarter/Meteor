@@ -62,7 +62,8 @@ for configuration in "${configurations[@]}"; do
   forbidden=()
   while IFS= read -r path; do forbidden+=("${path}"); done < <(
     find "${configuration_root}" -type f \( \
-      -iname '*Tests*.dll' -o -iname '*Tests*.exe' \
+      -name '.DS_Store' \
+      -o -iname '*Tests*.dll' -o -iname '*Tests*.exe' \
       -o -iname 'AetherXIV.Map' -o -iname 'AetherXIV.Map.dll' -o -iname 'AetherXIV.Map.exe' \
       -o -iname 'AetherXIV.World' -o -iname 'AetherXIV.World.dll' -o -iname 'AetherXIV.World.exe' \
       -o -iname 'AetherXIV.Lobby' -o -iname 'AetherXIV.Lobby.dll' -o -iname 'AetherXIV.Lobby.exe' \
@@ -111,6 +112,13 @@ for configuration in "${configurations[@]}"; do
     verify_file "${platform_root}/Database/migrations/20260720_000016_gridania_tutorial_actor_roles.sql"
     verify_file "${platform_root}/Database/migrations/20260720_000017_gridania_tutorial_spawn_contract.sql"
     verify_file "${platform_root}/Database/migrations/20260720_000018_gridania_tutorial_nameplates.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000019_gridania_man0g1_guilds.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000020_gridania_man0g1_growery.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000021_gridania_man0g1_escort_and_completion.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000022_gridania_man0g1_escort_balance.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000023_gridania_man0g1_escort_boundary.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000024_gridania_man0g1_escort_boundary_polarity.sql"
+    verify_file "${platform_root}/Database/migrations/20260722_000025_gridania_man0g1_escort_actor_presentation.sql"
     grep -q 'CREATE TABLE IF NOT EXISTS server_battlenpc_spawn_audit_pins' \
       "${platform_root}/Database/ffxiv_server.sql" || {
         echo "Database baseline omits pinspawn persistence: ${platform_root}" >&2

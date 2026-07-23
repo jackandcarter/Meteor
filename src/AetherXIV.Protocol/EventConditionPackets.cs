@@ -195,18 +195,21 @@ public sealed class SetEmoteEventConditionPacketCodec : IPacketCodec<EmoteEventC
         EnsureOpcode(packet, Opcode);
         ReadOnlySpan<byte> payload = EnsurePayload(packet, PayloadSize);
         return new EmoteEventCondition(
-            EventStartPacketCodec.ReadFixedString(payload[3..], 0x24),
+            EventStartPacketCodec.ReadFixedString(payload[4..], 0x24),
             payload[0],
-            0,
-            (byte)PacketBinary.ReadUInt16LittleEndian(payload[1..]));
+            payload[1],
+            (byte)PacketBinary.ReadUInt16LittleEndian(payload[2..]));
     }
 
     public SubPacket Encode(uint sourceActorId, EmoteEventCondition packet)
     {
         byte[] payload = new byte[PayloadSize];
-        payload[0] = packet.Unknown1;
-        PacketBinary.WriteUInt16LittleEndian(payload.AsSpan(1), packet.EmoteId);
-        WriteFixedString(payload.AsSpan(3), 0x24, packet.ConditionName);
+        // The client requires the opaque byte between the kind and emote id.
+        // This is the native 0x016C layout, not padding that may be collapsed.
+        payload[0] = 4;
+        payload[1] = packet.Unknown2;
+        PacketBinary.WriteUInt16LittleEndian(payload.AsSpan(2), packet.EmoteId);
+        WriteFixedString(payload.AsSpan(4), 0x24, packet.ConditionName);
         return SubPacket.Create(Opcode, sourceActorId, payload);
     }
 }

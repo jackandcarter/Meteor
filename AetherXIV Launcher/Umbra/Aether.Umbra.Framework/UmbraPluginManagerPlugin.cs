@@ -11,6 +11,8 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
     private string? pendingUninstallId;
     private string? resultMessage;
     private bool resultSucceeded;
+    private string customRepositoryUrl = "";
+    private Task<UmbraPluginActionResult>? pendingAction;
 
     public string Name => "Umbra Plugin Manager";
 
@@ -24,6 +26,7 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
 
     public void Draw(IUmbraDrawContext drawContext)
     {
+        PollPendingAction();
         if (!runtime.PluginManager.IsOpen)
             return;
 
@@ -78,10 +81,15 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
                 if (!string.IsNullOrWhiteSpace(resultMessage))
                 {
                     drawContext.Spacing(4.0f);
-                    drawContext.Badge(
+                    drawContext.Icon(
+                        resultSucceeded ? UmbraIcon.Check : UmbraIcon.Warning,
+                        resultSucceeded ? UmbraTextTone.Success : UmbraTextTone.Error,
+                        18.0f);
+                    drawContext.SameLine();
+                    drawContext.Text(
                         resultMessage,
                         resultSucceeded ? UmbraTextTone.Success : UmbraTextTone.Error,
-                        resultSucceeded ? UmbraIcon.Check : UmbraIcon.Warning);
+                        UmbraTextStyle.Caption);
                 }
             }
             finally
@@ -150,10 +158,13 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
                 DrawInstalled(drawContext);
                 break;
             case UmbraPluginManagerTab.Supported:
-                DrawInstaller(drawContext, runtime.PluginManager.SupportedPlugins, "Discover Plugins");
+                DrawInstaller(
+                    drawContext,
+                    runtime.PluginManager.SupportedPlugins.Concat(runtime.PluginManager.AvailablePlugins).ToArray(),
+                    "Discover Plugins");
                 break;
             case UmbraPluginManagerTab.Available:
-                DrawStoreEntries(drawContext, runtime.PluginManager.AvailablePlugins, "Repositories");
+                DrawRepositories(drawContext);
                 break;
             case UmbraPluginManagerTab.Updates:
                 DrawInstaller(drawContext, runtime.PluginManager.Updates, "Plugin Updates");
@@ -338,6 +349,8 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
         drawContext.Badge(stateText, stateTone, status?.State == UmbraPluginRuntimeState.Running ? UmbraIcon.Check : UmbraIcon.Power);
         drawContext.Text($"Entry: {manifest.Entry}", UmbraTextTone.Muted, UmbraTextStyle.Caption);
         drawContext.Text($"Minimum framework: {manifest.MinimumFrameworkVersion}", UmbraTextTone.Muted, UmbraTextStyle.Caption);
+        if (!string.IsNullOrWhiteSpace(manifest.InstalledFromSource))
+            drawContext.Text($"Source: {manifest.InstalledFromSource}", UmbraTextTone.Muted, UmbraTextStyle.Caption);
         drawContext.Spacing(4.0f);
         drawContext.Text("Permissions", UmbraTextTone.Normal, UmbraTextStyle.Heading);
         drawContext.Text(
@@ -566,7 +579,11 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
                 if (!string.IsNullOrWhiteSpace(description))
                     drawContext.Text(description, UmbraTextTone.Normal, UmbraTextStyle.Body);
 
-                drawContext.Badge("Verified metadata", UmbraTextTone.Success, UmbraIcon.Shield);
+                bool supported = string.Equals(entry.Source, UmbraRepositorySource.Supported, StringComparison.OrdinalIgnoreCase);
+                drawContext.Badge(
+                    supported ? "AetherXIV supported" : "Custom · unreviewed",
+                    supported ? UmbraTextTone.Success : UmbraTextTone.Warning,
+                    supported ? UmbraIcon.Shield : UmbraIcon.Warning);
                 drawContext.SameLine();
                 drawContext.Badge($"API {entry.ApiVersion}", UmbraTextTone.Accent, UmbraIcon.Check);
                 drawContext.SameLine();
@@ -591,7 +608,7 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
         }
     }
 
-    private static void DrawStoreDetails(IUmbraDrawContext drawContext, UmbraStoreEntry? entry)
+    private void DrawStoreDetails(IUmbraDrawContext drawContext, UmbraStoreEntry? entry)
     {
         if (entry is null)
         {
@@ -607,7 +624,11 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
             $"by {(string.IsNullOrWhiteSpace(entry.Author) ? "Unknown" : entry.Author)}",
             UmbraTextTone.Muted,
             UmbraTextStyle.Caption);
-        drawContext.Badge("Verified metadata", UmbraTextTone.Success, UmbraIcon.Shield);
+        bool supported = string.Equals(entry.Source, UmbraRepositorySource.Supported, StringComparison.OrdinalIgnoreCase);
+        drawContext.Badge(
+            supported ? "AetherXIV supported" : "Custom · unreviewed",
+            supported ? UmbraTextTone.Success : UmbraTextTone.Warning,
+            supported ? UmbraIcon.Shield : UmbraIcon.Warning);
         drawContext.SameLine();
         drawContext.Badge($"API {entry.ApiVersion}", UmbraTextTone.Accent, UmbraIcon.Check);
         drawContext.Spacing(5.0f);
@@ -629,10 +650,32 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
             drawContext.Text($"Package size: {FormatBytes(entry.SizeBytes)}", UmbraTextTone.Muted);
 
         drawContext.Spacing(6.0f);
-        drawContext.Badge("Browse only", UmbraTextTone.Warning, UmbraIcon.Download);
+        UmbraPluginManifest? installed = runtime.PluginManager.InstalledPlugins.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, entry.Id, StringComparison.OrdinalIgnoreCase));
+        bool sameVersion = installed is not null
+            && string.Equals(installed.Version, entry.Version, StringComparison.OrdinalIgnoreCase);
+        if (sameVersion)
+        {
+            drawContext.Badge("Installed", UmbraTextTone.Success, UmbraIcon.Check);
+        }
+        else if (pendingAction is not null)
+        {
+            drawContext.Badge("Working…", UmbraTextTone.Accent, UmbraIcon.Refresh);
+        }
+        else if (drawContext.Button(
+            $"{(installed is null ? "Install" : "Update")}###install-{entry.Source}-{entry.Id}",
+            UmbraButtonStyle.Primary,
+            UmbraIcon.Download,
+            132.0f,
+            36.0f))
+        {
+            StartAction(runtime.InstallPluginAsync(entry));
+        }
         drawContext.Text(
-            "Installation will be enabled with transactional package verification.",
-            UmbraTextTone.Muted,
+            supported
+                ? "The package will be downloaded, verified, staged and activated with rollback protection."
+                : "Custom repository packages are checksum-verified but are not reviewed by AetherXIV.",
+            supported ? UmbraTextTone.Muted : UmbraTextTone.Warning,
             UmbraTextStyle.Caption);
         if (!string.IsNullOrWhiteSpace(entry.Changelog))
         {
@@ -642,9 +685,117 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
         }
     }
 
+    private void DrawRepositories(IUmbraDrawContext drawContext)
+    {
+        drawContext.Text("Plugin Repositories", UmbraTextTone.Normal, UmbraTextStyle.Heading);
+        drawContext.Text(
+            "Add HTTPS plugin index URLs. Valid entries appear in Discover after the repository is checked.",
+            UmbraTextTone.Muted,
+            UmbraTextStyle.Caption);
+        drawContext.InputText(
+            "##UmbraCustomRepositoryUrl",
+            ref customRepositoryUrl,
+            "https://example.github.io/repository.json",
+            2048);
+
+        if (pendingAction is null)
+        {
+            if (drawContext.Button(
+                "Add repository###repository-add",
+                UmbraButtonStyle.Primary,
+                UmbraIcon.Repository,
+                170.0f,
+                36.0f))
+            {
+                string url = customRepositoryUrl.Trim();
+                StartAction(runtime.AddCustomRepositoryAsync(url));
+                customRepositoryUrl = "";
+            }
+            drawContext.SameLine();
+            if (drawContext.Button(
+                "Refresh all###repository-refresh",
+                UmbraButtonStyle.Ghost,
+                UmbraIcon.Refresh,
+                140.0f,
+                36.0f))
+            {
+                StartAction(runtime.RefreshRepositoriesAsync());
+            }
+        }
+        else
+        {
+            drawContext.Badge("Repository operation in progress…", UmbraTextTone.Accent, UmbraIcon.Refresh);
+        }
+
+        drawContext.Spacing(8.0f);
+        drawContext.Separator();
+        drawContext.Text(
+            $"Configured sources ({runtime.PluginManager.RepositorySources.Count})",
+            UmbraTextTone.Accent,
+            UmbraTextStyle.Heading);
+        if (runtime.PluginManager.RepositorySources.Count == 0)
+        {
+            drawContext.Text("No repositories are configured.", UmbraTextTone.Muted);
+            return;
+        }
+
+        foreach (UmbraRepositorySource source in runtime.PluginManager.RepositorySources)
+        {
+            bool supported = string.Equals(source.Source, UmbraRepositorySource.Supported, StringComparison.OrdinalIgnoreCase);
+            bool visible = drawContext.BeginPanel(
+                $"##repository-{source.Url}",
+                0.0f,
+                136.0f,
+                UmbraPanelStyle.Card);
+            try
+            {
+                if (!visible)
+                    continue;
+
+                drawContext.Badge(
+                    supported ? "Managed · supported" : "Custom · unreviewed",
+                    supported ? UmbraTextTone.Success : UmbraTextTone.Warning,
+                    supported ? UmbraIcon.Shield : UmbraIcon.Warning);
+                drawContext.Text(source.Name ?? source.Url, UmbraTextTone.Normal, UmbraTextStyle.Caption);
+                if (source.Name is not null)
+                    drawContext.Text(source.Url, UmbraTextTone.Muted, UmbraTextStyle.Caption);
+                int entryCount = runtime.PluginManager.SupportedPlugins
+                    .Concat(runtime.PluginManager.AvailablePlugins)
+                    .Count(entry => string.Equals(
+                        entry.RepositoryUrl,
+                        source.Url,
+                        StringComparison.OrdinalIgnoreCase));
+                drawContext.Text($"{entryCount} compatible plugin entries", UmbraTextTone.Muted, UmbraTextStyle.Caption);
+                if (!supported && pendingAction is null)
+                {
+                    if (drawContext.Button(
+                        $"Remove###repository-remove-{source.Url}",
+                        UmbraButtonStyle.Ghost,
+                        UmbraIcon.Trash,
+                        104.0f,
+                        30.0f))
+                    {
+                        StartAction(runtime.RemoveCustomRepositoryAsync(source.Url));
+                    }
+                }
+            }
+            finally
+            {
+                drawContext.EndChild();
+            }
+            drawContext.Spacing(5.0f);
+        }
+    }
+
     private void DrawSettings(IUmbraDrawContext drawContext)
     {
         bool about = runtime.PluginManager.ActiveTab == UmbraPluginManagerTab.Logs;
+        if (!about && drawContext is UmbraDrawContext)
+        {
+            UmbraNativeUi.DrawSettingsContent();
+            return;
+        }
+
         drawContext.Text(
             about ? "About Umbra" : "Plugin Settings",
             UmbraTextTone.Normal,
@@ -754,5 +905,30 @@ internal sealed class UmbraPluginManagerPlugin(UmbraRuntime runtime) : IUmbraPlu
     {
         resultMessage = result.Message;
         resultSucceeded = result.Succeeded;
+    }
+
+    private void StartAction(Task<UmbraPluginActionResult> action)
+    {
+        if (pendingAction is not null)
+            return;
+        pendingAction = action;
+        resultMessage = null;
+    }
+
+    private void PollPendingAction()
+    {
+        Task<UmbraPluginActionResult>? action = pendingAction;
+        if (action is null || !action.IsCompleted)
+            return;
+
+        pendingAction = null;
+        if (action.IsCompletedSuccessfully)
+        {
+            Report(action.Result);
+            return;
+        }
+
+        string message = action.Exception?.GetBaseException().Message ?? "The plugin operation was cancelled.";
+        Report(UmbraPluginActionResult.Failure(message));
     }
 }

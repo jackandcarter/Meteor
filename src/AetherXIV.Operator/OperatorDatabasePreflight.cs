@@ -24,7 +24,7 @@ public static class AetherXivDatabaseCompatibility
     public const string CompatibilityId = "aetherxiv-direct-core-v2";
     public const string BaselineId = "20260716_000001_ffxiv_server_v2_baseline";
     public const string GuildleveContentMigration = "20260716_000005_guildleve_content_contract.sql";
-    public const string LatestDirectCoreMigration = "20260720_000018_gridania_tutorial_nameplates.sql";
+    public const string LatestDirectCoreMigration = "20260722_000025_gridania_man0g1_escort_actor_presentation.sql";
     public static readonly IReadOnlyList<string> RequiredDirectCoreMigrations =
     [
         "20260627_battlenpc_spawn_audit_pins.sql",
@@ -46,7 +46,14 @@ public static class AetherXivDatabaseCompatibility
         "20260719_000015_hall_of_flames_push_circle.sql",
         "20260720_000016_gridania_tutorial_actor_roles.sql",
         "20260720_000017_gridania_tutorial_spawn_contract.sql",
-        "20260720_000018_gridania_tutorial_nameplates.sql"
+        "20260720_000018_gridania_tutorial_nameplates.sql",
+        "20260722_000019_gridania_man0g1_guilds.sql",
+        "20260722_000020_gridania_man0g1_growery.sql",
+        "20260722_000021_gridania_man0g1_escort_and_completion.sql",
+        "20260722_000022_gridania_man0g1_escort_balance.sql",
+        "20260722_000023_gridania_man0g1_escort_boundary.sql",
+        "20260722_000024_gridania_man0g1_escort_boundary_polarity.sql",
+        "20260722_000025_gridania_man0g1_escort_actor_presentation.sql"
     ];
     public const string NpcServiceCatalogId = "zone-service-npcs-1.23b";
     public const string NpcServiceCatalogVersion = "2026.07.19.1";
@@ -373,6 +380,70 @@ WHERE ((s.bnpcId=6 AND s.customDisplayName='' AND g.scriptName='yda' AND p.name=
         }
         add("gridania-tutorial.actor-contract", AetherXivDatabasePreflightStatus.Passed,
             "Verified Gridania tutorial roles and localized nameplates.");
+
+        int gridaniaMan0g1GuildContract = await CountAsync(connection, """
+SELECT COUNT(*)
+FROM server_zones_privateareas
+WHERE parentZoneId=155
+  AND privateAreaName='PrivateAreaMasterPast'
+  AND privateAreaType=0
+  AND (SELECT COUNT(*) FROM gamedata_actor_class
+       WHERE id IN (1000028,1000033,1000372,1000460,1000513,1000737,1001072,1700030)
+         AND classPath='/Chara/Npc/Populace/PopulaceStandard'
+         AND propertyFlags=19)=8
+  AND (SELECT COUNT(*) FROM server_spawn_locations
+       WHERE id BETWEEN 1021 AND 1032
+         AND ((id=1022 AND uniqueId='conjurers_guild_scene_entry' AND zoneId=206) OR id<>1022))=12;
+""", cancellationToken).ConfigureAwait(false);
+        if (gridaniaMan0g1GuildContract != 1)
+        {
+            add("gridania-man0g1.guild-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
+                "The Man0g1 guild branch private area, cast, or entry trigger is missing or stale. Run the packaged Database setup tool.");
+            return;
+        }
+        add("gridania-man0g1.guild-contract", AetherXivDatabasePreflightStatus.Passed,
+            "Verified the Man0g1 dual-guild branch and conjurers' scene contract.");
+
+        int gridaniaMan0g1EscortContract = await CountAsync(connection, """
+SELECT COUNT(*)
+FROM gamedata_actor_class
+WHERE id=1090202
+  AND classPath='/Chara/Npc/Populace/PopulaceStandard'
+  AND eventConditions LIKE '%"pushDefault"%'
+  AND (SELECT COUNT(*) FROM gamedata_actor_class
+       WHERE id=1290003
+         AND classPath='/Chara/Npc/Object/ContentPrivateAreaRange'
+         AND propertyFlags=1
+         AND eventConditions LIKE '%"exit"%'
+         AND eventConditions LIKE '%"caution"%'
+         AND eventConditions NOT LIKE '%"outwards":false%'
+         AND (LENGTH(eventConditions)-LENGTH(REPLACE(eventConditions, '"outwards":true', '')))
+             / LENGTH('"outwards":true')=2)=1
+  AND (SELECT COUNT(*) FROM server_zones_privateareas
+       WHERE (parentZoneId=155 AND privateAreaName='PrivateAreaMasterPast' AND privateAreaType IN (3,4))
+          OR (parentZoneId=150 AND privateAreaName='PrivateAreaMasterPast' AND privateAreaType IN (0,1)))=4
+  AND (SELECT COUNT(*)
+       FROM server_battlenpc_spawn_locations s
+       JOIN server_battlenpc_groups g ON g.groupId=s.groupId
+       JOIN server_battlenpc_pools p ON p.poolId=g.poolId
+       WHERE s.bnpcId BETWEEN 34 AND 41
+         AND s.customDisplayName=''
+         AND ((s.bnpcId=34 AND p.actorClassId=2290009 AND g.allegiance=1)
+           OR (s.bnpcId=35 AND p.actorClassId=2290010 AND g.allegiance=1)
+           OR (s.bnpcId BETWEEN 36 AND 41 AND p.actorClassId=2205603 AND g.zoneId=150 AND g.hp=3)))=8
+  AND (SELECT COUNT(*) FROM gamedata_actor_class
+       WHERE id IN (2290009,2290010,2205603)
+         AND propertyFlags=23
+         AND eventConditions LIKE '%"noticeEvent"%')=3;
+""", cancellationToken).ConfigureAwait(false);
+        if (gridaniaMan0g1EscortContract != 1)
+        {
+            add("gridania-man0g1.escort-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
+                "The Man0g1 escort actors, route encounters, or private scenes are missing or stale. Run the packaged Database setup tool.");
+            return;
+        }
+        add("gridania-man0g1.escort-contract", AetherXivDatabasePreflightStatus.Passed,
+            "Verified the Man0g1 escort and quest-completion contract.");
 
         int guildleveSearchPointContract = await CountAsync(connection, """
 SELECT COUNT(*)

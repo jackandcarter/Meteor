@@ -89,6 +89,8 @@ internal static class UmbraNativeUi
     internal static void SetPluginManagerOpen(bool isOpen) =>
         SetPluginManagerOpenNative(isOpen ? 1 : 0);
 
+    internal static void DrawSettingsContent() => DrawSettingsContentNative();
+
     [DllImport(BootstrapLibrary, EntryPoint = "UmbraUiBeginWindow", CallingConvention = CallingConvention.StdCall)]
     private static extern int BeginWindowNative(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string title,
@@ -190,4 +192,7 @@ internal static class UmbraNativeUi
 
     [DllImport(BootstrapLibrary, EntryPoint = "UmbraUiSetPluginManagerOpen", CallingConvention = CallingConvention.StdCall)]
     private static extern void SetPluginManagerOpenNative(int isOpen);
+
+    [DllImport(BootstrapLibrary, EntryPoint = "UmbraUiDrawSettingsContent", CallingConvention = CallingConvention.StdCall)]
+    private static extern void DrawSettingsContentNative();
 }

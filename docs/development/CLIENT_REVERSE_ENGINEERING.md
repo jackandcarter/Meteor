@@ -43,7 +43,7 @@ Use the strongest available source and preserve its provenance:
 2. official server/client packet capture with stream and frame numbers;
 3. repeatable client-file evidence with file hash and bounded parser output;
 4. verified runtime observation through the read-only developer bridge;
-5. legacy Meteor/Aether code or SQL as a compatibility reference;
+5. deprecated emulator code or SQL as a compatibility reference;
 6. in-game `!pinspawn` observations as provisional location notes.
 
 Legacy code proves what the older emulator attempted, not necessarily what the

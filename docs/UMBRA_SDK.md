@@ -232,10 +232,45 @@ deleting it.
 Repository and download URLs must use HTTPS; HTTP is allowed only for loopback
 development. Repository responses are cached for use when a later fetch fails.
 
+The Repositories tab accepts an HTTPS URL for a JSON plugin index. GitHub Pages,
+GitHub Releases, or any other static HTTPS host can be used; Umbra does not clone
+or build a source repository on the client. A custom index may use a Dalamud-style
+top-level array, while the supported AetherXIV service uses a named envelope:
+
+```json
+{
+  "repository_name": "Example Umbra Repository",
+  "plugins": [
+    {
+      "id": "example.plugin",
+      "name": "Example Plugin",
+      "version": "1.0.0",
+      "api_version": "2.0",
+      "author": "Example Developer",
+      "description": "An example Umbra plugin.",
+      "download_url": "https://example.invalid/releases/example.plugin-1.0.0.zip",
+      "size_bytes": 12345,
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "minimum_framework_version": "0.1.0",
+      "entry": "Example.Plugin.dll"
+    }
+  ]
+}
+```
+
+Every package must contain `umbra-plugin.json` or `plugin.json` at the ZIP root.
+Its identity, name, version, API version, minimum framework version, and optional
+entry path must match the repository entry, and the declared assembly must exist.
+Custom repositories are checksum-verified but remain unreviewed; only the managed
+AetherXIV catalog receives the supported trust label.
+
 Installable entries require identity/version fields, API and minimum framework
 versions, URL, archive size, and SHA-256. Umbra verifies size and hash before
-extraction and rejects rooted or traversal archive paths. Hidden and testing-only
-entries are not normally installable.
+extraction, bounds archive size and expansion, and rejects rooted or traversal
+archive paths. Installation validates in a staging directory before activation.
+Updates preserve the previous package in `Cache/PluginBackups`, and a failed
+activation restores the prior installation. Hidden and testing-only entries are
+not normally installable.
 
 ## Development bridge
 
@@ -294,4 +329,3 @@ ZIP when publishing through a repository.
 - Third-party plugins receive no arbitrary memory-write, packet-mutation, or
   general unsafe-native API.
 - API 2.0 is implemented, while Framework 0.1.0 remains pre-stable.
-

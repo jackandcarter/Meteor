@@ -26,6 +26,8 @@ internal struct UmbraNativeRenderEvent
     public uint Reserved;
 
     public bool IsPluginManagerOpen => (Reserved & 1u) != 0;
+
+    public bool IsPluginManagerSettingsRequested => (Reserved & 2u) != 0;
 }
 
 public sealed class UmbraRenderBridge
@@ -93,6 +95,12 @@ public sealed class UmbraRenderBridge
 
         TimeSpan delta = TimeSpan.FromSeconds(Math.Clamp(renderEvent.DeltaSeconds, 0.0f, 0.25f));
         runtime.SynchronizePluginManagerOpen(renderEvent.IsPluginManagerOpen);
+        if (renderEvent.IsPluginManagerSettingsRequested
+            && runtime.PluginManager.ActiveTab != UmbraPluginManagerTab.Settings)
+        {
+            runtime.SetPluginManagerTab(UmbraPluginManagerTab.Settings);
+            runtime.Log.Info("umbra_plugin_manager_settings_requested=true");
+        }
         ulong frameNumber = renderEvent.FrameNumber;
         Interlocked.Exchange(ref frameCount, renderEvent.FrameNumber);
 

@@ -379,6 +379,7 @@ case "${query}" in
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
   *promotionMigration*) echo "60:11:13:0" ;;
   *server_battlenpc_pools*) echo "2:5" ;;
+  *conjurers_guild_scene_entry*) echo "1:8:12" ;;
   *"CONCAT(schema_generation"*) echo "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ;;
   *"SELECT checksum_sha256"*) ;;
   *"SELECT COUNT(*) FROM server_zones"*) echo 1 ;;
@@ -554,6 +555,7 @@ case "${query}" in
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
   *promotionMigration*) echo "60:11:13:0" ;;
   *server_battlenpc_pools*) echo "2:5" ;;
+  *conjurers_guild_scene_entry*) echo "1:8:12" ;;
   *"CONCAT(schema_generation"*) echo "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline" ;;
   *"SELECT COUNT(*) FROM server_zones"*) echo 1 ;;
   *"SELECT COUNT(*) FROM server_battle_commands"*) echo 1 ;;
@@ -624,8 +626,8 @@ esac
         Assert.Equal(1u, AetherXivDatabaseCompatibility.SchemaVersion);
         Assert.Equal("aetherxiv-direct-core-v2", AetherXivDatabaseCompatibility.CompatibilityId);
         Assert.Contains("baseline", AetherXivDatabaseCompatibility.BaselineId, StringComparison.Ordinal);
-        Assert.Equal("20260720_000018_gridania_tutorial_nameplates.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
-        Assert.Equal(20, AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Count);
+        Assert.Equal("20260722_000025_gridania_man0g1_escort_actor_presentation.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
+        Assert.Equal(27, AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Count);
         Assert.Equal(
             AetherXivDatabaseCompatibility.LatestDirectCoreMigration,
             AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations[^1]);

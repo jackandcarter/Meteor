@@ -43,6 +43,8 @@ public sealed record UmbraStoreEntry(
             throw new InvalidDataException($"Umbra store entry is not installable: {Id}");
         if (Sha256.Length != 64 || Sha256.Any(character => !Uri.IsHexDigit(character)))
             throw new InvalidDataException($"Umbra store entry has an invalid SHA256: {Id}");
+        if (!UmbraRepositorySource.IsAllowedUri(DownloadUrl))
+            throw new InvalidDataException($"Umbra store entry has a disallowed download URL: {Id}");
     }
 
     public UmbraPluginManifest ToManifest(bool enabled = false)
@@ -62,16 +64,18 @@ public sealed record UmbraStoreEntry(
         UmbraRepositorySource repository)
     {
         using JsonDocument document = JsonDocument.Parse(json);
-        if (document.RootElement.ValueKind != JsonValueKind.Array)
-            throw new InvalidDataException("Umbra plugin repository must be a JSON array.");
+        JsonElement pluginEntries = ResolvePluginEntries(document.RootElement);
 
         List<UmbraStoreEntry> entries = new();
-        foreach (JsonElement element in document.RootElement.EnumerateArray())
+        foreach (JsonElement element in pluginEntries.EnumerateArray())
         {
             if (element.ValueKind != JsonValueKind.Object)
                 continue;
 
-            entries.Add(FromJsonObject(element, repository));
+            UmbraStoreEntry entry = FromJsonObject(element, repository);
+            if (!entry.IsHidden && !entry.TestingOnly)
+                entry.ValidateInstallable();
+            entries.Add(entry);
         }
 
         return entries
@@ -79,6 +83,23 @@ public sealed record UmbraStoreEntry(
             .ThenBy(entry => entry.Id, StringComparer.OrdinalIgnoreCase)
             .ThenByDescending(entry => entry.Version, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static JsonElement ResolvePluginEntries(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Array)
+            return root;
+
+        if (root.ValueKind == JsonValueKind.Object
+            && (root.TryGetProperty("plugins", out JsonElement plugins)
+                || root.TryGetProperty("Plugins", out plugins))
+            && plugins.ValueKind == JsonValueKind.Array)
+        {
+            return plugins;
+        }
+
+        throw new InvalidDataException(
+            "Umbra plugin repository must be a JSON array or an object containing a plugins array.");
     }
 
     private static UmbraStoreEntry FromJsonObject(JsonElement element, UmbraRepositorySource repository)

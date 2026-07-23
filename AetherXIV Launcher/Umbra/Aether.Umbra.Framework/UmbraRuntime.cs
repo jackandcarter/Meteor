@@ -5,6 +5,7 @@ namespace Aether.Umbra.Framework;
 public sealed class UmbraRuntime : IDisposable
 {
     private readonly CancellationTokenSource shutdown = new();
+    private readonly SemaphoreSlim pluginMutationGate = new(1, 1);
     private readonly UmbraSystemPluginHost systemPlugins;
     private readonly Task updateLoop;
     private bool disposed;
@@ -190,6 +191,184 @@ public sealed class UmbraRuntime : IDisposable
         }
     }
 
+    internal async Task<UmbraPluginActionResult> RefreshRepositoriesAsync()
+    {
+        await pluginMutationGate.WaitAsync(shutdown.Token).ConfigureAwait(false);
+        try
+        {
+            IReadOnlyList<UmbraStoreEntry> entries = await UmbraRepositoryFetcher.FetchAsync(
+                PluginManager.RepositorySources,
+                Path.Combine(Options.CacheDirectory, "Repositories"),
+                Log,
+                shutdown.Token).ConfigureAwait(false);
+            ReplaceStoreCatalog(entries);
+            Log.Info($"umbra_repository_refresh_success entries={entries.Count}");
+            return UmbraPluginActionResult.Success($"Repositories refreshed: {entries.Count} plugin entries.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("umbra_repository_refresh_failed", ex);
+            return UmbraPluginActionResult.Failure(ex.Message);
+        }
+        finally
+        {
+            pluginMutationGate.Release();
+        }
+    }
+
+    internal async Task<UmbraPluginActionResult> AddCustomRepositoryAsync(string url)
+    {
+        IReadOnlyList<UmbraRepositorySource> normalized = UmbraRepositorySource.Normalize(
+            new[] { new UmbraRepositorySource(url, UmbraRepositorySource.Custom) });
+        if (normalized.Count != 1)
+            return UmbraPluginActionResult.Failure("Enter an absolute HTTPS repository index URL.");
+
+        UmbraRepositorySource source = normalized[0];
+        if (PluginManager.RepositorySources.Any(candidate =>
+            string.Equals(candidate.Url, source.Url, StringComparison.OrdinalIgnoreCase)))
+        {
+            return UmbraPluginActionResult.Failure("That repository is already configured.");
+        }
+
+        await pluginMutationGate.WaitAsync(shutdown.Token).ConfigureAwait(false);
+        try
+        {
+            IReadOnlyList<UmbraStoreEntry> fetched = await UmbraRepositoryFetcher.FetchRepositoryAsync(
+                source,
+                Path.Combine(Options.CacheDirectory, "Repositories"),
+                shutdown.Token).ConfigureAwait(false);
+            IReadOnlyList<UmbraRepositorySource> sources = UmbraRepositorySource.Normalize(
+                PluginManager.RepositorySources.Append(source));
+            UmbraRepositoryRegistry.SaveCustom(Options.CacheDirectory, sources);
+
+            IEnumerable<UmbraStoreEntry> retained = PluginManager.SupportedPlugins
+                .Concat(PluginManager.AvailablePlugins)
+                .Where(entry => !string.Equals(entry.RepositoryUrl, source.Url, StringComparison.OrdinalIgnoreCase));
+            PluginManager = PluginManager with
+            {
+                RepositorySources = sources,
+                Catalog = UmbraPluginCatalogState.Build(
+                    PluginManager.InstalledPlugins,
+                    retained.Concat(fetched))
+            };
+            PluginManager.RuntimeHost = Plugins;
+            Log.Info($"umbra_custom_repository_added url={source.Url} entries={fetched.Count}");
+            return UmbraPluginActionResult.Success(
+                $"Custom repository added: {fetched.Count} plugin entries discovered.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"umbra_custom_repository_add_failed url={source.Url}", ex);
+            return UmbraPluginActionResult.Failure($"Repository validation failed: {ex.Message}");
+        }
+        finally
+        {
+            pluginMutationGate.Release();
+        }
+    }
+
+    internal async Task<UmbraPluginActionResult> RemoveCustomRepositoryAsync(string url)
+    {
+        await pluginMutationGate.WaitAsync(shutdown.Token).ConfigureAwait(false);
+        try
+        {
+            UmbraRepositorySource? source = PluginManager.RepositorySources.FirstOrDefault(candidate =>
+                string.Equals(candidate.Url, url, StringComparison.OrdinalIgnoreCase));
+            if (source is null || !string.Equals(source.Source, UmbraRepositorySource.Custom, StringComparison.OrdinalIgnoreCase))
+                return UmbraPluginActionResult.Failure("Only custom repositories can be removed.");
+
+            IReadOnlyList<UmbraRepositorySource> sources = PluginManager.RepositorySources
+                .Where(candidate => !string.Equals(candidate.Url, url, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            UmbraRepositoryRegistry.SaveCustom(Options.CacheDirectory, sources);
+            IEnumerable<UmbraStoreEntry> retained = PluginManager.SupportedPlugins
+                .Concat(PluginManager.AvailablePlugins)
+                .Where(entry => !string.Equals(entry.RepositoryUrl, url, StringComparison.OrdinalIgnoreCase));
+            PluginManager = PluginManager with
+            {
+                RepositorySources = sources,
+                Catalog = UmbraPluginCatalogState.Build(PluginManager.InstalledPlugins, retained)
+            };
+            PluginManager.RuntimeHost = Plugins;
+            Log.Info($"umbra_custom_repository_removed url={url}");
+            return UmbraPluginActionResult.Success("Custom repository removed. Installed plugins were left intact.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"umbra_custom_repository_remove_failed url={url}", ex);
+            return UmbraPluginActionResult.Failure(ex.Message);
+        }
+        finally
+        {
+            pluginMutationGate.Release();
+        }
+    }
+
+    internal async Task<UmbraPluginActionResult> InstallPluginAsync(UmbraStoreEntry entry)
+    {
+        await pluginMutationGate.WaitAsync(shutdown.Token).ConfigureAwait(false);
+        UmbraPluginManifest? previous = PluginManager.InstalledPlugins.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, entry.Id, StringComparison.OrdinalIgnoreCase));
+        try
+        {
+            if (previous is not null)
+                Plugins.Unload(previous.Id);
+
+            UmbraPluginInstallResult install = await UmbraPluginInstaller.DownloadAndInstallAsync(
+                entry,
+                Options.PluginDirectory,
+                Path.Combine(Options.CacheDirectory, "Packages"),
+                shutdown.Token).ConfigureAwait(false);
+            UmbraPluginManifest manifest = UmbraPluginManifest.Load(install.ManifestPath);
+            if (previous is null)
+            {
+                ReplaceInstalledCatalog(PluginManager.InstalledPlugins.Append(manifest));
+            }
+            else
+            {
+                ReplaceInstalledManifest(manifest);
+            }
+
+            if (manifest.Enabled && !Options.SafeMode)
+            {
+                UmbraPluginRuntimeStatus status = Plugins.Load(manifest);
+                if (status.State != UmbraPluginRuntimeState.Running)
+                {
+                    if (previous is not null
+                        && !string.IsNullOrWhiteSpace(install.BackupDirectory)
+                        && Directory.Exists(install.BackupDirectory))
+                    {
+                        Plugins.Unload(manifest.Id);
+                        Directory.Delete(install.InstallDirectory, recursive: true);
+                        Directory.Move(install.BackupDirectory, install.InstallDirectory);
+                        UmbraPluginManifest restored = UmbraPluginManifest.Load(previous.ManifestPath);
+                        ReplaceInstalledManifest(restored);
+                        Plugins.Load(restored);
+                        return UmbraPluginActionResult.Failure(
+                            $"Update loading failed and the previous version was restored: {status.LastError}");
+                    }
+
+                    return UmbraPluginActionResult.Failure($"Installed, but loading failed: {status.LastError}");
+                }
+            }
+
+            Log.Info($"umbra_plugin_installed id={entry.Id} version={entry.Version} source={entry.Source}");
+            return UmbraPluginActionResult.Success(
+                previous is null ? "Plugin installed. Enable it from Installed when ready." : "Plugin updated successfully.");
+        }
+        catch (Exception ex)
+        {
+            if (previous is { Enabled: true } && !Options.SafeMode)
+                Plugins.Load(previous);
+            Log.Error($"umbra_plugin_install_failed id={entry.Id} version={entry.Version}", ex);
+            return UmbraPluginActionResult.Failure(ex.Message);
+        }
+        finally
+        {
+            pluginMutationGate.Release();
+        }
+    }
+
     public static async Task<UmbraRuntime> StartAsync(UmbraRuntimeOptions options, UmbraRuntimeLog log)
     {
         Directory.CreateDirectory(options.PluginDirectory);
@@ -203,11 +382,15 @@ public sealed class UmbraRuntime : IDisposable
         log.Info($"umbra_dev_bridge_initial_enabled={options.DevBridgeInitiallyEnabled}");
 
         IReadOnlyList<UmbraPluginManifest> manifests = UmbraPluginDiscovery.Discover(options.PluginDirectory, log);
+        IReadOnlyList<UmbraRepositorySource> repositorySources = UmbraRepositoryRegistry.Load(
+            options.CacheDirectory,
+            options.RepositorySources,
+            log);
         IReadOnlyList<UmbraStoreEntry> storeEntries;
         using (CancellationTokenSource repositoryTimeout = new(TimeSpan.FromSeconds(5)))
         {
             storeEntries = await UmbraRepositoryFetcher.FetchAsync(
-                options.RepositorySources,
+                repositorySources,
                 Path.Combine(options.CacheDirectory, "Repositories"),
                 log,
                 repositoryTimeout.Token);
@@ -218,7 +401,7 @@ public sealed class UmbraRuntime : IDisposable
             true,
             UmbraPluginManagerTab.Installed,
             catalog,
-            options.RepositorySources,
+            repositorySources,
             options.SafeMode,
             DebugLoggingEnabled: false,
             DevUiEnabled: false,
@@ -324,6 +507,15 @@ public sealed class UmbraRuntime : IDisposable
         IEnumerable<UmbraStoreEntry> storeEntries = PluginManager.SupportedPlugins
             .Concat(PluginManager.AvailablePlugins);
         UmbraPluginCatalogState catalog = UmbraPluginCatalogState.Build(installed, storeEntries);
+        PluginManager = PluginManager with { Catalog = catalog };
+        PluginManager.RuntimeHost = Plugins;
+    }
+
+    private void ReplaceStoreCatalog(IEnumerable<UmbraStoreEntry> storeEntries)
+    {
+        UmbraPluginCatalogState catalog = UmbraPluginCatalogState.Build(
+            PluginManager.InstalledPlugins,
+            storeEntries);
         PluginManager = PluginManager with { Catalog = catalog };
         PluginManager.RuntimeHost = Plugins;
     }

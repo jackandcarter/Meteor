@@ -37,8 +37,12 @@ public sealed class EventConditionPacketCodecTests
 
         Assert.Equal((ushort)0x016C, (ushort)emote.Header.Opcode);
         Assert.Equal(4, emote.Payload.Span[0]);
-        Assert.Equal(0x52, PacketBinary.ReadUInt16LittleEndian(emote.Payload.Span[1..]));
-        Assert.Equal("bowEvent", emoteCodec.Decode(emote).ConditionName);
+        Assert.Equal(7, emote.Payload.Span[1]);
+        Assert.Equal(0x52, PacketBinary.ReadUInt16LittleEndian(emote.Payload.Span[2..]));
+        Assert.Equal((byte)'b', emote.Payload.Span[4]);
+        EmoteEventCondition decodedEmote = emoteCodec.Decode(emote);
+        Assert.Equal("bowEvent", decodedEmote.ConditionName);
+        Assert.Equal(7, decodedEmote.Unknown2);
     }
 
     [Fact]

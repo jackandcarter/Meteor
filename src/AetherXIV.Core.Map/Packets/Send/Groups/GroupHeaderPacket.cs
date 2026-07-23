@@ -34,8 +34,8 @@ namespace AetherXIV.Core.Map.packets.send.group
                     ulong clientGroupIndex = group.GetClientGroupIndex();
 
                     // Retail uses distinct registration envelopes for player
-                    // parties and content groups. Other legacy group families
-                    // retain the inherited Meteor shape.
+                    // parties and content groups. Other group families retain
+                    // the compatibility envelope expected by the client.
                     binWriter.Write(isPlayerParty ? (UInt64)0 : (UInt64)3);
                     binWriter.Write(isPlayerParty ? (UInt64)0 : clientGroupIndex);
                     binWriter.Write((UInt64)0);

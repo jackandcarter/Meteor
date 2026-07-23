@@ -2282,7 +2282,22 @@ namespace AetherXIV.Core.Map.Actors
         }
 
         public void SetNpcLS(uint npcLSId, uint state)
-        {            
+        {
+            if (npcLSId >= (uint)playerWork.npcLinkshellChatCalling.Length ||
+                npcLSId >= (uint)playerWork.npcLinkshellChatExtra.Length)
+            {
+                Program.Log.Error("Ignoring invalid NPC linkshell id {0} for player {1}.", npcLSId, actorId);
+                return;
+            }
+
+            if (state > NPCLS_ALERT)
+            {
+                Program.Log.Error("Ignoring invalid NPC linkshell state {0} for player {1}.", state, actorId);
+                return;
+            }
+
+            bool wasOwned = playerWork.npcLinkshellChatCalling[npcLSId] ||
+                            playerWork.npcLinkshellChatExtra[npcLSId];
             bool isCalling, isExtra;
             isCalling = isExtra = false;
 
@@ -2331,6 +2346,12 @@ namespace AetherXIV.Core.Map.Actors
             propPacketUtil.AddProperty(String.Format("playerWork.npcLinkshellChatExtra[{0}]", npcLSId));
             propPacketUtil.AddProperty(String.Format("playerWork.npcLinkshellChatCalling[{0}]", npcLSId));
             QueuePackets(propPacketUtil.Done());
+
+            // The client must learn that this NPC linkshell now belongs to the
+            // player before it is asked to open or display a pending message.
+            // Quest-facing identifiers are one-based; playerWork is zero-based.
+            if (!wasOwned && (isCalling || isExtra))
+                SendGameMessage(Server.GetWorldManager().GetActor(), 25118, 0x20, (object)(npcLSId + 1));
         }
 
         private void TraceNpcLinkshellState(uint npcLSId, uint state, bool isCalling, bool isExtra, bool unchanged)
@@ -2537,7 +2558,115 @@ namespace AetherXIV.Core.Map.Actors
                 "eventName", start.eventName,
                 "eventType", start.eventType,
                 "params", LuaUtils.DumpParams(start.luaParams));
+
+            Npc questNpc = owner as Npc;
+            if (questNpc != null)
+            {
+                foreach (Quest quest in questScenario)
+                {
+                    if (quest != null && quest.TryHandleNpcEvent(this, questNpc, start))
+                        return;
+                }
+            }
+
             LuaEngine.GetInstance().EventStarted(this, owner, start);
+        }
+
+        public void RefreshQuestENpcs()
+        {
+            foreach (Quest quest in questScenario)
+            {
+                if (quest != null)
+                    quest.UpdateENPCs(true);
+            }
+
+            DisableRetiredGridaniaOpeningTrigger();
+        }
+
+        private void DisableRetiredGridaniaOpeningTrigger()
+        {
+            // The unnamed public copy is Man0g0's adventurers' guild push
+            // trigger. Once that quest has been replaced by Man0g1 it must
+            // remain present for the map layout but its push event is off.
+            if (zone == null || HasQuest(110005))
+                return;
+
+            foreach (Npc npc in zone.GetAllActors<Npc>())
+            {
+                if (npc.GetActorClassId() != 1099046 || !String.IsNullOrEmpty(npc.GetUniqueId()))
+                    continue;
+
+                if (npc.eventConditions != null && npc.eventConditions.pushWithCircleEventConditions != null)
+                {
+                    foreach (var condition in npc.eventConditions.pushWithCircleEventConditions)
+                        SetEventStatus(npc, condition.conditionName, false, 2);
+                }
+
+                npc.SetQuestGraphic(this, 0);
+            }
+        }
+
+        public void StartNpcLinkshellEvent(EventStartPacket start)
+        {
+            currentEventOwner = start.ownerActorID;
+            currentEventName = start.eventName;
+            currentEventType = start.eventType;
+
+            uint? npcLsHint = null;
+            if (start.luaParams != null)
+            {
+                foreach (LuaParam parameter in start.luaParams)
+                {
+                    if (parameter.value is byte byteValue)
+                        npcLsHint = byteValue;
+                    else if (parameter.value is ushort ushortValue)
+                        npcLsHint = ushortValue;
+                    else if (parameter.value is short shortValue && shortValue >= 0)
+                        npcLsHint = (uint)shortValue;
+                    else if (parameter.value is int intValue && intValue >= 0)
+                        npcLsHint = (uint)intValue;
+                    else if (parameter.value is uint uintValue)
+                        npcLsHint = uintValue;
+
+                    if (npcLsHint.HasValue)
+                        break;
+                }
+            }
+
+            Quest pendingQuest = null;
+            foreach (Quest quest in questScenario)
+            {
+                if (quest == null || quest.GetNpcLsFrom() == 0)
+                    continue;
+
+                uint from = quest.GetNpcLsFrom();
+                if (!npcLsHint.HasValue || from == npcLsHint.Value || from == npcLsHint.Value + 1)
+                {
+                    pendingQuest = quest;
+                    break;
+                }
+
+                if (pendingQuest == null)
+                    pendingQuest = quest;
+            }
+
+            DevDiagnostics.Trace(
+                "npcLinkshell.event",
+                "player", customDisplayName,
+                "owner", String.Format("0x{0:X}", start.ownerActorID),
+                "eventName", start.eventName,
+                "hint", npcLsHint.HasValue ? npcLsHint.Value.ToString() : "",
+                "quest", pendingQuest == null ? "" : pendingQuest.GetName(),
+                "from", pendingQuest == null ? 0 : pendingQuest.GetNpcLsFrom(),
+                "messageStep", pendingQuest == null ? 0 : pendingQuest.GetNpcLsMessageStep());
+
+            if (pendingQuest == null)
+            {
+                EndEvent();
+                return;
+            }
+
+            pendingQuest.OnNpcLs(this, pendingQuest.GetNpcLsFrom(), pendingQuest.GetNpcLsMessageStep());
         }
 
         public void UpdateEvent(EventUpdatePacket update)
@@ -2737,6 +2866,11 @@ namespace AetherXIV.Core.Map.Actors
                 "player", customDisplayName,
                 "force", force,
                 "instanceActorCountAfter", playerSession.actorInstanceList.Count);
+        }
+
+        public string GetPrivateAreaName()
+        {
+            return privateArea ?? "";
         }
 
         public bool IsInParty()

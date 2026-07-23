@@ -3,6 +3,7 @@ using AetherXIV.Core.Map.Actors;
 using AetherXIV.Core.Map.lua;
 using AetherXIV.Core.Common;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AetherXIV.Core.Map.actors.chara.npc;
 using AetherXIV.Core.Map.actors.group;
@@ -15,6 +16,9 @@ namespace AetherXIV.Core.Map.actors.area
         private Director currentDirector;
         private bool isContentFinished = false;
         private bool battleCompletionSignaled = false;
+        private DateTime lastContentUpdate = DateTime.MinValue;
+        private long contentUpdateTick = 0;
+        private readonly Dictionary<string, long> scriptState = new Dictionary<string, long>();
 
         public static PrivateAreaContent CreateContentArea(String scriptPath)
         {
@@ -121,6 +125,28 @@ namespace AetherXIV.Core.Map.actors.area
         }
 
         /// <summary>
+        /// Stores small, instance-scoped values for content scripts whose
+        /// onCreate and onUpdate hooks are loaded in separate Lua VMs. This
+        /// state belongs to the content area, so concurrent duties cannot
+        /// overwrite one another and teardown discards it automatically.
+        /// </summary>
+        public void SetScriptState(string key, long value)
+        {
+            if (String.IsNullOrEmpty(key))
+                return;
+
+            scriptState[key] = value;
+        }
+
+        public long GetScriptState(string key)
+        {
+            if (String.IsNullOrEmpty(key))
+                return 0;
+
+            return scriptState.TryGetValue(key, out long value) ? value : 0;
+        }
+
+        /// <summary>
         /// Resolves the player who owns a Gridania tutorial wolf kill. Yda and
         /// Papalymo are transient NPC party members, so their final blows still
         /// need to credit the sole player in this director.
@@ -141,6 +167,37 @@ namespace AetherXIV.Core.Map.actors.area
 
             Player[] players = currentDirector.GetPlayerMembers().OfType<Player>().ToArray();
             return players.Length == 1 ? players[0] : null;
+        }
+
+        public override void Update(DateTime tick)
+        {
+            base.Update(tick);
+
+            // Content scripts own time-sensitive duty behavior such as escort
+            // movement. Keep this hook scoped to content instances; enabling
+            // the dormant Area-wide callback would unexpectedly activate old
+            // zone scripts that were never part of the modern runtime.
+            if (isContentFinished || (tick - lastContentUpdate).TotalMilliseconds < 500)
+                return;
+
+            lastContentUpdate = tick;
+            contentUpdateTick++;
+            try
+            {
+                LuaEngine.GetInstance().CallLuaFunctionForReturn(
+                    LuaEngine.GetScriptPath(this), "onUpdate", true, contentUpdateTick, this);
+            }
+            catch (Exception exception)
+            {
+                Program.Log.Error(
+                    "Content update failed for {0}: {1}",
+                    GetPrivateAreaName(), exception.Message);
+                DevDiagnostics.Trace(
+                    "content.area.update.error",
+                    "privateArea", GetPrivateAreaName(),
+                    "tick", contentUpdateTick,
+                    "error", exception.Message);
+            }
         }
 
         public void CheckDestroy()

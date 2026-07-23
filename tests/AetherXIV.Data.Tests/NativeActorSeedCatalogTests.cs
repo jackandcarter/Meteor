@@ -13,9 +13,9 @@ public sealed class NativeActorSeedCatalogTests
 
         Assert.Equal("static-actor-catalog", catalog.Manifest.SeedId);
         Assert.Equal(111, catalog.Zones.Count);
-        Assert.Equal(836, catalog.ActorClasses.Count);
-        Assert.Equal(827, catalog.ActorAppearances.Count);
-        Assert.Equal(995, catalog.StaticActorSpawns.Count);
+        Assert.Equal(852, catalog.ActorClasses.Count);
+        Assert.Equal(835, catalog.ActorAppearances.Count);
+        Assert.Equal(1007, catalog.StaticActorSpawns.Count);
         Assert.Equal(3, catalog.Manifest.ExcludedOrphanSpawnCount);
         Assert.Equal(3, catalog.Manifest.ExcludedInvalidActorClassSpawnCount);
         HashSet<uint> classIds = catalog.ActorClasses.Select(row => row.ActorClassId).ToHashSet();
@@ -27,6 +27,7 @@ public sealed class NativeActorSeedCatalogTests
     [InlineData(230u, 1u, 11)]
     [InlineData(155u, 1u, 8)]
     [InlineData(175u, 3u, 14)]
+    [InlineData(155u, 0u, 10)]
     public async Task PackagedCatalogContainsOpeningCityPastActors(uint zoneId, uint level, int expectedCount)
     {
         NativeActorSeedCatalog catalog = await NativeActorSeedCatalog.LoadAsync(FindSeedRoot());

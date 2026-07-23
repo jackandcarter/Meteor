@@ -266,6 +266,10 @@ function Test-Database {
     if ($gridaniaTutorialActors -ne "2:5") {
         throw "Gridania tutorial actor-role contract mismatch: $gridaniaTutorialActors"
     }
+    $gridaniaMan0g1GuildContract = Invoke-Query $appArgs "SELECT CONCAT((SELECT COUNT(*) FROM server_zones_privateareas WHERE parentZoneId=155 AND privateAreaName='PrivateAreaMasterPast' AND privateAreaType=0),':',(SELECT COUNT(*) FROM gamedata_actor_class WHERE id IN (1000028,1000033,1000372,1000460,1000513,1000737,1001072,1700030) AND classPath='/Chara/Npc/Populace/PopulaceStandard' AND propertyFlags=19),':',(SELECT COUNT(*) FROM server_spawn_locations WHERE id BETWEEN 1021 AND 1032 AND ((id=1022 AND uniqueId='conjurers_guild_scene_entry' AND zoneId=206) OR (id<>1022))))" $dbName
+    if ($gridaniaMan0g1GuildContract -ne "1:8:12") {
+        throw "Gridania Man0g1 guild contract mismatch: $gridaniaMan0g1GuildContract"
+    }
     $contract = Invoke-Query $appArgs "SELECT CONCAT(schema_generation,':',schema_version,':',compatibility_id,':',baseline_id) FROM aether_database_compatibility WHERE compatibility_key='direct-core' LIMIT 1" $dbName
     if ($contract -ne "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline") {
         throw "Database compatibility mismatch: $contract"

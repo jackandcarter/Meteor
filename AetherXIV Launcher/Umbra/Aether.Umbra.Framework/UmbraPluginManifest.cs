@@ -23,6 +23,12 @@ public sealed record UmbraPluginManifest(
     [JsonPropertyName("capabilities")]
     public IReadOnlyList<string> Capabilities { get; init; } = Array.Empty<string>();
 
+    [JsonPropertyName("installed_from_url")]
+    public string? InstalledFromUrl { get; init; }
+
+    [JsonPropertyName("installed_from_source")]
+    public string? InstalledFromSource { get; init; }
+
     [JsonIgnore]
     public string ManifestPath { get; init; } = "";
 

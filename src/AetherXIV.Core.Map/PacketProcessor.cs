@@ -245,7 +245,10 @@ namespace AetherXIV.Core.Map
                             "unknown", zoneInCompletePacket.unknown,
                             "invalidPacket", zoneInCompletePacket.invalidPacket);
                         if (!zoneInCompletePacket.invalidPacket)
+                        {
+                            session.GetActor().RefreshQuestENpcs();
                             session.GetActor().ReleaseDeferredContentKickEvent();
+                        }
                         break;
                     //Update Position
                     case 0x00CA:
@@ -354,6 +357,17 @@ namespace AetherXIV.Core.Map
                     case 0x012D:
                         subpacket.DebugPrintSubPacket();
                         EventStartPacket eventStart = new EventStartPacket(subpacket.data);
+
+                        // NPC-linkshell reads are quest events, even though the
+                        // client addresses the system command actor. Route the
+                        // command directly to the pending quest's onNpcLS hook;
+                        // the generic command script is not the owner of that
+                        // message chain.
+                        if (eventStart.ownerActorID == 0xA0F05E95)
+                        {
+                            session.GetActor().StartNpcLinkshellEvent(eventStart);
+                            break;
+                        }
 
                         /*
                         if (eventStart.error != null)

@@ -366,6 +366,36 @@ public sealed class AetherXivLauncherCoreTests
     }
 
     [Fact]
+    public void UmbraStoreEntryParsesAetherCatalogEnvelope()
+    {
+        string json = """
+            {
+              "repository_name": "AetherXIV Supported",
+              "plugins": [
+                {
+                  "id": "dev.envelope",
+                  "name": "Envelope Plugin",
+                  "version": "1.0.0",
+                  "api_version": "2.0",
+                  "download_url": "https://example.com/plugin.zip",
+                  "size_bytes": 1234,
+                  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "minimum_framework_version": "0.1.0"
+                }
+              ]
+            }
+            """;
+
+        FrameworkStoreEntry entry = Assert.Single(FrameworkStoreEntry.ParseRepository(
+            json,
+            new FrameworkRepositorySource("https://example.com/repo.json", FrameworkRepositorySource.Supported)));
+
+        Assert.Equal("dev.envelope", entry.Id);
+        Assert.Equal(FrameworkRepositorySource.Supported, entry.Source);
+        Assert.True(entry.IsInstallable);
+    }
+
+    [Fact]
     public void UmbraStoreEntryRejectsInstallWhenIntegrityMetadataIsMissing()
     {
         string json = """
@@ -381,18 +411,27 @@ public sealed class AetherXivLauncherCoreTests
             ]
             """;
 
-        FrameworkStoreEntry entry = Assert.Single(FrameworkStoreEntry.ParseRepository(
+        Assert.Throws<InvalidDataException>(() => FrameworkStoreEntry.ParseRepository(
             json,
             new FrameworkRepositorySource("https://example.com/repo.json", FrameworkRepositorySource.Custom)));
-
-        Assert.False(entry.IsInstallable);
-        Assert.Throws<InvalidDataException>(() => entry.ValidateInstallable());
     }
 
     [Fact]
-    public void UmbraPluginInstallerValidatesArchiveAndWritesManifest()
+    public void UmbraPluginInstallerValidatesArchiveAndRequiresMatchingManifest()
     {
-        byte[] archive = CreateRuntimeArchive(("ExamplePlugin.dll", Encoding.UTF8.GetBytes("placeholder")));
+        byte[] archive = CreateRuntimeArchive(
+            ("ExamplePlugin.dll", Encoding.UTF8.GetBytes("placeholder")),
+            ("umbra-plugin.json", Encoding.UTF8.GetBytes("""
+                {
+                  "id": "dev.example",
+                  "name": "dev.example",
+                  "version": "1.0.0",
+                  "api_version": "2.0",
+                  "entry": "ExamplePlugin.dll",
+                  "minimum_framework_version": "0.1.0",
+                  "enabled": false
+                }
+                """)));
         string archivePath = Path.Combine(CreateTempDirectory(), "plugin.zip");
         File.WriteAllBytes(archivePath, archive);
         string pluginDirectory = CreateTempDirectory();
@@ -419,13 +458,63 @@ public sealed class AetherXivLauncherCoreTests
     }
 
     [Fact]
+    public void UmbraPluginInstallerStagesUpdatePreservesEnabledStateAndArchivesPreviousVersion()
+    {
+        byte[] archive = CreateRuntimeArchive(
+            ("ExamplePlugin.dll", Encoding.UTF8.GetBytes("new")),
+            ("umbra-plugin.json", Encoding.UTF8.GetBytes("""
+                {
+                  "id": "dev.example",
+                  "name": "dev.example",
+                  "version": "1.0.0",
+                  "api_version": "2.0",
+                  "entry": "ExamplePlugin.dll",
+                  "minimum_framework_version": "0.1.0",
+                  "enabled": false
+                }
+                """)));
+        string root = CreateTempDirectory();
+        string pluginDirectory = Path.Combine(root, "Plugins");
+        string installDirectory = Path.Combine(pluginDirectory, "dev.example");
+        string backupDirectory = Path.Combine(root, "PluginBackups");
+        Directory.CreateDirectory(installDirectory);
+        File.WriteAllText(Path.Combine(installDirectory, "ExamplePlugin.dll"), "old");
+        File.WriteAllText(Path.Combine(installDirectory, "umbra-plugin.json"), """
+            {
+              "id": "dev.example",
+              "name": "dev.example",
+              "version": "0.9.0",
+              "api_version": "1.0",
+              "entry": "ExamplePlugin.dll",
+              "minimum_framework_version": "0.1.0",
+              "enabled": true
+            }
+            """);
+        string archivePath = Path.Combine(root, "plugin.zip");
+        File.WriteAllBytes(archivePath, archive);
+
+        Aether.Umbra.Framework.UmbraPluginInstallResult result =
+            FrameworkPluginInstaller.InstallVerifiedArchive(
+                CreateStoreEntry(archive, "dev.example"),
+                archivePath,
+                pluginDirectory,
+                backupDirectory);
+
+        UmbraPluginManifest installed = UmbraPluginManifest.Load(result.ManifestPath);
+        Assert.True(installed.Enabled);
+        Assert.Equal("new", File.ReadAllText(Path.Combine(result.InstallDirectory, "ExamplePlugin.dll")));
+        Assert.NotNull(result.BackupDirectory);
+        Assert.Equal("old", File.ReadAllText(Path.Combine(result.BackupDirectory!, "ExamplePlugin.dll")));
+    }
+
+    [Fact]
     public void UmbraPluginCatalogStateSeparatesInstalledSupportedAvailableAndUpdates()
     {
         Aether.Umbra.Framework.UmbraPluginManifest installed = new(
             "dev.example",
             "Example",
             "1.0.0",
-            "1.0",
+            "2.0",
             "Example.dll",
             "0.1.0",
             true);
@@ -2159,7 +2248,7 @@ public sealed class AetherXivLauncherCoreTests
             id,
             id,
             "1.0.0",
-            "1.0",
+            "2.0",
             "https://example.com/plugin.zip",
             archive.Length,
             Convert.ToHexString(SHA256.HashData(archive)).ToLowerInvariant(),

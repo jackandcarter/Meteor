@@ -23,12 +23,23 @@ public sealed class UmbraRenderBridgeTests
             FrameNumber = 42,
             DeltaSeconds = 1.0f / 60.0f,
             ViewportWidth = 1280,
-            ViewportHeight = 720
+            ViewportHeight = 720,
+            Reserved = 3
         };
 
         Assert.Equal(0, runtime.RenderBridge.Process(frame));
         Assert.Equal(Environment.CurrentManagedThreadId, runtime.RenderBridge.RenderThreadId);
         Assert.Equal(42, runtime.RenderBridge.FrameCount);
+        Assert.True(runtime.PluginManager.IsOpen);
+        Assert.Equal(UmbraPluginManagerTab.Settings, runtime.PluginManager.ActiveTab);
+
+        runtime.SetPluginManagerTab(UmbraPluginManagerTab.Installed);
+        Assert.Equal(0, runtime.RenderBridge.Process(frame with
+        {
+            FrameNumber = 43,
+            Reserved = 1
+        }));
+        Assert.Equal(UmbraPluginManagerTab.Installed, runtime.PluginManager.ActiveTab);
 
         Assert.Equal(0, runtime.RenderBridge.Process(CreateEvent(UmbraNativeRenderEventKind.BeforeReset)));
         Assert.Equal(0, runtime.RenderBridge.DeviceGeneration);

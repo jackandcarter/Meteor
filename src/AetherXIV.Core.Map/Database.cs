@@ -11,6 +11,7 @@ using AetherXIV.Core.Map.actors.chara.player;
 using AetherXIV.Core.Map.packets.receive.supportdesk;
 using AetherXIV.Core.Map.actors.chara.npc;
 using AetherXIV.Core.Map.actors.chara.ai;
+using AetherXIV.Core.Map.actors.area;
 using AetherXIV.Core.Map.packets.send.actor.battle;
 
 namespace AetherXIV.Core.Map
@@ -966,10 +967,13 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
             MySqlCommand cmd;
             string currentPrivateArea = player.privateArea;
             uint currentPrivateAreaType = player.privateAreaType;
+            uint currentZoneId = player.zoneId;
+            float currentPositionX = player.positionX;
+            float currentPositionY = player.positionY;
+            float currentPositionZ = player.positionZ;
+            float currentRotation = player.rotation;
             bool isTransientContentArea =
-                player.zone == null &&
-                !String.IsNullOrEmpty(player.privateArea) &&
-                player.privateArea.StartsWith("SimpleContent", StringComparison.Ordinal);
+                TransientContentRecoveryPolicy.IsTransient(player.privateArea);
 
             if (isTransientContentArea)
             {
@@ -983,6 +987,26 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
 
                 currentPrivateArea = null;
                 currentPrivateAreaType = 0;
+
+                uint recoveryZoneId;
+                float recoveryX;
+                float recoveryY;
+                float recoveryZ;
+                float recoveryRotation;
+                if (TransientContentRecoveryPolicy.TryGetRecoveryPoint(
+                    player.privateArea,
+                    out recoveryZoneId,
+                    out recoveryX,
+                    out recoveryY,
+                    out recoveryZ,
+                    out recoveryRotation))
+                {
+                    currentZoneId = recoveryZoneId;
+                    currentPositionX = recoveryX;
+                    currentPositionY = recoveryY;
+                    currentPositionZ = recoveryZ;
+                    currentRotation = recoveryRotation;
+                }
             }
 
             using (MySqlConnection conn = new MySqlConnection(String.Format("Server={0}; Port={1}; Database={2}; UID={3}; Password={4}", ConfigConstants.DATABASE_HOST, ConfigConstants.DATABASE_PORT, ConfigConstants.DATABASE_NAME, ConfigConstants.DATABASE_USERNAME, ConfigConstants.DATABASE_PASSWORD)))
@@ -1007,11 +1031,11 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
 
                     cmd = new MySqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@charaId", player.actorId);
-                    cmd.Parameters.AddWithValue("@x", player.positionX);
-                    cmd.Parameters.AddWithValue("@y", player.positionY);
-                    cmd.Parameters.AddWithValue("@z", player.positionZ);
-                    cmd.Parameters.AddWithValue("@rot", player.rotation);
-                    cmd.Parameters.AddWithValue("@zoneId", player.zoneId);
+                    cmd.Parameters.AddWithValue("@x", currentPositionX);
+                    cmd.Parameters.AddWithValue("@y", currentPositionY);
+                    cmd.Parameters.AddWithValue("@z", currentPositionZ);
+                    cmd.Parameters.AddWithValue("@rot", currentRotation);
+                    cmd.Parameters.AddWithValue("@zoneId", currentZoneId);
                     cmd.Parameters.AddWithValue("@privateArea", String.IsNullOrEmpty(currentPrivateArea) ? (object)DBNull.Value : currentPrivateArea);
                     cmd.Parameters.AddWithValue("@privateAreaType", currentPrivateAreaType);
                     cmd.Parameters.AddWithValue("@destZone", player.destinationZone);
@@ -1501,6 +1525,52 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
                                 player.privateArea = reader.GetString("currentPrivateArea");
                             player.privateAreaType = reader.GetUInt32("currentPrivateAreaType");
 
+                            if (TransientContentRecoveryPolicy.IsTransient(player.privateArea))
+                            {
+                                string transientPrivateArea = player.privateArea;
+                                DevDiagnostics.Trace(
+                                    "player.login.clearTransientPrivateArea",
+                                    "player", player.customDisplayName,
+                                    "zone", player.zoneId,
+                                    "privateArea", player.privateArea,
+                                    "privateAreaType", player.privateAreaType,
+                                    "x", player.positionX,
+                                    "y", player.positionY,
+                                    "z", player.positionZ);
+                                player.privateArea = null;
+                                player.privateAreaType = 0;
+
+                                uint recoveryZoneId;
+                                float recoveryX;
+                                float recoveryY;
+                                float recoveryZ;
+                                float recoveryRotation;
+                                if (TransientContentRecoveryPolicy.TryGetRecoveryPoint(
+                                    transientPrivateArea,
+                                    out recoveryZoneId,
+                                    out recoveryX,
+                                    out recoveryY,
+                                    out recoveryZ,
+                                    out recoveryRotation))
+                                {
+                                    player.zoneId = recoveryZoneId;
+                                    player.oldPositionX = player.positionX = recoveryX;
+                                    player.oldPositionY = player.positionY = recoveryY;
+                                    player.oldPositionZ = player.positionZ = recoveryZ;
+                                    player.oldRotation = player.rotation = recoveryRotation;
+
+                                    DevDiagnostics.Trace(
+                                        "player.login.applyTransientRecoveryPoint",
+                                        "player", player.customDisplayName,
+                                        "privateArea", transientPrivateArea,
+                                        "zone", player.zoneId,
+                                        "x", player.positionX,
+                                        "y", player.positionY,
+                                        "z", player.positionZ,
+                                        "rotation", player.rotation);
+                                }
+                            }
+
                             if (player.destinationZone != 0)
                                 player.zoneId = player.destinationZone;
 
@@ -1947,6 +2017,14 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
                         while (reader.Read())
                         {
                             int npcLSId = reader.GetUInt16(0);
+                            if (npcLSId < 0 ||
+                                npcLSId >= player.playerWork.npcLinkshellChatCalling.Length ||
+                                npcLSId >= player.playerWork.npcLinkshellChatExtra.Length)
+                            {
+                                Program.Log.Error("Ignoring invalid NPC linkshell row for character {0}: id={1}", player.actorId, npcLSId);
+                                continue;
+                            }
+
                             player.playerWork.npcLinkshellChatCalling[npcLSId] = reader.GetBoolean(1);
                             player.playerWork.npcLinkshellChatExtra[npcLSId] = reader.GetBoolean(2);
                         }

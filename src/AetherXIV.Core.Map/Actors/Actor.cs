@@ -79,6 +79,7 @@ namespace AetherXIV.Core.Map.Actors
         public Actor(uint actorId)
         {
             this.actorId = actorId;
+            InitializeMoveSpeeds();
             positionUpdates = new List<Vector3>();
         }
 
@@ -89,11 +90,16 @@ namespace AetherXIV.Core.Map.Actors
             this.className = className;
             this.classParams = classParams;
 
-            this.moveSpeeds[0] = SetActorSpeedPacket.DEFAULT_STOP;
-            this.moveSpeeds[1] = SetActorSpeedPacket.DEFAULT_WALK;
-            this.moveSpeeds[2] = SetActorSpeedPacket.DEFAULT_RUN;
-            this.moveSpeeds[3] = SetActorSpeedPacket.DEFAULT_ACTIVE;
+            InitializeMoveSpeeds();
             positionUpdates = new List<Vector3>();
+        }
+
+        private void InitializeMoveSpeeds()
+        {
+            moveSpeeds[0] = SetActorSpeedPacket.DEFAULT_STOP;
+            moveSpeeds[1] = SetActorSpeedPacket.DEFAULT_WALK;
+            moveSpeeds[2] = SetActorSpeedPacket.DEFAULT_RUN;
+            moveSpeeds[3] = SetActorSpeedPacket.DEFAULT_ACTIVE;
         }
 
         public void SetPushCircleRange(string triggerName, float size)
@@ -740,6 +746,31 @@ namespace AetherXIV.Core.Map.Actors
         public void QueuePositionUpdate(float x, float y, float z)
         {
             QueuePositionUpdate(new Vector3(x, y, z));
+        }
+
+        /// <summary>
+        /// Queues server-authored movement with the heading and movement state
+        /// that the client must use while interpolating the actor.
+        /// </summary>
+        public void MoveTo(float x, float y, float z, float rot = 0, ushort state = 2)
+        {
+            DevDiagnostics.Trace(
+                "actor.move.server",
+                "actor", String.Format("0x{0:X}", actorId),
+                "actorName", !String.IsNullOrWhiteSpace(customDisplayName) ? customDisplayName : actorName,
+                "actorType", GetType().Name,
+                "fromX", positionX,
+                "fromY", positionY,
+                "fromZ", positionZ,
+                "toX", x,
+                "toY", y,
+                "toZ", z,
+                "rotation", rot,
+                "moveState", state,
+                "queuedPositions", positionUpdates == null ? 0 : positionUpdates.Count);
+            rotation = rot;
+            moveState = state;
+            QueuePositionUpdate(x, y, z);
         }
 
         public void ClearPositionUpdates()

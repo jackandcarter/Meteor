@@ -633,6 +633,8 @@ namespace AetherXIV.Core.Map.Actors
 
 
                 npc.LoadEventConditions(actorClass.eventConditions);
+                if (location.uniqueId == "conjurers_guild_scene_entry")
+                    npc.SetPushCircleRange("pushDefault", 3.0f);
 
                 AddActorToZone(npc);
             }

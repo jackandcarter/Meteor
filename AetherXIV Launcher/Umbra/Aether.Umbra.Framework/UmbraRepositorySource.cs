@@ -66,7 +66,7 @@ public sealed record UmbraRepositorySource(
         return JsonSerializer.Serialize(Normalize(sources), JsonOptions);
     }
 
-    private static bool IsAllowedUri(string value)
+    public static bool IsAllowedUri(string value)
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out Uri? uri))
             return false;

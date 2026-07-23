@@ -10,9 +10,12 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 
 **Highlights**
 
+- **Build 21986:** restores the Gridania opening tutorial and the early `Souls Gone Wild` story route through the Growery, child-emote scenes, White Wolf Gate escort, Lifemend Stump battle and public-Gridania return, including interruption and stale-instance recovery.
 - Corrected ZiPatch `0x44` handling so hash-selection records apply their payload instead of deleting valid client files.
 - Client memory patches now resolve from the suspended process's actual loaded image base, including the Windows/WOW64 helper path.
 - Gridania's opening tutorial now registers retail-shaped content and temporary-party groups atomically, with correct NPC names and a single active content director during zone-in.
+- Actor removal, quest-event presentation, private-content teardown and zone finalization now preserve the packet order and object lifetime expected by the client.
+- Umbra repository discovery and installation now support server-provided registries, safer downloads, update state and clearer in-game management.
 - Database startup now recognizes trusted earlier 2.0 baselines, verifies every migration checksum and canonical seed/schema contract, and falls back to an explicit backed-up clean-install prompt when in-place convergence is unsafe or fails.
 - Modernized .NET 10 core and tooling.
 - One release layout for the AetherXIV Core app, Launcher, database tools and Umbra.
@@ -23,7 +26,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 463 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 509 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 
@@ -50,6 +53,8 @@ __                                                                         __
 - **Guildleve content:** The observed Central Shroud guildleve scene now creates its director, party content group, bonus object, search points, objective state and map markers. Eligible party members in the same zone are included.
 - **Central Shroud population:** 23 observed ambient enemies have been restored across nine enemy families, including bats, ladybugs, wolves, flowers, nuteaters, glirulus, crabs and monkeys.
 - **Player-specific event states:** Scripted event-condition changes are now actually sent to the client, restoring logic used to enable or disable interactions for an individual player.
+- **Gridania opening story:** The opening battle, post-battle transition, Carline Canopy handoff, guild visits, Growery emote sequence, White Wolf Gate escort, staged enemy encounters, Lifemend Stump scenes and return to public Gridania now have a continuous server-side quest contract.
+- **Interrupted-duty recovery:** Logging out, restarting the stack or leaving transient quest content no longer leaves the character permanently bound to a stale private area. The active quest phase reconstructs the appropriate public or private presentation on return.
 
 
 __                                                                         __
@@ -91,7 +96,7 @@ __                                                                         __
 - 826 actor appearances.
 - 993 static actor spawns.
 - 734 quest actor records.
-- 1,192 tracked Lua scripts.
+- 1,200 tracked Lua scripts.
 - Invalid and orphaned actor relationships are excluded rather than filled with invented defaults.
 
 __                                                                         __
@@ -192,7 +197,7 @@ __                                                                         __
 
 AetherXIV 2.0 is a major foundation and restoration release, not a claim that the full original game is complete.
 
-- The three opening story paths still need end-to-end gameplay validation beyond the restored recovery and checkpoint handling.
+- Gridania's restored opening and early story route has been exercised through its major tutorial, guild, escort, battle and return checkpoints. Later Gridania story content and the equivalent Limsa Lominsa and Ul'dah routes still need the same trace-backed restoration depth.
 - The restored Central Shroud guildleve has its observed director, objects, markers and party state, but its enemy waves and complete combat/objective behavior are still being reconstructed.
 - Most guildleves and quests do not yet have complete retail-faithful scripts.
 - Full equipment stat scaling is intentionally deferred until the conditional item data is understood; unverified bonuses are not applied.

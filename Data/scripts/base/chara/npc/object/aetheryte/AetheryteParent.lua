@@ -32,6 +32,22 @@ function init(npc)
 end
 
 function onEventStarted(player, aetheryte, triggerName)
+
+	-- Camp Bentbranch is the attunement beat for Gridania's opening
+	-- storyline. The client finishes this delegated event before the quest
+	-- advances and the ordinary aetheryte menu is shown.
+	if (player:HasQuest(110006) == true) then
+		require ("quests/man/man0g1");
+		local quest = player:GetQuest("Man0g1");
+		if (quest:GetSequence() == SEQ_005) then
+			if (ENABLE_GL_TUTORIAL) then
+				callClientFunction(player, "delegateEvent", player, quest, "processEvent013");
+			else
+				callClientFunction(player, "delegateEvent", player, quest, "processEvent013_2");
+			end
+			quest:StartSequence(SEQ_010);
+		end
+	end
 	
 	if (player:GetGuildleveDirector() ~= nil) then
 		doGuildleveMenu(player, aetheryte);
