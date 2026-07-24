@@ -30,16 +30,32 @@ namespace AetherXIV.Core.Map.actors.area
             z = 0;
             rotation = 0;
 
-            if (!String.Equals(privateAreaName, "SimpleContentMan0g101", StringComparison.OrdinalIgnoreCase))
-                return false;
+            if (String.Equals(privateAreaName, "SimpleContent30010", StringComparison.OrdinalIgnoreCase))
+            {
+                // Gridania opening-battle retry point beside Yda. The public
+                // and duty copies share fst0Battle03, so retaining the last
+                // private-copy position can otherwise strand an interrupted
+                // character beyond the quest's entry actor.
+                zoneId = 166;
+                x = 354.84f;
+                y = 3.77f;
+                z = -699.71f;
+                rotation = -0.791f;
+                return true;
+            }
 
-            // White Wolf Gate, immediately before Man0g1's escort-duty push.
-            zoneId = 155;
-            x = -194.73f;
-            y = 3.54f;
-            z = -1021.33f;
-            rotation = -1.642f;
-            return true;
+            if (String.Equals(privateAreaName, "SimpleContentMan0g101", StringComparison.OrdinalIgnoreCase))
+            {
+                // White Wolf Gate, immediately before Man0g1's escort-duty push.
+                zoneId = 155;
+                x = -194.73f;
+                y = 3.54f;
+                z = -1021.33f;
+                rotation = -1.642f;
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -203,7 +203,7 @@ public sealed class GridaniaOpeningTutorialScriptTests
     }
 
     [Fact]
-    public void AcceptedDestinationPositionAlsoReleasesDeferredTutorialNotice()
+    public void AcceptedDestinationPositionDoesNotReleaseDeferredTutorialNotice()
     {
         string player = LoadRepositoryFile(
             "src",
@@ -213,12 +213,21 @@ public sealed class GridaniaOpeningTutorialScriptTests
             "Player",
             "Player.cs");
 
-        AssertOrdered(
-            player,
+        string completeZoneChange = player.Substring(
+            player.IndexOf("public void CompleteZoneChange()", StringComparison.Ordinal),
+            player.IndexOf("private void ClearExpectedZoneChangePosition()", StringComparison.Ordinal) -
+            player.IndexOf("public void CompleteZoneChange()", StringComparison.Ordinal));
+
+        Assert.Contains(
             "public void CompleteZoneChange()",
-            "SetZoneChanging(false);",
-            "Database.SavePlayerPosition(this);",
-            "ReleaseDeferredContentKickEvent();");
+            completeZoneChange,
+            StringComparison.Ordinal);
+        Assert.Contains("SetZoneChanging(false);", completeZoneChange, StringComparison.Ordinal);
+        Assert.Contains("Database.SavePlayerPosition(this);", completeZoneChange, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "ReleaseDeferredContentKickEvent();",
+            completeZoneChange,
+            StringComparison.Ordinal);
     }
 
     [Fact]

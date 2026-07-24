@@ -10,6 +10,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 
 **Highlights**
 
+- **Build 21991:** fixes the Gridania opening-battle handoff so the deferred tutorial event waits for the client's completed zone-in acknowledgement instead of racing an earlier position update. Interrupted characters in the three-wolf duty now recover beside Yda at the valid battle entry point rather than remaining stranded in a stale private copy.
 - **Build 21990:** fixes the Gridania opening battle race observed on the Linux server by correlating Lua event waits with the director event they belong to, so the client's overlapping active/passive command can no longer consume the tutorial continuation. It also restores the historical opening of Ul'dah's *Court in the Sands*: Momodi grants the Adventurers' Guild linkpearl during her briefing, Camp Black Brush attunement queues her real follow-up call, and Build 21989 characters with the ownerless flashing pearl repair themselves on login without a database edit.
 - **Build 21989:** fixes Linux quest-script loading so mixed-case catalog names such as `Man0g1` resolve to the canonical lowercase packaged scripts. The post-Miounne Adventurers' Guild linkpearl now runs its quest callback when the Linux package is used on a case-sensitive filesystem instead of reporting that the actor script is missing.
 - **Build 21988:** restores the historical post-Miounne linkpearl tutorial without the nested Lua handoff that could leave the client event-locked after the Carline Canopy scene. Miounne's first pearl message now leads cleanly to Camp Bentbranch, while interrupted Build 21987 characters retain their pending story state.
@@ -30,7 +31,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 568 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 569 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 
