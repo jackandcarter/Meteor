@@ -1,6 +1,9 @@
 # Local legacy/reference material
 /Legacy Meteor:Aether/
 /ffxiv_traces/
+/map-*.jsonl
+/world-*.jsonl
+/lobby-*.jsonl
 
 # Generated build and test output
 /bin/
