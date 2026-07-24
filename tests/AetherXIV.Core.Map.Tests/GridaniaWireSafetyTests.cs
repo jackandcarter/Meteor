@@ -40,6 +40,55 @@ public sealed class GridaniaWireSafetyTests
     }
 
     [Fact]
+    public void GridaniaPostWarpDirectorRunsTutorialAndAlwaysClosesTheNotice()
+    {
+        string path = Path.Combine(
+            FindRepositoryRoot(),
+            "Data", "scripts", "directors", "AfterQuestWarpDirector.lua");
+        string source = File.ReadAllText(path)
+            .Replace("require(\"global\")", "", StringComparison.Ordinal);
+
+        Script script = new();
+        DynValue result = script.DoString(source + """
+
+            local calls = { ended = 0, run = nil }
+            local quest = {
+                GetSequence = function(self)
+                    return 5
+                end
+            }
+            local player = {
+                HasQuest = function(self, questId)
+                    return questId == 110006
+                end,
+                GetQuest = function(self, questId)
+                    return quest
+                end,
+                RunEventFunction = function(self, functionName, eventPlayer, eventQuest, eventName)
+                    calls.run = { functionName, eventPlayer, eventQuest, eventName }
+                end,
+                EndEvent = function(self)
+                    calls.ended = calls.ended + 1
+                end
+            }
+
+            onEventStarted(player, {}, "noticeEvent", true)
+            return calls.ended,
+                calls.run[1],
+                calls.run[2] == player,
+                calls.run[3] == quest,
+                calls.run[4]
+            """);
+
+        Assert.Equal(DataType.Tuple, result.Type);
+        Assert.Equal(1d, result.Tuple[0].Number);
+        Assert.Equal("delegateEvent", result.Tuple[1].String);
+        Assert.True(result.Tuple[2].Boolean);
+        Assert.True(result.Tuple[3].Boolean);
+        Assert.Equal("processEventTu_001", result.Tuple[4].String);
+    }
+
+    [Fact]
     public void PlayerExposesTheGilRewardContractUsedByQuestLua()
     {
         System.Reflection.MethodInfo? method = typeof(Player).GetMethod(
@@ -228,5 +277,20 @@ public sealed class GridaniaWireSafetyTests
     {
         public override uint GetTypeId() => typeId;
         public override int GetMemberCount() => memberCount;
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AetherXIV.sln")) &&
+                Directory.Exists(Path.Combine(directory.FullName, "Data", "scripts")))
+                return directory.FullName;
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate the AetherXIV repository root.");
     }
 }

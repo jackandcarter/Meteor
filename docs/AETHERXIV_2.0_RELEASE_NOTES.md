@@ -10,6 +10,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 
 **Highlights**
 
+- **Build 21988:** restores the historical post-Miounne linkpearl tutorial without the nested Lua handoff that could leave the client event-locked after the Carline Canopy scene. Miounne's first pearl message now leads cleanly to Camp Bentbranch, while interrupted Build 21987 characters retain their pending story state.
 - **Build 21987:** repairs the Gridania Carline Canopy login handoff so an interrupted character reconstructs the missing post-cutscene director automatically, and ships the unified progression, character-data, launcher and database fixes from this 2.0 source snapshot.
 - **Build 21986:** restores the Gridania opening tutorial and the early `Souls Gone Wild` story route through the Growery, child-emote scenes, White Wolf Gate escort, Lifemend Stump battle and public-Gridania return, including interruption and stale-instance recovery.
 - Corrected ZiPatch `0x44` handling so hash-selection records apply their payload instead of deleting valid client files.
@@ -27,7 +28,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 557 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 560 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 

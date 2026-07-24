@@ -121,21 +121,26 @@ public sealed class GridaniaOpeningTutorialScriptTests
 
         string director = ReadDataScript("directors", "AfterQuestWarpDirector.lua");
         Assert.Contains("/Director/AfterQuestWarpDirector", director, StringComparison.Ordinal);
-        Assert.Contains("quest:OnNotice(player)", director, StringComparison.Ordinal);
+        Assert.DoesNotContain("quest:OnNotice(player)", director, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PostWarpDirectorRoutesTheSuccessorQuestIntoTheSynchronousTutorial()
+    public void PostWarpDirectorRunsAndClosesTheSynchronousTutorialWithoutNestedLuaDispatch()
     {
+        string director = ReadDataScript("directors", "AfterQuestWarpDirector.lua");
         string quest = ReadDataScript("quests", "man", "man0g1.lua");
         string globals = ReadDataScript("global.lua");
 
-        Assert.Contains("quest:GetSequence() == SEQ_005", quest, StringComparison.Ordinal);
-        Assert.Contains("MESSAGE_TYPE_NPC_LINKSHELL  = 39", globals, StringComparison.Ordinal);
         AssertOrdered(
-            quest,
+            director,
+            "player:HasQuest(110006)",
+            "player:GetQuest(110006)",
+            "quest:GetSequence() == 5",
             "player:RunEventFunction(\"delegateEvent\", player, quest, \"processEventTu_001\")",
             "player:EndEvent()");
+        Assert.DoesNotContain("quest:OnNotice(player);", director, StringComparison.Ordinal);
+        Assert.DoesNotContain("function onNotice", quest, StringComparison.Ordinal);
+        Assert.Contains("MESSAGE_TYPE_NPC_LINKSHELL  = 39", globals, StringComparison.Ordinal);
         Assert.Contains("function onNpcLS", quest, StringComparison.Ordinal);
         AssertOrdered(
             quest,
