@@ -1,6 +1,0 @@
-{"timestamp":"2026-07-24T02:02:42.1355573Z","server":"World","category":"diagnostics.enabled","path":"/home/devunit/.config/AetherXIV/Diagnostics/20260724T020220.131Z-51065011b54046b28de80d7754c3e40c/world-20260724-020242.jsonl"}
-{"timestamp":"2026-07-24T02:07:21.5414065Z","server":"World","category":"packet.classification","context":"world type 0x08","classification":"world.session-heartbeat-candidate","type":"0x8","opcode":"0x0","source":"0x0","target":"0x0","size":24,"payloadLength":8}
-{"timestamp":"2026-07-24T02:07:21.6708628Z","server":"World","category":"packet.classification","context":"world type 0x08","classification":"world.session-heartbeat-candidate","type":"0x8","opcode":"0x0","source":"0x0","target":"0x0","size":24,"payloadLength":8}
-{"timestamp":"2026-07-24T02:09:13.6487854Z","server":"World","category":"world.session.end.request","session":9,"character":"That Oneguy","reason":"socket closed","zone":155}
-{"timestamp":"2026-07-24T02:09:17.6020858Z","server":"World","category":"service.shutdown.world.started","connections":0,"zoneSessions":0,"chatSessions":0}
-{"timestamp":"2026-07-24T02:09:17.6037674Z","server":"World","category":"service.shutdown.world.completed","connectionsClosed":0}
