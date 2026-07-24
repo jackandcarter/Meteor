@@ -1838,6 +1838,16 @@ namespace AetherXIV.Core.Map.Actors
                 "rot", rotation);
 
             Database.SavePlayerPosition(this);
+
+            // ClientZoneInComplete (0x0007) is the primary release signal, but
+            // retail traces show that acknowledgement can trail the actor
+            // bundle substantially and a resident-geometry reload may not
+            // deliver it through every proxy path. An accepted destination
+            // position is equally strong evidence that the replacement scene
+            // and its director actor are live. Release the one-shot notice
+            // here as a fallback so processEventTu_001 can lift the tutorial
+            // input mask instead of leaving both the linkpearl and NPC inert.
+            ReleaseDeferredContentKickEvent();
         }
 
         private void ClearExpectedZoneChangePosition()

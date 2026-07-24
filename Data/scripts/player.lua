@@ -97,7 +97,7 @@ local function startOpeningDirector(player, spawnImmediate)
 	player:KickEvent(director, "noticeEvent", true);
 end
 
-local function resumeGridaniaPostOpeningHandoff(player)
+local function repairPrematureGridaniaLinkpearl(player)
 	if (player:HasQuest(110006) == false or
 		player:GetZoneID() ~= 155 or
 		player:GetPrivateAreaName() ~= "PrivateAreaMasterPast" or
@@ -106,26 +106,15 @@ local function resumeGridaniaPostOpeningHandoff(player)
 	end
 
 	local quest = player:GetQuest(110006);
-	if (quest == nil or quest:GetSequence() ~= 5 or
-		player:GetDirector("AfterQuestWarpDirector") ~= nil) then
+	if (quest == nil or quest:GetSequence() ~= 5 or quest:GetNpcLsFrom() == 0) then
 		return;
 	end
 
-	-- Man0g0 has already been replaced and phase 5 is durable, but the
-	-- destination acknowledgement director is session-scoped. Reconstruct it
-	-- before the login zone bundle so an interruption between the Carline
-	-- cutscene and 0x0007 can replay the synchronous tutorial and clear the
-	-- loading veil.
-	local zone = GetWorldManager():GetZone(155);
-	if (zone == nil) then
-		return;
-	end
-
-	local director = zone:CreateDirector("AfterQuestWarpDirector", false);
-	director:StartDirector(true);
-	player:AddDirector(director);
-	player:SetLoginDirector(director);
-	player:DeferContentKickEvent(director, "noticeEvent", true);
+	-- Build 21987 could persist sequence 5 and a flashing linkpearl before the
+	-- player ever spoke to Miounne. Hide that premature call on login; the PA/2
+	-- Miounne handler accepts sequence 5 as a one-time recovery path and queues
+	-- the real message after replaying her first conversation.
+	quest:EndOfNpcLsMsgs();
 end
 
 function onBeginLogin(player)		
@@ -154,7 +143,7 @@ function onBeginLogin(player)
 	end
 
 	setOpeningCheckpoint(player);
-	resumeGridaniaPostOpeningHandoff(player);
+	repairPrematureGridaniaLinkpearl(player);
 end
 
 function onLogin(player)
