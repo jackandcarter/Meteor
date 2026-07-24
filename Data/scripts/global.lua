@@ -151,12 +151,18 @@ SPAWN_NIGHTMARE = 0x18;
 
 function kickEventContinue(player, actor, trigger, ...)
 	player:KickEvent(actor, trigger, ...);
-	return coroutine.yield("_WAIT_EVENT", player);
+	return coroutine.yield("_WAIT_EVENT", player, actor.actorId, trigger, 5);
 end
 
 function callClientFunction(player, functionName, ...)
 	player:RunEventFunction(functionName, ...);	
-	return coroutine.yield("_WAIT_EVENT", player);	
+	return coroutine.yield(
+		"_WAIT_EVENT",
+		player,
+		player.currentEventOwner,
+		player.currentEventName,
+		player.currentEventType
+	);
 end
 
 function wait(seconds)

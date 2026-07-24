@@ -51,6 +51,27 @@ public sealed class GridaniaWireSafetyTests
     }
 
     [Fact]
+    public void EventWaiterOnlyConsumesTheExpectedDirectorContinuation()
+    {
+        const uint directorActorId = 0x4530000B;
+
+        Assert.False(LuaEngine.MatchesExpectedPlayerEvent(
+            directorActorId,
+            "noticeEvent",
+            5,
+            0xA0F0520A,
+            "commandForced",
+            4));
+        Assert.True(LuaEngine.MatchesExpectedPlayerEvent(
+            directorActorId,
+            "noticeEvent",
+            5,
+            directorActorId,
+            "noticeEvent",
+            5));
+    }
+
+    [Fact]
     public void EveryPackagedQuestScriptUsesCanonicalLowercasePathCasing()
     {
         string questRoot = Path.Combine(FindRepositoryRoot(), "Data", "scripts", "quests");

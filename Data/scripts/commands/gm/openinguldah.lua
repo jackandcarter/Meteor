@@ -57,8 +57,9 @@ function onTrigger(player, argc, action)
             return;
         end
 
-        player:SetNpcLS(0, NPCLS_ALERT);
-        send(player, "Adventurers' Guild NPC Linkpearl set to alert for active Man0u1.");
+        local quest = player:GetQuest("Man0u1");
+        quest:NewNpcLsMsg(1);
+        send(player, "Adventurers' Guild NPC Linkpearl queued for active Man0u1.");
         return;
     end
 

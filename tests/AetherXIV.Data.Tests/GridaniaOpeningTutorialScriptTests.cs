@@ -27,6 +27,14 @@ public sealed class GridaniaOpeningTutorialScriptTests
 
         Assert.DoesNotContain("player:SendMessage", script, StringComparison.Ordinal);
         Assert.DoesNotContain("waitForSignal(\"mobkill\")", script, StringComparison.Ordinal);
+
+        string globals = ReadDataScript("global.lua");
+        Assert.Contains(
+            "coroutine.yield(\"_WAIT_EVENT\", player, actor.actorId, trigger, 5)",
+            globals,
+            StringComparison.Ordinal);
+        Assert.Contains("player.currentEventOwner", globals, StringComparison.Ordinal);
+        Assert.Contains("player.currentEventName", globals, StringComparison.Ordinal);
     }
 
     [Fact]

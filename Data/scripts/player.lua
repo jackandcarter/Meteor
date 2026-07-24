@@ -117,6 +117,30 @@ local function repairPrematureGridaniaLinkpearl(player)
 	quest:EndOfNpcLsMsgs();
 end
 
+local function repairBuild21989UldahHandoff(player)
+	if (player:HasQuest(110010) == false) then
+		return;
+	end
+
+	local quest = player:GetQuest(110010);
+	if (quest == nil or quest:GetSequence() ~= 0) then
+		return;
+	end
+
+	if (player:GetZoneID() == 175 and
+		player:GetPrivateAreaName() == "PrivateAreaMasterPast" and
+		player.privateAreaType == 4) then
+		return;
+	end
+
+	-- Build 21989 replaced Flowers for All but left Court in the Sands at
+	-- sequence 0 after Momodi's briefing, then lit a pearl with no owning
+	-- quest message. Outside the Quicksand intro instance, that state can
+	-- only be the old broken handoff. Restore the granted pearl and camp leg.
+	quest:NewNpcLsMsg(1);
+	quest:StartSequence(5);
+end
+
 function onBeginLogin(player)		
 	--New character, set the initial quest
 	if (player:GetPlayTime(false) == 0) then
@@ -144,6 +168,7 @@ function onBeginLogin(player)
 
 	setOpeningCheckpoint(player);
 	repairPrematureGridaniaLinkpearl(player);
+	repairBuild21989UldahHandoff(player);
 end
 
 function onLogin(player)

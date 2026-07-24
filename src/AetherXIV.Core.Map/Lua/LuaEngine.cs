@@ -31,7 +31,15 @@ namespace AetherXIV.Core.Map.lua
         private static LuaEngine mThisEngine;
         private Dictionary<Coroutine, ulong> mSleepingOnTime = new Dictionary<Coroutine, ulong>();
         private Dictionary<string, List<Coroutine>> mSleepingOnSignal = new Dictionary<string, List<Coroutine>>();
-        private Dictionary<uint, Coroutine> mSleepingOnPlayerEvent = new Dictionary<uint, Coroutine>();
+        private sealed class PlayerEventWaiter
+        {
+            public Coroutine Coroutine;
+            public uint ExpectedOwner;
+            public string ExpectedName;
+            public byte ExpectedType;
+        }
+
+        private Dictionary<uint, PlayerEventWaiter> mSleepingOnPlayerEvent = new Dictionary<uint, PlayerEventWaiter>();
 
         private Timer luaTimer;
 
@@ -78,17 +86,96 @@ namespace AetherXIV.Core.Map.lua
                 "signalWaiters", mSleepingOnSignal[signal].Count);
         }
 
-        public void AddWaitEventCoroutine(Player player, Coroutine coroutine)
+        public void AddWaitEventCoroutine(
+            Player player,
+            Coroutine coroutine,
+            uint expectedOwner = 0,
+            string expectedName = null,
+            byte expectedType = 0)
         {
             if (!mSleepingOnPlayerEvent.ContainsKey(player.actorId))
-                mSleepingOnPlayerEvent.Add(player.actorId, coroutine);
+            {
+                mSleepingOnPlayerEvent.Add(player.actorId, new PlayerEventWaiter
+                {
+                    Coroutine = coroutine,
+                    ExpectedOwner = expectedOwner,
+                    ExpectedName = expectedName ?? "",
+                    ExpectedType = expectedType
+                });
+            }
             DevDiagnostics.Trace(
                 "lua.wait.register",
                 "player", player.customDisplayName,
                 "actor", String.Format("0x{0:X}", player.actorId),
                 "waitType", "_WAIT_EVENT",
                 "coroutine", coroutine.GetHashCode(),
+                "expectedOwner", String.Format("0x{0:X}", expectedOwner),
+                "expectedName", expectedName ?? "",
+                "expectedType", expectedType,
                 "eventWaiters", mSleepingOnPlayerEvent.Count);
+        }
+
+        internal static bool MatchesExpectedPlayerEvent(
+            uint expectedOwner,
+            string expectedName,
+            byte expectedType,
+            uint actualOwner,
+            string actualName,
+            byte actualType)
+        {
+            if (expectedOwner != 0 && expectedOwner != actualOwner)
+                return false;
+
+            if (!String.IsNullOrEmpty(expectedName) &&
+                !String.Equals(expectedName, actualName, StringComparison.Ordinal))
+                return false;
+
+            return expectedType == 0 || expectedType == actualType;
+        }
+
+        private bool TryTakePlayerEventWaiter(
+            Player player,
+            uint actualOwner,
+            string actualName,
+            byte actualType,
+            out PlayerEventWaiter waiter)
+        {
+            if (!mSleepingOnPlayerEvent.TryGetValue(player.actorId, out waiter))
+                return false;
+
+            if (!MatchesExpectedPlayerEvent(
+                waiter.ExpectedOwner,
+                waiter.ExpectedName,
+                waiter.ExpectedType,
+                actualOwner,
+                actualName,
+                actualType))
+            {
+                DevDiagnostics.Trace(
+                    "lua.wait.eventMismatch",
+                    "player", player.customDisplayName,
+                    "actor", String.Format("0x{0:X}", player.actorId),
+                    "expectedOwner", String.Format("0x{0:X}", waiter.ExpectedOwner),
+                    "expectedName", waiter.ExpectedName,
+                    "actualOwner", String.Format("0x{0:X}", actualOwner),
+                    "actualName", actualName ?? "",
+                    "actualType", actualType,
+                    "action", "dispatch unrelated event");
+                waiter = null;
+                return false;
+            }
+
+            mSleepingOnPlayerEvent.Remove(player.actorId);
+            return true;
+        }
+
+        private bool TryTakePlayerEventWaiter(Player player, out PlayerEventWaiter waiter)
+        {
+            if (!mSleepingOnPlayerEvent.TryGetValue(player.actorId, out waiter))
+                return false;
+
+            mSleepingOnPlayerEvent.Remove(player.actorId);
+            return true;
         }
 
         public void PulseSleepingOnTime(object state)
@@ -143,12 +230,18 @@ namespace AetherXIV.Core.Map.lua
 
         public void OnEventUpdate(Player player, List<LuaParam> args)
         {
-            if (mSleepingOnPlayerEvent.ContainsKey(player.actorId))
+            PlayerEventWaiter waiter;
+            if (TryTakePlayerEventWaiter(player, out waiter))
             {
                 try
                 {
-                    Coroutine coroutine = mSleepingOnPlayerEvent[player.actorId];
-                    mSleepingOnPlayerEvent.Remove(player.actorId);
+                    Coroutine coroutine = waiter.Coroutine;
+                    if (waiter.ExpectedOwner != 0)
+                    {
+                        player.currentEventOwner = waiter.ExpectedOwner;
+                        player.currentEventName = waiter.ExpectedName;
+                        player.currentEventType = waiter.ExpectedType;
+                    }
                     DevDiagnostics.Trace(
                         "lua.resume",
                         "player", player.customDisplayName,
@@ -865,10 +958,15 @@ namespace AetherXIV.Core.Map.lua
             List<LuaParam> lparams = new List<LuaParam>();
             lparams.AddRange(eventStart.luaParams);
             lparams.Insert(0, new LuaParam(2, eventStart.eventName));
-            if (mSleepingOnPlayerEvent.ContainsKey(player.actorId))
+            PlayerEventWaiter waiter;
+            if (TryTakePlayerEventWaiter(
+                player,
+                eventStart.ownerActorID,
+                eventStart.eventName,
+                eventStart.eventType,
+                out waiter))
             {
-                Coroutine coroutine = mSleepingOnPlayerEvent[player.actorId];
-                mSleepingOnPlayerEvent.Remove(player.actorId);
+                Coroutine coroutine = waiter.Coroutine;
 
                 try
                 {
@@ -945,13 +1043,30 @@ namespace AetherXIV.Core.Map.lua
                         break;
                     case "_WAIT_EVENT":
                         Player waitingPlayer = (Player)value.Tuple[1].UserData.Object;
+                        uint expectedOwner = value.Tuple.Length > 2 && value.Tuple[2].Type == DataType.Number
+                            ? (uint)value.Tuple[2].Number
+                            : 0;
+                        string expectedName = value.Tuple.Length > 3 && value.Tuple[3].Type == DataType.String
+                            ? value.Tuple[3].String
+                            : "";
+                        byte expectedType = value.Tuple.Length > 4 && value.Tuple[4].Type == DataType.Number
+                            ? (byte)value.Tuple[4].Number
+                            : (byte)0;
                         DevDiagnostics.Trace(
                             "lua.wait",
                             "player", waitingPlayer.customDisplayName,
                             "actor", String.Format("0x{0:X}", waitingPlayer.actorId),
                             "waitType", "_WAIT_EVENT",
+                            "expectedOwner", String.Format("0x{0:X}", expectedOwner),
+                            "expectedName", expectedName,
+                            "expectedType", expectedType,
                             "coroutine", coroutine.GetHashCode());
-                        GetInstance().AddWaitEventCoroutine(waitingPlayer, coroutine);
+                        GetInstance().AddWaitEventCoroutine(
+                            waitingPlayer,
+                            coroutine,
+                            expectedOwner,
+                            expectedName,
+                            expectedType);
                         break;
                     default:
                         return value;

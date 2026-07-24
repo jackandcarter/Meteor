@@ -39,7 +39,7 @@ namespace AetherXIV.Core.Map
 
             Log.Info("==================================");
             Log.Info("AetherXIV Core v2.0: Map Server");
-            Log.Info("Version: 2.0 (build 21989)");
+            Log.Info("Version: 2.0 (build 21990)");
             Log.Info("==================================");
 
             try

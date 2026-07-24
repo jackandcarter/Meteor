@@ -32,11 +32,12 @@ function init(npc)
 end
 
 function onEventStarted(player, aetheryte, triggerName)
+	local aetheryteId = aetheryte:GetActorClassId();
 
 	-- Camp Bentbranch is the attunement beat for Gridania's opening
 	-- storyline. The client finishes this delegated event before the quest
 	-- advances and the ordinary aetheryte menu is shown.
-	if (player:HasQuest(110006) == true) then
+	if (player:HasQuest(110006) == true and aetheryteId == 1280062) then
 		require ("quests/man/man0g1");
 		local quest = player:GetQuest("Man0g1");
 		if (quest:GetSequence() == SEQ_005) then
@@ -46,6 +47,18 @@ function onEventStarted(player, aetheryte, triggerName)
 				callClientFunction(player, "delegateEvent", player, quest, "processEvent013_2");
 			end
 			quest:StartSequence(SEQ_010);
+		end
+	elseif (player:HasQuest(110010) == true and aetheryteId == 1280032) then
+		require ("quests/man/man0u1");
+		local quest = player:GetQuest("Man0u1");
+		if (quest:GetSequence() == MAN0U1_SEQ_CAMP) then
+			-- Retail does not skip straight to the return objective here.
+			-- Attuning makes Momodi call; reading that pearl runs processEvent013
+			-- and advances the journal to the return-to-Quicksand sequence.
+			quest:GetData():SetFlag(MAN0U1_FLAG_CAMP_ATTUNED);
+			if (quest:GetNpcLsFrom() == 0) then
+				quest:NewNpcLsMsg(1);
+			end
 		end
 	end
 	
