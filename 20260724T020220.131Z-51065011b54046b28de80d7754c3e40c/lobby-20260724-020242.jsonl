@@ -1,0 +1,5 @@
+{"timestamp":"2026-07-24T02:02:42.1294304Z","server":"Lobby","category":"diagnostics.enabled","path":"/home/devunit/.config/AetherXIV/Diagnostics/20260724T020220.131Z-51065011b54046b28de80d7754c3e40c/lobby-20260724-020242.jsonl"}
+{"timestamp":"2026-07-24T02:07:01.6582347Z","server":"Lobby","category":"lobby.session.accepted","remote":"172.59.98.90:48582","sessionLength":56,"sessionFingerprint":"83498e9ff232","version":"2012.09.19.0001","sequence":1,"userId":1}
+{"timestamp":"2026-07-24T02:07:08.5256116Z","server":"Lobby","category":"lobby.session.accepted","remote":"172.59.98.90:41959","sessionLength":56,"sessionFingerprint":"83498e9ff232","version":"2012.09.19.0001","sequence":1,"userId":1}
+{"timestamp":"2026-07-24T02:09:17.4915386Z","server":"Lobby","category":"service.shutdown.lobby.started","connections":0}
+{"timestamp":"2026-07-24T02:09:17.4926337Z","server":"Lobby","category":"service.shutdown.lobby.completed","connectionsClosed":0}
