@@ -251,7 +251,8 @@ function Test-Database {
     $commands = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_battle_commands" $dbName
     $stats = Invoke-Query $appArgs "SELECT COUNT(*) FROM server_player_base_stats" $dbName
     $launcherColumns = Invoke-Query $appArgs "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='launcher_config' AND column_name IN ('service_version','server_name','is_active')" $dbName
-    if ([int]$zones -eq 0 -or [int]$commands -eq 0 -or [int]$stats -eq 0 -or $launcherColumns -ne "3") {
+    $classJobColumns = Invoke-Query $appArgs "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='characters' AND column_name='currentJob'" $dbName
+    if ([int]$zones -eq 0 -or [int]$commands -eq 0 -or [int]$stats -eq 0 -or $launcherColumns -ne "3" -or $classJobColumns -ne "1") {
         throw "Database seed/launcher verification failed."
     }
     $npcServiceContract = Invoke-Query $appArgs "SELECT CONCAT(COUNT(*),':',COALESCE(MAX(version),''),':',COALESCE(MAX(contentHashSha256),''),':',COALESCE(MAX(recordCount),0)) FROM server_npc_spawn_evidence_catalog WHERE catalogId='zone-service-npcs-1.23b'" $dbName
@@ -274,7 +275,7 @@ function Test-Database {
     if ($contract -ne "2:1:aetherxiv-direct-core-v2:20260716_000001_ffxiv_server_v2_baseline") {
         throw "Database compatibility mismatch: $contract"
     }
-    Write-Host "Direct-core database verified: $dbName (zones=$zones commands=$commands baseStats=$stats)"
+    Write-Host "AetherXIV 2.0 database verified: $dbName (zones=$zones commands=$commands baseStats=$stats)"
 }
 
 function Test-CurrentV2Contract {
@@ -398,7 +399,7 @@ else {
     if ($baselineImported) {
         Write-Host "Canonical baseline is installed in $dbName"
     } elseif ($exists -eq "0") {
-        Write-Host "Importing canonical direct-core baseline into $dbName"
+        Write-Host "Importing canonical AetherXIV 2.0 baseline into $dbName"
         try { Invoke-SqlFile $baseline $dbName }
         catch {
             Write-Warning "Canonical database installation failed."

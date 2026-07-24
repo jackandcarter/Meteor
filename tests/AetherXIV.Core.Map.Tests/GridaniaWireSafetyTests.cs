@@ -40,6 +40,20 @@ public sealed class GridaniaWireSafetyTests
     }
 
     [Fact]
+    public void PlayerExposesTheGilRewardContractUsedByQuestLua()
+    {
+        System.Reflection.MethodInfo? method = typeof(Player).GetMethod(
+            "AddGil",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public,
+            binder: null,
+            types: [typeof(int)],
+            modifiers: null);
+
+        Assert.NotNull(method);
+        Assert.Equal(typeof(int), method.ReturnType);
+    }
+
+    [Fact]
     public void LuaStoryScriptsEnumerateClrActorListsInsteadOfIndexingThemAsLuaArrays()
     {
         UserData.RegistrationPolicy = InteropRegistrationPolicy.Automatic;

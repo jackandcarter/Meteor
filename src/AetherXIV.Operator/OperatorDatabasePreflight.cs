@@ -18,13 +18,16 @@ public enum AetherXivDatabasePreflightStatus
 
 public static class AetherXivDatabaseCompatibility
 {
+    // These two values are immutable identifiers already recorded by released
+    // AetherXIV 2.0 databases. They describe schema lineage only; no alternate
+    // server implementation is selected at runtime.
     public const string Key = "direct-core";
     public const uint SchemaGeneration = 2;
     public const uint SchemaVersion = 1;
     public const string CompatibilityId = "aetherxiv-direct-core-v2";
     public const string BaselineId = "20260716_000001_ffxiv_server_v2_baseline";
     public const string GuildleveContentMigration = "20260716_000005_guildleve_content_contract.sql";
-    public const string LatestDirectCoreMigration = "20260722_000025_gridania_man0g1_escort_actor_presentation.sql";
+    public const string LatestDirectCoreMigration = "20260723_000026_class_job_progression.sql";
     public static readonly IReadOnlyList<string> RequiredDirectCoreMigrations =
     [
         "20260627_battlenpc_spawn_audit_pins.sql",
@@ -53,7 +56,8 @@ public static class AetherXivDatabaseCompatibility
         "20260722_000022_gridania_man0g1_escort_balance.sql",
         "20260722_000023_gridania_man0g1_escort_boundary.sql",
         "20260722_000024_gridania_man0g1_escort_boundary_polarity.sql",
-        "20260722_000025_gridania_man0g1_escort_actor_presentation.sql"
+        "20260722_000025_gridania_man0g1_escort_actor_presentation.sql",
+        "20260723_000026_class_job_progression.sql"
     ];
     public const string NpcServiceCatalogId = "zone-service-npcs-1.23b";
     public const string NpcServiceCatalogVersion = "2026.07.19.1";
@@ -126,7 +130,7 @@ public sealed class AetherXivDatabasePreflightService
             Add(
                 "database.bootstrap",
                 AetherXivDatabasePreflightStatus.NeedsAdminCredentials,
-                "The direct-core database or app account does not exist or is not accessible. MariaDB administrator credentials are needed once so startup can create the canonical AetherXIV 2 database and application account.");
+                "The AetherXIV 2.0 database or app account does not exist or is not accessible. MariaDB administrator credentials are needed once so startup can create the canonical database and application account.");
         }
         catch (Exception ex)
         {
@@ -301,7 +305,7 @@ WHERE migration_name IN ({String.Join(",", parameterNames)});
         if (missingMigrations.Length > 0)
         {
             add("database.migrations", AetherXivDatabasePreflightStatus.NeedsMigration,
-                $"Pending direct-core migrations: {missingMigrations.Length}/{expectedMigrations.Count}; "
+                $"Pending AetherXIV 2.0 migrations: {missingMigrations.Length}/{expectedMigrations.Count}; "
                 + $"latest required is {AetherXivDatabaseCompatibility.LatestDirectCoreMigration}. "
                 + "The packaged updater will back up the database, apply every missing migration, and verify the result in place.");
             return;
@@ -337,8 +341,8 @@ WHERE migration_name IN ({String.Join(",", parameterNames)});
                 $"The AetherXIV 2 database is missing required tables: {String.Join(", ", missing)}. Setup will back it up and rebuild the canonical schema.");
             return;
         }
-        add("direct-core.schema", AetherXivDatabasePreflightStatus.Passed,
-            $"Verified {requiredTables.Length} direct-core and modern launcher tables.");
+        add("database.schema", AetherXivDatabasePreflightStatus.Passed,
+            $"Verified {requiredTables.Length} AetherXIV server and launcher tables.");
 
         int obsoleteTables = await CountAsync(connection, """
 SELECT COUNT(*)
@@ -354,12 +358,96 @@ WHERE table_schema=DATABASE()
 """, cancellationToken).ConfigureAwait(false);
         if (obsoleteTables != 0)
         {
-            add("direct-core.obsolete-schema", AetherXivDatabasePreflightStatus.NeedsRepair,
+            add("database.obsolete-schema", AetherXivDatabasePreflightStatus.NeedsRepair,
                 $"The database still contains {obsoleteTables} obsolete development tables. A canonical rebuild is required.");
             return;
         }
-        add("direct-core.obsolete-schema", AetherXivDatabasePreflightStatus.Passed,
+        add("database.obsolete-schema", AetherXivDatabasePreflightStatus.Passed,
             "Verified that obsolete development/import tables are absent.");
+
+        int invalidCharacterTribes = await CountAsync(connection, """
+SELECT COUNT(*)
+FROM characters
+WHERE tribe NOT BETWEEN 1 AND 15;
+""", cancellationToken).ConfigureAwait(false);
+        if (invalidCharacterTribes != 0)
+        {
+            add("player-identity.tribe-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
+                $"{invalidCharacterTribes} character record(s) have an invalid retail tribe id. Their race and sex cannot be inferred safely; restore those characters from a known-good backup.");
+            return;
+        }
+        add("player-identity.tribe-contract", AetherXivDatabasePreflightStatus.Passed,
+            "Verified retail tribe ids for every character.");
+
+        const string mismatchedCharacterModelsSql = """
+SELECT COUNT(*)
+FROM characters c
+JOIN characters_appearance a ON a.characterId=c.id
+WHERE a.baseId <> 4294967295
+  AND a.baseId <> CASE c.tribe
+      WHEN 1 THEN 1
+      WHEN 2 THEN 2
+      WHEN 3 THEN 9
+      WHEN 4 THEN 3
+      WHEN 5 THEN 4
+      WHEN 6 THEN 3
+      WHEN 7 THEN 4
+      WHEN 8 THEN 5
+      WHEN 9 THEN 6
+      WHEN 10 THEN 5
+      WHEN 11 THEN 6
+      WHEN 12 THEN 8
+      WHEN 13 THEN 8
+      WHEN 14 THEN 7
+      WHEN 15 THEN 7
+  END;
+""";
+        int mismatchedCharacterModels = await CountAsync(
+            connection,
+            mismatchedCharacterModelsSql,
+            cancellationToken).ConfigureAwait(false);
+        if (mismatchedCharacterModels != 0)
+        {
+            if (!repair)
+            {
+                add("player-identity.model-contract", AetherXivDatabasePreflightStatus.NeedsRepair,
+                    $"{mismatchedCharacterModels} character appearance record(s) conflict with their tribe-derived race or sex. Run the packaged Database setup tool.");
+                return;
+            }
+
+            await using MySqlCommand normalizeCharacterModels = connection.CreateCommand();
+            normalizeCharacterModels.CommandText = """
+UPDATE characters_appearance a
+JOIN characters c ON c.id=a.characterId
+SET a.baseId=4294967295
+WHERE a.baseId <> 4294967295
+  AND a.baseId <> CASE c.tribe
+      WHEN 1 THEN 1
+      WHEN 2 THEN 2
+      WHEN 3 THEN 9
+      WHEN 4 THEN 3
+      WHEN 5 THEN 4
+      WHEN 6 THEN 3
+      WHEN 7 THEN 4
+      WHEN 8 THEN 5
+      WHEN 9 THEN 6
+      WHEN 10 THEN 5
+      WHEN 11 THEN 6
+      WHEN 12 THEN 8
+      WHEN 13 THEN 8
+      WHEN 14 THEN 7
+      WHEN 15 THEN 7
+  END;
+""";
+            int normalizedCharacterModels = await normalizeCharacterModels.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            add("player-identity.model-contract", AetherXivDatabasePreflightStatus.Repaired,
+                $"Normalized {normalizedCharacterModels} character appearance record(s) to the retail tribe-derived model contract.");
+        }
+        else
+        {
+            add("player-identity.model-contract", AetherXivDatabasePreflightStatus.Passed,
+                "Verified that every character model agrees with its tribe-derived race and sex.");
+        }
 
         int gridaniaTutorialActorRoles = await CountAsync(connection, """
 SELECT COUNT(*)
@@ -729,12 +817,12 @@ WHERE table_schema=DATABASE() AND (
         int baseStats = await CountAsync(connection, "SELECT COUNT(*) FROM server_player_base_stats;", cancellationToken).ConfigureAwait(false);
         if (zones == 0 || commands == 0 || baseStats == 0)
         {
-            add("direct-core.seed", AetherXivDatabasePreflightStatus.NeedsRepair,
-                $"Direct-core seed data is incomplete: zones={zones}, commands={commands}, baseStats={baseStats}.");
+            add("database.seed", AetherXivDatabasePreflightStatus.NeedsRepair,
+                $"AetherXIV server seed data is incomplete: zones={zones}, commands={commands}, baseStats={baseStats}.");
             return;
         }
-        add("direct-core.seed", AetherXivDatabasePreflightStatus.Passed,
-            $"Direct-core seed data is present: zones={zones}, commands={commands}, baseStats={baseStats}.");
+        add("database.seed", AetherXivDatabasePreflightStatus.Passed,
+            $"AetherXIV server seed data is present: zones={zones}, commands={commands}, baseStats={baseStats}.");
 
         ServerEndpoint world = ParseEndpoint(config.World.Advertise, "World advertise endpoint");
         await using MySqlCommand readWorld = connection.CreateCommand();
@@ -742,7 +830,7 @@ WHERE table_schema=DATABASE() AND (
         await using MySqlDataReader reader = await readWorld.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
-            add("direct-core.world", AetherXivDatabasePreflightStatus.NeedsRepair, "World id 1 is missing from servers; canonical database repair is required.");
+            add("database.world", AetherXivDatabasePreflightStatus.NeedsRepair, "World id 1 is missing from servers; canonical database repair is required.");
             return;
         }
         string address = reader.GetString(0);
@@ -752,13 +840,13 @@ WHERE table_schema=DATABASE() AND (
 
         if (String.Equals(address, world.Host, StringComparison.OrdinalIgnoreCase) && port == world.Port && active)
         {
-            add("direct-core.world", AetherXivDatabasePreflightStatus.Passed,
+            add("database.world", AetherXivDatabasePreflightStatus.Passed,
                 $"World id 1 advertises {world.Host}:{world.Port}.");
             return;
         }
         if (!repair)
         {
-            add("direct-core.world", AetherXivDatabasePreflightStatus.Missing,
+            add("database.world", AetherXivDatabasePreflightStatus.Missing,
                 $"World id 1 advertises {address}:{port} active={active}; expected {world.Host}:{world.Port}.");
             return;
         }
@@ -768,7 +856,7 @@ WHERE table_schema=DATABASE() AND (
         updateWorld.Parameters.AddWithValue("@address", world.Host);
         updateWorld.Parameters.AddWithValue("@port", world.Port);
         await updateWorld.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-        add("direct-core.world", AetherXivDatabasePreflightStatus.Repaired,
+        add("database.world", AetherXivDatabasePreflightStatus.Repaired,
             $"World id 1 now advertises {world.Host}:{world.Port}.");
     }
 

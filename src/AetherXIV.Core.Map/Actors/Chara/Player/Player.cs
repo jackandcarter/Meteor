@@ -1575,6 +1575,9 @@ namespace AetherXIV.Core.Map.Actors
             resultContainer.CombineLists();
             DoBattleAction(0, 0x7c000062, resultContainer.GetList());
 
+            if (currentJob != 0 && ConvertJobIdToClassId((byte)currentJob) != classId)
+                SetCurrentJob(0);
+
             //If new class, init abilties and level
             if (charaWork.battleSave.skillLevel[classId - 1] <= 0)
             {
@@ -1697,12 +1700,20 @@ namespace AetherXIV.Core.Map.Actors
                 BroadcastPackets(propPacketUtil.Done(), true);            
         }        
 
+        private const uint GilCatalogId = 1000001;
+
         public int GetCurrentGil()
         {
-            if (HasItem(1000001))
-                return GetItemPackage(ItemPackage.CURRENCY_CRYSTALS).GetItemByCatelogId(1000001).quantity;
-            else
-                return 0;
+            InventoryItem gil = GetItemPackage(ItemPackage.CURRENCY_CRYSTALS).GetItemByCatelogId(GilCatalogId);
+            return gil != null ? gil.quantity : 0;
+        }
+
+        public int AddGil(int amount)
+        {
+            if (amount <= 0)
+                return ItemPackage.ERROR_SYSTEM;
+
+            return GetItemPackage(ItemPackage.CURRENCY_CRYSTALS).AddItem(GilCatalogId, amount, 1);
         }
 
         public Actor GetActorInInstance(uint actorId)
@@ -1940,6 +1951,10 @@ namespace AetherXIV.Core.Map.Actors
         {
             return CanAcceptQuest((uint)id);
         }
+        public bool CanAcceptClassQuest(int id)
+        {
+            return CanAcceptClassQuest((uint)id);
+        }
         //For Lua calls, cause MoonSharp goes retard with uint
 
         public bool AddGuildleve(uint id)
@@ -2174,7 +2189,18 @@ namespace AetherXIV.Core.Map.Actors
         public bool CanAcceptQuest(uint id)
         {
             Actor actor = Server.GetStaticActors((0xA0F00000 | id));
-            return CanAcceptQuest(actor.actorName);
+            return actor != null && CanAcceptQuest(actor.actorName);
+        }
+
+        public bool CanAcceptClassQuest(uint id)
+        {
+            return ClassQuestProgressionPolicy.TryGet(id, out ClassQuestRequirement requirement)
+                && CanAcceptQuest(id)
+                && ClassQuestProgressionPolicy.MeetsRequirements(
+                    requirement,
+                    GetCurrentClassOrJob(),
+                    GetClassLevel,
+                    IsQuestCompleted);
         }
 
         public bool IsQuestCompleted(string questName)
@@ -4016,9 +4042,38 @@ namespace AetherXIV.Core.Map.Actors
         {
             currentJob = jobId;
             BroadcastPacket(SetCurrentJobPacket.BuildPacket(actorId, jobId), true);
+            Database.SavePlayerCurrentJob(this);
             Database.LoadHotbar(this);
             SendCharaExpInfo();
             RecalculateStats("job-change");
+        }
+
+        public short GetClassLevel(byte classId)
+        {
+            if (classId == 0 || classId > charaWork.battleSave.skillLevel.Length)
+                return 0;
+
+            return charaWork.battleSave.skillLevel[classId - 1];
+        }
+
+        public bool TryChangeToCurrentClassJob()
+        {
+            byte baseClassId = charaWork.parameterSave.state_mainSkill[0];
+            if (!JobProgressionPolicy.TryGetForBaseClass(baseClassId, out JobProgressionRequirement requirement))
+                return false;
+
+            if (currentJob == requirement.JobId)
+            {
+                SetCurrentJob(0);
+                return true;
+            }
+
+            if (!HasItem(requirement.SoulCrystalItemId)
+                || !JobProgressionPolicy.MeetsLevelRequirements(requirement, GetClassLevel))
+                return false;
+
+            SetCurrentJob(requirement.JobId);
+            return true;
         }
 
         //Gets the id of the player's current job. If they aren't a job, gets the id of their class

@@ -88,7 +88,7 @@ notarization, archive creation, and distribution are separate release steps.
 - **SDK not found:** install SDK `10.0.203` and ensure `dotnet` resolves to it.
 - **`i686-w64-mingw32-g++` missing:** install Homebrew MinGW-w64 and re-open the
   shell if its path was added recently.
-- **Manifest verification failed:** do not modify canonical direct-port files
-  without updating the reviewed manifest workflow.
+- **Lua manifest verification failed:** regenerate the Lua inventory only after
+  reviewing the authoritative `Data/scripts` changes.
 - **NuGet restore failed:** confirm network access or the configured offline
   package cache.

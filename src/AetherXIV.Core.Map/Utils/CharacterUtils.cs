@@ -49,51 +49,7 @@ namespace AetherXIV.Core.Map.utils
 
         public static UInt32 GetTribeModel(byte tribe)
         {
-            switch (tribe)
-            {
-                //Hyur Midlander Male
-                case 1:
-                default:
-                    return 1;
-
-                //Hyur Midlander Female
-                case 2:
-                    return 2;
-
-                //Elezen Male
-                case 4:
-                case 6:
-                    return 3;
-
-                //Elezen Female
-                case 5:
-                case 7:
-                    return 4;
-
-                //Lalafell Male
-                case 8:
-                case 10:
-                    return 5;
-
-                //Lalafell Female
-                case 9:
-                case 11:
-                    return 6;
-
-                //Miqo'te Female
-                case 12:
-                case 13:
-                    return 8;
-
-                //Roegadyn Male
-                case 14:
-                case 15:
-                    return 7;
-
-                //Hyur Highlander Male
-                case 3:
-                    return 9;
-            }
+            return PlayableCharacterIdentity.GetModelId(tribe);
         }
 
         public static string GetClassNameForId(short id)

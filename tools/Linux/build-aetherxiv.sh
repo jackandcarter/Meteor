@@ -164,7 +164,8 @@ build_umbra_bootstrap() {
     "${imgui_dir}/backends/imgui_impl_dx9.cpp" \
     "${imgui_dir}/backends/imgui_impl_win32.cpp" \
     -lgdi32 \
-    -ldwmapi
+    -ldwmapi \
+    -lws2_32
 
   printf '%s\n' "${UMBRA_VERSION}" > "${framework_dir}/version.txt"
   rm -rf "${framework_dir}/Assets"

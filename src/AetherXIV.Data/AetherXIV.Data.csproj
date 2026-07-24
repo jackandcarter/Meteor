@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\AetherXIV.Core.Common\AetherXIV.Core.Common.csproj" />
     <ProjectReference Include="..\AetherXIV.Core\AetherXIV.Core.csproj" />
   </ItemGroup>
 

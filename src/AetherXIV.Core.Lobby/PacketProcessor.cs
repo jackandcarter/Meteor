@@ -279,6 +279,17 @@ namespace AetherXIV.Core.Lobby
                     break;
                 case 0x02://Make                    
                     CharaInfo info = CharaInfo.GetFromNewCharRequest(charaReq.characterInfoEncoded);
+                    if (!PlayableCharacterIdentity.IsValidTribe((byte)info.tribe))
+                    {
+                        ErrorPacket errorPacket = new ErrorPacket(charaReq.sequence, 0, 0, 13001, "Character appearance contains an invalid tribe.");
+                        SubPacket subpacket = errorPacket.BuildPacket();
+                        BasePacket basePacket = BasePacket.CreatePacket(subpacket, true, false);
+                        BasePacket.EncryptPacket(client.blowfish, basePacket);
+                        client.QueuePacket(basePacket);
+
+                        Program.Log.Warn("User {0} => Error; invalid character tribe: {1}", client.currentUserId, info.tribe);
+                        return;
+                    }
 
                     //Set Initial Appearance (items will be loaded in by map server)                    
                     uint[] classAppearance = CharacterCreatorUtils.GetEquipmentForClass(info.currentClass);

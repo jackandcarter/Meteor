@@ -774,6 +774,36 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
             }
         }
 
+        public static void SavePlayerCurrentJob(Player player)
+        {
+            using (MySqlConnection conn = new MySqlConnection(String.Format(
+                "Server={0}; Port={1}; Database={2}; UID={3}; Password={4}",
+                ConfigConstants.DATABASE_HOST,
+                ConfigConstants.DATABASE_PORT,
+                ConfigConstants.DATABASE_NAME,
+                ConfigConstants.DATABASE_USERNAME,
+                ConfigConstants.DATABASE_PASSWORD)))
+            {
+                try
+                {
+                    conn.Open();
+                    using (MySqlCommand cmd = new MySqlCommand(@"
+UPDATE characters
+SET currentJob = @currentJob
+WHERE id = @characterId", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@characterId", player.actorId);
+                        cmd.Parameters.AddWithValue("@currentJob", player.currentJob);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (MySqlException e)
+                {
+                    Program.Log.Error(e.ToString());
+                }
+            }
+        }
+
         public static PlayerBaseStatProfile GetPlayerBaseStats(byte classOrJobId, byte tribe, short level)
         {
             if (!playerBaseStatsTableAvailable)
@@ -1485,8 +1515,10 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
                     currentPrivateArea,
                     currentPrivateAreaType,
                     homepoint,
-                    homepointInn
-                    FROM characters WHERE id = @charId";
+                    homepointInn,
+                    currentJob
+                    FROM characters
+                    WHERE id = @charId";
 
                     cmd = new MySqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@charId", player.actorId);
@@ -1508,6 +1540,7 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
                             player.gcRankGridania = reader.GetByte(9);
                             player.gcRankUldah = reader.GetByte(10);
                             player.currentTitle = reader.GetUInt32(11);
+                            player.currentJob = reader.GetByte("currentJob");
                             player.playerWork.guardian = reader.GetByte(12);
                             player.playerWork.birthdayDay = reader.GetByte(13);
                             player.playerWork.birthdayMonth = reader.GetByte(14);
@@ -1764,10 +1797,36 @@ ON DUPLICATE KEY UPDATE hasChocobo=1,chocoboAppearance=@appearance,chocoboName=@
                     {
                         if (reader.Read())
                         {
-                            if (reader.GetUInt32("baseId") == 0xFFFFFFFF)
-                                player.modelId = CharacterUtils.GetTribeModel(player.playerWork.tribe);
+                            uint storedModelId = reader.GetUInt32("baseId");
+                            if (PlayableCharacterIdentity.TryGetModelId(player.playerWork.tribe, out uint canonicalModelId))
+                            {
+                                player.modelId = canonicalModelId;
+                                if (!PlayableCharacterIdentity.IsModelConsistent(player.playerWork.tribe, storedModelId))
+                                {
+                                    PlayableCharacterIdentity.TryGetSex(player.playerWork.tribe, out PlayableCharacterSex sex);
+                                    PlayableCharacterIdentity.TryGetRace(player.playerWork.tribe, out PlayableCharacterRace race);
+                                    DevDiagnostics.Trace(
+                                        "player.identity.model.normalized",
+                                        "player", player.customDisplayName,
+                                        "tribe", player.playerWork.tribe,
+                                        "race", race,
+                                        "sex", sex,
+                                        "storedModelId", storedModelId,
+                                        "canonicalModelId", canonicalModelId);
+                                }
+                            }
                             else
-                                player.modelId = reader.GetUInt32("baseId");
+                            {
+                                player.modelId = storedModelId == PlayableCharacterIdentity.UseTribeDefaultModel
+                                    ? CharacterUtils.GetTribeModel(player.playerWork.tribe)
+                                    : storedModelId;
+                                DevDiagnostics.Trace(
+                                    "player.identity.tribe.invalid",
+                                    "player", player.customDisplayName,
+                                    "tribe", player.playerWork.tribe,
+                                    "storedModelId", storedModelId,
+                                    "selectedModelId", player.modelId);
+                            }
                             player.appearanceIds[Character.SIZE] = reader.GetByte("size");
                             player.appearanceIds[Character.COLORINFO] = (uint)(reader.GetUInt16("skinColor") | (reader.GetUInt16("hairColor") << 10) | (reader.GetUInt16("eyeColor") << 20));
                             player.appearanceIds[Character.FACEINFO] = PrimitiveConversion.ToUInt32(CharacterUtils.GetFaceInfo(

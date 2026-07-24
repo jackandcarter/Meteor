@@ -107,19 +107,67 @@ public sealed class V1SqlDumpCharacterSeedImporterTests
         }
     }
 
-    private static async Task WriteCharacterSeedSqlAsync(string root)
+    [Fact]
+    public async Task ImporterRejectsIdentityOutsideRetailTribeRange()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            await WriteCharacterSeedSqlAsync(root, tribe: 16);
+
+            V1SqlDumpCharacterSeedDataSet dataSet = await new V1SqlDumpCharacterSeedImporter()
+                .ImportAsync(root);
+
+            Assert.Empty(dataSet.Characters);
+            Assert.Contains(
+                dataSet.Warnings,
+                warning => warning.Contains("outside the retail playable range", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ImporterNormalizesExplicitModelThatConflictsWithTribe()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            await WriteCharacterSeedSqlAsync(root, tribe: 2, baseId: 1);
+
+            V1SqlDumpCharacterSeedDataSet dataSet = await new V1SqlDumpCharacterSeedImporter()
+                .ImportAsync(root);
+
+            V1SqlDumpCharacterSeedRecord seed = Assert.Single(dataSet.Characters);
+            Assert.Equal(2u, seed.Appearance.ModelId);
+            Assert.Contains(
+                dataSet.Warnings,
+                warning => warning.Contains("conflicts with tribe 2", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    private static async Task WriteCharacterSeedSqlAsync(
+        string root,
+        byte tribe = 3,
+        uint baseId = UInt32.MaxValue)
     {
         await File.WriteAllTextAsync(
             Path.Combine(root, "characters.sql"),
-            """
+            $$"""
             INSERT INTO `characters` VALUES
-            ('42','7','1','1','Tester','2','2020-01-01','0','0','0','10','20','30','1.5','0','209','prv0Inn01','2','0','0','6','12','7','2','3','0','127','127','127','0','0','0','','0','0');
+            ('42','7','1','1','Tester','2','2020-01-01','0','0','0','10','20','30','1.5','0','209','prv0Inn01','2','0','0','6','12','7','2','{{tribe}}','0','127','127','127','0','0','0','','0','0');
             """);
         await File.WriteAllTextAsync(
             Path.Combine(root, "characters_appearance.sql"),
-            """
+            $$"""
             INSERT INTO `characters_appearance` VALUES
-            ('1','42','4294967295','2','44','100','200','300','400','5','600','1','2','3','4','5','6','7','8','9','10','111','112','113','114','115','116','117','118','119','120','121','122','123','124','125');
+            ('1','42','{{baseId}}','2','44','100','200','300','400','5','600','1','2','3','4','5','6','7','8','9','10','111','112','113','114','115','116','117','118','119','120','121','122','123','124','125');
             """);
         await File.WriteAllTextAsync(
             Path.Combine(root, "characters_parametersave.sql"),

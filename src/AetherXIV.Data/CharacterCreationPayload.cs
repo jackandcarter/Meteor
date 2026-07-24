@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using AetherXIV.Core;
+using AetherXIV.Core.Common;
 
 namespace AetherXIV.Data;
 
@@ -22,8 +23,12 @@ public static class CharacterCreationPayloadParser
         if (payload.Length < MinimumPayloadSize)
             return false;
 
+        byte tribe = payload[0x08];
+        if (!PlayableCharacterIdentity.IsValidTribe(tribe))
+            return false;
+
         info = new CharacterCreationPayloadInfo(
-            payload[0x08],
+            tribe,
             payload[0x27],
             payload[0x28],
             payload[0x29],
@@ -76,6 +81,8 @@ public static class LobbyAppearancePayloadProfileParser
             reader.ReadByte();
             reader.ReadUInt16();
             byte tribe = reader.ReadByte();
+            if (!PlayableCharacterIdentity.IsValidTribe(tribe))
+                return false;
             reader.ReadUInt32();
             ReadLengthPrefixed(reader);
             ReadLengthPrefixed(reader);

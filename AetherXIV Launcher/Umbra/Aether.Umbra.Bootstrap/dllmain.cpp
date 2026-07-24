@@ -5,6 +5,8 @@
 #define _UNICODE
 #endif
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <d3d9.h>
 
@@ -87,6 +89,9 @@ namespace
     using get_async_key_state_fn = SHORT (WINAPI*)(int);
     using get_cursor_pos_fn = BOOL (WINAPI*)(LPPOINT);
     using screen_to_client_fn = BOOL (WINAPI*)(HWND, LPPOINT);
+    using legacy_main_menu_label_fn = int (__cdecl*)(char*, unsigned int, const char*, int);
+    using legacy_main_menu_enable_fn = void (__thiscall*)(void*, int, void*, BYTE*);
+    using legacy_main_menu_selection_fn = void (__thiscall*)(void*, void*, DWORD, DWORD);
 
     struct JumpHook
     {
@@ -95,6 +100,30 @@ namespace
         void* trampoline;
         BYTE original[5];
         bool hasOriginal;
+        bool installed;
+    };
+
+#pragma pack(push, 1)
+    struct LegacyMainMenuEntry
+    {
+        short command;
+        int label;
+        short enabled;
+    };
+#pragma pack(pop)
+
+    struct LegacyMainMenuHookState
+    {
+        BYTE* moduleBase;
+        LegacyMainMenuEntry* entries;
+        void* selectionTrampoline;
+        BYTE originalTablePointer[4];
+        BYTE originalLabelCall[5];
+        BYTE originalEnableCall[5];
+        BYTE originalCount;
+        BYTE originalBaseSelectionTablePointer[4];
+        BYTE originalSelectionTablePointer[4];
+        BYTE originalSelectionPrologue[7];
         bool installed;
     };
 
@@ -132,6 +161,19 @@ namespace
     constexpr DWORD ToastVisibleMs = 30000;
     constexpr DWORD UmbraDockCollapseMs = 8000;
     constexpr DWORD UmbraRenderBridgeAbiVersion = 1;
+    constexpr int DevBridgeDefaultPort = 8797;
+    constexpr int DevBridgeMaxPeekBytes = 4096;
+    constexpr int DevBridgeMaxScanBytes = 1024 * 1024;
+    constexpr int DevBridgeMaxPatternBytes = 64;
+    constexpr int DevBridgeMaxScanMatches = 128;
+    constexpr DWORD LegacyClientTimestamp = 0x504f671f;
+    constexpr DWORD LegacyClientImageSize = 0x00f99000;
+    constexpr DWORD LegacyMainMenuOriginalCount = 17;
+    constexpr DWORD LegacyMainMenuExtendedCount = 19;
+    constexpr int LegacyUmbraLabel = 0x7ffffffe;
+    constexpr int LegacyUmbraSettingsLabel = 0x7ffffffd;
+    constexpr short LegacyUmbraCommand = -1;
+    constexpr short LegacyUmbraSettingsCommand = -1;
     const wchar_t* UnmanagedCallersOnlyMethod = reinterpret_cast<const wchar_t*>(-1);
 
     struct OverlayVertex
@@ -152,6 +194,10 @@ namespace
     };
 
     JumpHook Direct3DCreate9Hook{};
+    LegacyMainMenuHookState LegacyMainMenuHook{};
+    legacy_main_menu_label_fn OriginalLegacyMainMenuLabel = nullptr;
+    legacy_main_menu_enable_fn OriginalLegacyMainMenuEnable = nullptr;
+    legacy_main_menu_selection_fn OriginalLegacyMainMenuSelection = nullptr;
     direct3d_create9_fn OriginalDirect3DCreate9 = nullptr;
     idirect3d9_create_device_fn OriginalCreateDevice = nullptr;
     idirect3ddevice9_present_fn OriginalPresent = nullptr;
@@ -179,6 +225,11 @@ namespace
     volatile LONG ManagedRenderBridgeFailureLogged = 0;
     volatile LONG ManagedFrameNumber = 0;
     volatile LONG ManagedUiCallbackActive = 0;
+    volatile LONG NativeDevBridgeStopRequested = 0;
+    volatile LONG NativeDevBridgeRunning = 0;
+    volatile LONG NativeDevBridgePort = DevBridgeDefaultPort;
+    HANDLE NativeDevBridgeThreadHandle = nullptr;
+    SOCKET NativeDevBridgeListenSocket = INVALID_SOCKET;
     HMODULE UmbraModule = nullptr;
     ImFont* UmbraUiFont = nullptr;
     umbra_render_bridge_fn ManagedRenderBridge = nullptr;
@@ -258,8 +309,14 @@ namespace
         DWORD flags);
     bool HookUmbraWindowProc();
     bool ResolveDevBridgeControlPath(wchar_t* output, DWORD outputChars);
+    bool ReadDevBridgeControlState(bool* enabled, int* port = nullptr);
     void RefreshDevBridgeControlState(bool force);
     void WriteDevBridgeControlState(bool enabled);
+    DWORD WINAPI NativeDevBridgeThread(LPVOID);
+    bool StartNativeDevBridgeMonitor(HANDLE log);
+    void StopNativeDevBridgeMonitor();
+    bool StartLegacyMainMenuHook(HANDLE log);
+    void StopLegacyMainMenuHook();
     void ParentDirectory(const wchar_t* path, wchar_t* output, DWORD outputChars);
     void CombinePath(const wchar_t* left, const wchar_t* right, wchar_t* output, DWORD outputChars);
     int NotifyManagedRenderEvent(UmbraRenderEventKind kind, const D3DVIEWPORT9* viewport = nullptr);
@@ -641,6 +698,269 @@ namespace
         FlushInstructionCache(GetCurrentProcess(), target, 5);
         hook.installed = true;
         AppendLogLiteral(log, installedLine);
+        return true;
+    }
+
+    bool BytesEqual(const BYTE* actual, const BYTE* expected, DWORD count)
+    {
+        if (actual == nullptr || expected == nullptr)
+            return false;
+
+        for (DWORD index = 0; index < count; index++)
+        {
+            if (actual[index] != expected[index])
+                return false;
+        }
+
+        return true;
+    }
+
+    bool WriteProtectedBytes(void* target, const void* source, DWORD count)
+    {
+        if (target == nullptr || source == nullptr || count == 0)
+            return false;
+
+        DWORD oldProtect = 0;
+        if (!VirtualProtect(target, count, PAGE_EXECUTE_READWRITE, &oldProtect))
+            return false;
+
+        CopyBytes(static_cast<BYTE*>(target), static_cast<const BYTE*>(source), count);
+        DWORD ignored = 0;
+        VirtualProtect(target, count, oldProtect, &ignored);
+        FlushInstructionCache(GetCurrentProcess(), target, count);
+        return true;
+    }
+
+    bool WriteRelativeCall(void* source, void* destination)
+    {
+        BYTE patch[5]{};
+        patch[0] = 0xE8;
+        *reinterpret_cast<DWORD*>(patch + 1) = static_cast<DWORD>(
+            reinterpret_cast<ULONG_PTR>(destination) - reinterpret_cast<ULONG_PTR>(source) - 5);
+        return WriteProtectedBytes(source, patch, sizeof(patch));
+    }
+
+    int __cdecl HookedLegacyMainMenuLabel(char* output, unsigned int outputChars, const char* format, int label)
+    {
+        const char* replacement = nullptr;
+        if (label == LegacyUmbraLabel)
+            replacement = "Umbra";
+        else if (label == LegacyUmbraSettingsLabel)
+            replacement = "Umbra Settings";
+
+        if (replacement == nullptr)
+        {
+            return OriginalLegacyMainMenuLabel != nullptr
+                ? OriginalLegacyMainMenuLabel(output, outputChars, format, label)
+                : -1;
+        }
+
+        if (output == nullptr || outputChars == 0)
+            return -1;
+
+        unsigned int length = 0;
+        while (replacement[length] != '\0' && length + 1 < outputChars)
+        {
+            output[length] = replacement[length];
+            length++;
+        }
+        output[length] = '\0';
+        return static_cast<int>(length);
+    }
+
+    void __fastcall HookedLegacyMainMenuEnable(
+        void* model,
+        void*,
+        int index,
+        void* field,
+        BYTE* enabled)
+    {
+        if (index < 2)
+        {
+            if (enabled != nullptr)
+                *enabled = 1;
+            return;
+        }
+
+        if (OriginalLegacyMainMenuEnable != nullptr)
+            OriginalLegacyMainMenuEnable(model, index - 2, field, enabled);
+    }
+
+    void OpenUmbraFromLegacyMainMenu(bool settings)
+    {
+        PluginInstallerOpen = true;
+        PluginManagerSettingsRequestPending = settings;
+        UmbraLibrarySection = settings ? 4 : 0;
+        UmbraDockExpanded = true;
+        UmbraDockLastInteractionTicks = GetTickCount();
+    }
+
+    void __fastcall HookedLegacyMainMenuSelection(
+        void* self,
+        void*,
+        void* control,
+        DWORD value,
+        DWORD index)
+    {
+        void* mainMenuControl = nullptr;
+        if (self != nullptr)
+            mainMenuControl = *reinterpret_cast<void**>(static_cast<BYTE*>(self) + 0x33c);
+
+        if (control == mainMenuControl && index < 2)
+        {
+            OpenUmbraFromLegacyMainMenu(index == 1);
+            return;
+        }
+
+        if (OriginalLegacyMainMenuSelection != nullptr)
+            OriginalLegacyMainMenuSelection(self, control, value, index);
+    }
+
+    void StopLegacyMainMenuHook()
+    {
+        LegacyMainMenuHookState& hook = LegacyMainMenuHook;
+        if (!hook.installed || hook.moduleBase == nullptr)
+            return;
+
+        WriteProtectedBytes(hook.moduleBase + 0x10f555, hook.originalTablePointer, 4);
+        WriteProtectedBytes(hook.moduleBase + 0x10f597, hook.originalLabelCall, 5);
+        WriteProtectedBytes(hook.moduleBase + 0x10f600, hook.originalEnableCall, 5);
+        WriteProtectedBytes(hook.moduleBase + 0x10f621, &hook.originalCount, 1);
+        WriteProtectedBytes(hook.moduleBase + 0x0fc6b8, hook.originalBaseSelectionTablePointer, 4);
+        WriteProtectedBytes(hook.moduleBase + 0x11ac67, hook.originalSelectionTablePointer, 4);
+        WriteProtectedBytes(hook.moduleBase + 0x11ac50, hook.originalSelectionPrologue, 7);
+        hook.installed = false;
+    }
+
+    bool StartLegacyMainMenuHook(HANDLE log)
+    {
+        static_assert(sizeof(void*) == 4, "The legacy FFXIV menu hook requires an x86 bootstrap.");
+        if (LegacyMainMenuHook.installed)
+        {
+            AppendLogLiteral(log, L"umbra_legacy_main_menu_hook_installed=true");
+            AppendLogLiteral(log, L"umbra_legacy_main_menu_hook_phase=pre_resume");
+            AppendLogLiteral(log, L"umbra_legacy_main_menu_order=Umbra,Umbra Settings,Attributes");
+            return true;
+        }
+
+        HMODULE module = GetModuleHandleW(nullptr);
+        if (module == nullptr)
+            return false;
+
+        BYTE* base = reinterpret_cast<BYTE*>(module);
+        auto dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+        if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+            return false;
+
+        auto ntHeaders = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dosHeader->e_lfanew);
+        if (ntHeaders->Signature != IMAGE_NT_SIGNATURE
+            || ntHeaders->FileHeader.TimeDateStamp != LegacyClientTimestamp
+            || ntHeaders->OptionalHeader.SizeOfImage != LegacyClientImageSize)
+        {
+            AppendLogLiteral(log, L"umbra_legacy_main_menu_hook_skipped=unsupported_client_build");
+            return false;
+        }
+
+        const BYTE tablePointerSignature[5]{ 0xbb, 0x14, 0xab, 0xf9, 0x00 };
+        const BYTE labelCallSignature[5]{ 0xe8, 0xe7, 0x59, 0x4c, 0x00 };
+        const BYTE enableCallSignature[5]{ 0xe8, 0xdb, 0x66, 0x43, 0x00 };
+        const BYTE countSignature[3]{ 0x83, 0xfe, 0x11 };
+        const BYTE selectionSignature[16]{
+            0x8b, 0x44, 0x24, 0x04, 0x56, 0x8b, 0xf1, 0x39,
+            0x86, 0x3c, 0x03, 0x00, 0x00, 0x75, 0x35, 0x8b
+        };
+        const BYTE baseSelectionTableSignature[8]{ 0x0f, 0xbf, 0x14, 0xc5, 0x12, 0xab, 0xf9, 0x00 };
+        const BYTE selectionTableSignature[8]{ 0x0f, 0xbf, 0x14, 0xc5, 0x12, 0xab, 0xf9, 0x00 };
+
+        if (!BytesEqual(base + 0x10f554, tablePointerSignature, sizeof(tablePointerSignature))
+            || !BytesEqual(base + 0x10f597, labelCallSignature, sizeof(labelCallSignature))
+            || !BytesEqual(base + 0x10f600, enableCallSignature, sizeof(enableCallSignature))
+            || !BytesEqual(base + 0x10f61f, countSignature, sizeof(countSignature))
+            || !BytesEqual(base + 0x11ac50, selectionSignature, sizeof(selectionSignature))
+            || !BytesEqual(base + 0x0fc6b4, baseSelectionTableSignature, sizeof(baseSelectionTableSignature))
+            || !BytesEqual(base + 0x11ac63, selectionTableSignature, sizeof(selectionTableSignature)))
+        {
+            AppendLogLiteral(log, L"umbra_legacy_main_menu_hook_skipped=signature_mismatch");
+            return false;
+        }
+
+        LegacyMainMenuEntry* entries = static_cast<LegacyMainMenuEntry*>(VirtualAlloc(
+            nullptr,
+            sizeof(LegacyMainMenuEntry) * LegacyMainMenuExtendedCount,
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_READWRITE));
+        BYTE* trampoline = static_cast<BYTE*>(VirtualAlloc(
+            nullptr,
+            12,
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_EXECUTE_READWRITE));
+        if (entries == nullptr || trampoline == nullptr)
+        {
+            if (entries != nullptr)
+                VirtualFree(entries, 0, MEM_RELEASE);
+            if (trampoline != nullptr)
+                VirtualFree(trampoline, 0, MEM_RELEASE);
+            AppendLogUInt(log, L"umbra_legacy_main_menu_hook_allocation_error", GetLastError());
+            return false;
+        }
+
+        entries[0] = LegacyMainMenuEntry{ LegacyUmbraCommand, LegacyUmbraLabel, 0 };
+        entries[1] = LegacyMainMenuEntry{ LegacyUmbraSettingsCommand, LegacyUmbraSettingsLabel, 1 };
+        CopyBytes(
+            reinterpret_cast<BYTE*>(entries + 2),
+            base + 0xb9ab12,
+            sizeof(LegacyMainMenuEntry) * LegacyMainMenuOriginalCount);
+
+        LegacyMainMenuHookState& hook = LegacyMainMenuHook;
+        hook.moduleBase = base;
+        hook.entries = entries;
+        hook.selectionTrampoline = trampoline;
+        CopyBytes(hook.originalTablePointer, base + 0x10f555, 4);
+        CopyBytes(hook.originalLabelCall, base + 0x10f597, 5);
+        CopyBytes(hook.originalEnableCall, base + 0x10f600, 5);
+        hook.originalCount = *(base + 0x10f621);
+        CopyBytes(hook.originalBaseSelectionTablePointer, base + 0x0fc6b8, 4);
+        CopyBytes(hook.originalSelectionTablePointer, base + 0x11ac67, 4);
+        CopyBytes(hook.originalSelectionPrologue, base + 0x11ac50, 7);
+
+        OriginalLegacyMainMenuLabel = reinterpret_cast<legacy_main_menu_label_fn>(
+            base + 0x5d4f83);
+        OriginalLegacyMainMenuEnable = reinterpret_cast<legacy_main_menu_enable_fn>(
+            base + 0x545ce0);
+
+        CopyBytes(trampoline, hook.originalSelectionPrologue, 7);
+        WriteRelativeJump(trampoline + 7, base + 0x11ac57);
+        OriginalLegacyMainMenuSelection =
+            reinterpret_cast<legacy_main_menu_selection_fn>(trampoline);
+
+        hook.installed = true;
+        DWORD entriesAddress = static_cast<DWORD>(reinterpret_cast<ULONG_PTR>(entries));
+        DWORD labelsAddress = entriesAddress + 2;
+        BYTE extendedCount = static_cast<BYTE>(LegacyMainMenuExtendedCount);
+        BYTE selectionPatch[7]{ 0xe9, 0, 0, 0, 0, 0x90, 0x90 };
+        *reinterpret_cast<DWORD*>(selectionPatch + 1) = static_cast<DWORD>(
+            reinterpret_cast<ULONG_PTR>(&HookedLegacyMainMenuSelection)
+            - reinterpret_cast<ULONG_PTR>(base + 0x11ac50)
+            - 5);
+
+        bool patched =
+            WriteProtectedBytes(base + 0x10f555, &labelsAddress, 4)
+            && WriteRelativeCall(base + 0x10f597, reinterpret_cast<void*>(&HookedLegacyMainMenuLabel))
+            && WriteRelativeCall(base + 0x10f600, reinterpret_cast<void*>(&HookedLegacyMainMenuEnable))
+            && WriteProtectedBytes(base + 0x10f621, &extendedCount, 1)
+            && WriteProtectedBytes(base + 0x0fc6b8, &entriesAddress, 4)
+            && WriteProtectedBytes(base + 0x11ac67, &entriesAddress, 4)
+            && WriteProtectedBytes(base + 0x11ac50, selectionPatch, sizeof(selectionPatch));
+        if (!patched)
+        {
+            AppendLogUInt(log, L"umbra_legacy_main_menu_hook_patch_error", GetLastError());
+            StopLegacyMainMenuHook();
+            return false;
+        }
+
+        AppendLogLiteral(log, L"umbra_legacy_main_menu_hook_installed=true");
+        AppendLogLiteral(log, L"umbra_legacy_main_menu_hook_phase=pre_resume");
+        AppendLogLiteral(log, L"umbra_legacy_main_menu_order=Umbra,Umbra Settings,Attributes");
         return true;
     }
 
@@ -2258,7 +2578,11 @@ namespace
         if (ImGui::Checkbox("Enable read-only Umbra Dev Bridge", &devBridge))
             WriteDevBridgeControlState(devBridge);
         ImGui::SameLine();
-        ImGui::TextColored(devBridge ? theme.accent : theme.mutedText, "%s", devBridge ? "localhost access requested" : "off");
+        const bool nativeBridgeRunning = InterlockedCompareExchange(&NativeDevBridgeRunning, 0, 0) != 0;
+        ImGui::TextColored(
+            nativeBridgeRunning ? theme.accentHover : (devBridge ? theme.accent : theme.mutedText),
+            "%s",
+            nativeBridgeRunning ? "localhost bridge active" : (devBridge ? "localhost access requested" : "off"));
         ImGui::Separator();
         ImGui::TextWrapped("When enabled, the dock exposes Developer Menu. It opens a top-screen menu bar with live log, severity selection, DX9 metrics, startup diagnostics and plugin-host state.");
         if (UmbraAppearanceDirty && ImGui::Button("Save developer preferences"))
@@ -2279,7 +2603,11 @@ namespace
             ImGui::TextUnformatted("Render callback"); ImGui::SameLine(210.0f); ImGui::TextColored(theme.accent, "SwapChain Present");
             ImGui::TextUnformatted("ImGui backend"); ImGui::SameLine(210.0f); ImGui::TextColored(theme.accent, "Win32 + DX9");
             ImGui::TextUnformatted("Managed plugin host"); ImGui::SameLine(210.0f); ImGui::TextColored(ManagedRenderBridge ? theme.accent : theme.warning, "%s", ManagedRenderBridge ? "active" : "waiting");
-            ImGui::TextUnformatted("Developer bridge"); ImGui::SameLine(210.0f); ImGui::TextColored(DevBridgeEnabled ? theme.accent : theme.mutedText, "%s", DevBridgeEnabled ? "requested" : "off");
+            const bool nativeBridgeRunning = InterlockedCompareExchange(&NativeDevBridgeRunning, 0, 0) != 0;
+            ImGui::TextUnformatted("Developer bridge"); ImGui::SameLine(210.0f); ImGui::TextColored(
+                nativeBridgeRunning ? theme.accentHover : (DevBridgeEnabled ? theme.accent : theme.mutedText),
+                "%s",
+                nativeBridgeRunning ? "active" : (DevBridgeEnabled ? "requested" : "off"));
             ImGui::TextUnformatted("Rendered frames"); ImGui::SameLine(210.0f); ImGui::Text("%ld", InterlockedCompareExchange(&ManagedFrameNumber, 0, 0));
             ImGui::TextUnformatted("Device resets"); ImGui::SameLine(210.0f); ImGui::Text("%ld", InterlockedCompareExchange(&ResetCount, 0, 0));
         }
@@ -3514,6 +3842,217 @@ namespace
         return false;
     }
 
+    const char* FindAscii(const char* haystack, DWORD haystackLength, const char* needle)
+    {
+        if (haystack == nullptr || needle == nullptr)
+            return nullptr;
+
+        DWORD needleLength = AnsiLength(needle);
+        if (needleLength == 0 || haystackLength < needleLength)
+            return nullptr;
+
+        for (DWORD index = 0; index <= haystackLength - needleLength; index++)
+        {
+            bool matched = true;
+            for (DWORD needleIndex = 0; needleIndex < needleLength; needleIndex++)
+            {
+                if (haystack[index + needleIndex] != needle[needleIndex])
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (matched)
+                return haystack + index;
+        }
+
+        return nullptr;
+    }
+
+    bool StartsWithAscii(const char* value, const char* prefix)
+    {
+        if (value == nullptr || prefix == nullptr)
+            return false;
+
+        while (*prefix != '\0')
+        {
+            if (*value++ != *prefix++)
+                return false;
+        }
+
+        return true;
+    }
+
+    void AppendAnsiUInt(char* destination, DWORD destinationBytes, unsigned long value)
+    {
+        char temporary[16]{};
+        DWORD count = 0;
+        do
+        {
+            temporary[count++] = static_cast<char>('0' + (value % 10));
+            value /= 10;
+        } while (value != 0 && count < sizeof(temporary));
+
+        char output[16]{};
+        DWORD index = 0;
+        while (count > 0 && index + 1 < sizeof(output))
+            output[index++] = temporary[--count];
+        output[index] = '\0';
+        AppendAnsi(destination, destinationBytes, output);
+    }
+
+    void AppendAnsiHex(char* destination, DWORD destinationBytes, ULONG_PTR value)
+    {
+        static const char Digits[] = "0123456789ABCDEF";
+        char output[2 + (sizeof(ULONG_PTR) * 2) + 1]{};
+        output[0] = '0';
+        output[1] = 'x';
+        DWORD out = 2;
+        bool started = false;
+        for (int shift = static_cast<int>((sizeof(ULONG_PTR) * 8) - 4); shift >= 0; shift -= 4)
+        {
+            unsigned int nibble = static_cast<unsigned int>((value >> shift) & 0xF);
+            if (nibble != 0 || started || shift == 0)
+            {
+                started = true;
+                output[out++] = Digits[nibble];
+            }
+        }
+        output[out] = '\0';
+        AppendAnsi(destination, destinationBytes, output);
+    }
+
+    bool ParseJsonUnsigned(const char* json, DWORD jsonLength, const char* key, ULONG_PTR* result)
+    {
+        if (json == nullptr || key == nullptr || result == nullptr)
+            return false;
+
+        const char* found = FindAscii(json, jsonLength, key);
+        if (found == nullptr)
+            return false;
+
+        const char* end = json + jsonLength;
+        const char* cursor = found + AnsiLength(key);
+        while (cursor < end && *cursor != ':')
+            cursor++;
+        if (cursor >= end)
+            return false;
+        cursor++;
+        while (cursor < end && (*cursor == ' ' || *cursor == '\t' || *cursor == '"'))
+            cursor++;
+
+        int radix = 10;
+        if (cursor + 1 < end && cursor[0] == '0' && (cursor[1] == 'x' || cursor[1] == 'X'))
+        {
+            radix = 16;
+            cursor += 2;
+        }
+
+        ULONG_PTR value = 0;
+        bool parsed = false;
+        while (cursor < end)
+        {
+            int digit = -1;
+            if (*cursor >= '0' && *cursor <= '9')
+                digit = *cursor - '0';
+            else if (radix == 16 && *cursor >= 'a' && *cursor <= 'f')
+                digit = 10 + (*cursor - 'a');
+            else if (radix == 16 && *cursor >= 'A' && *cursor <= 'F')
+                digit = 10 + (*cursor - 'A');
+            else
+                break;
+
+            if (digit >= radix)
+                break;
+            value = (value * static_cast<ULONG_PTR>(radix)) + static_cast<ULONG_PTR>(digit);
+            parsed = true;
+            cursor++;
+        }
+
+        if (!parsed)
+            return false;
+        *result = value;
+        return true;
+    }
+
+    bool ParseJsonPattern(
+        const char* json,
+        DWORD jsonLength,
+        BYTE* bytes,
+        BYTE* masks,
+        int* patternLength)
+    {
+        if (bytes == nullptr || masks == nullptr || patternLength == nullptr)
+            return false;
+
+        const char* found = FindAscii(json, jsonLength, "\"pattern\"");
+        if (found == nullptr)
+            return false;
+
+        const char* end = json + jsonLength;
+        const char* cursor = found + 9;
+        while (cursor < end && *cursor != ':')
+            cursor++;
+        if (cursor >= end)
+            return false;
+        cursor++;
+        while (cursor < end && (*cursor == ' ' || *cursor == '\t'))
+            cursor++;
+        if (cursor >= end || *cursor != '"')
+            return false;
+        cursor++;
+
+        int count = 0;
+        while (cursor < end && *cursor != '"')
+        {
+            while (cursor < end && (*cursor == ' ' || *cursor == '\t' || *cursor == '-' || *cursor == ':'))
+                cursor++;
+            if (cursor >= end || *cursor == '"')
+                break;
+            if (count >= DevBridgeMaxPatternBytes)
+                return false;
+
+            if (*cursor == '?')
+            {
+                cursor++;
+                if (cursor < end && *cursor == '?')
+                    cursor++;
+                bytes[count] = 0;
+                masks[count] = 0;
+                count++;
+                continue;
+            }
+
+            int value = 0;
+            for (int digitIndex = 0; digitIndex < 2; digitIndex++)
+            {
+                if (cursor >= end)
+                    return false;
+                int digit = -1;
+                if (*cursor >= '0' && *cursor <= '9')
+                    digit = *cursor - '0';
+                else if (*cursor >= 'a' && *cursor <= 'f')
+                    digit = 10 + (*cursor - 'a');
+                else if (*cursor >= 'A' && *cursor <= 'F')
+                    digit = 10 + (*cursor - 'A');
+                if (digit < 0)
+                    return false;
+                value = (value << 4) | digit;
+                cursor++;
+            }
+
+            bytes[count] = static_cast<BYTE>(value);
+            masks[count] = 0xFF;
+            count++;
+        }
+
+        if (count == 0)
+            return false;
+        *patternLength = count;
+        return true;
+    }
+
     void EnsureDirectoryTree(const wchar_t* directory)
     {
         if (directory == nullptr || directory[0] == L'\0')
@@ -3564,7 +4103,7 @@ namespace
         return false;
     }
 
-    bool ReadDevBridgeControlState(bool* enabled)
+    bool ReadDevBridgeControlState(bool* enabled, int* port)
     {
         if (enabled == nullptr)
             return false;
@@ -3592,6 +4131,20 @@ namespace
 
         *enabled = ContainsAscii(buffer, read, "\"enabled\": true")
             || ContainsAscii(buffer, read, "\"enabled\":true");
+        if (port != nullptr)
+        {
+            ULONG_PTR parsedPort = DevBridgeDefaultPort;
+            if (ParseJsonUnsigned(buffer, read, "\"port\"", &parsedPort)
+                && parsedPort >= 1024
+                && parsedPort <= 65535)
+            {
+                *port = static_cast<int>(parsedPort);
+            }
+            else
+            {
+                *port = DevBridgeDefaultPort;
+            }
+        }
         return true;
     }
 
@@ -3652,6 +4205,401 @@ namespace
 
         DevBridgeEnabled = enabled;
         DevBridgeControlKnown = true;
+    }
+
+    void SendNativeDevBridgeJson(SOCKET client, int statusCode, const char* body)
+    {
+        if (client == INVALID_SOCKET || body == nullptr)
+            return;
+
+        char header[512]{};
+        AppendAnsi(header, sizeof(header), "HTTP/1.1 ");
+        AppendAnsiUInt(header, sizeof(header), static_cast<unsigned long>(statusCode));
+        AppendAnsi(header, sizeof(header), statusCode == 200 ? " OK\r\n" : " Bad Request\r\n");
+        AppendAnsi(header, sizeof(header), "Content-Type: application/json; charset=utf-8\r\n");
+        AppendAnsi(header, sizeof(header), "Connection: close\r\nCache-Control: no-store\r\nContent-Length: ");
+        AppendAnsiUInt(header, sizeof(header), AnsiLength(body));
+        AppendAnsi(header, sizeof(header), "\r\n\r\n");
+        send(client, header, static_cast<int>(AnsiLength(header)), 0);
+        send(client, body, static_cast<int>(AnsiLength(body)), 0);
+    }
+
+    void SendNativeDevBridgeError(SOCKET client, int statusCode, const char* message)
+    {
+        char body[512]{};
+        AppendAnsi(body, sizeof(body), "{\"success\":false,\"error\":\"");
+        AppendAnsi(body, sizeof(body), message == nullptr ? "request failed" : message);
+        AppendAnsi(body, sizeof(body), "\"}");
+        SendNativeDevBridgeJson(client, statusCode, body);
+    }
+
+    bool ReceiveNativeDevBridgeRequest(SOCKET client, char* request, int requestBytes, int* receivedBytes)
+    {
+        if (request == nullptr || requestBytes < 2 || receivedBytes == nullptr)
+            return false;
+
+        *receivedBytes = 0;
+        int timeoutMs = 2000;
+        setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeoutMs), sizeof(timeoutMs));
+        while (*receivedBytes + 1 < requestBytes)
+        {
+            int received = recv(client, request + *receivedBytes, requestBytes - *receivedBytes - 1, 0);
+            if (received <= 0)
+                break;
+            *receivedBytes += received;
+            request[*receivedBytes] = '\0';
+
+            const char* headerEnd = FindAscii(request, static_cast<DWORD>(*receivedBytes), "\r\n\r\n");
+            if (headerEnd == nullptr)
+                continue;
+
+            ULONG_PTR contentLength = 0;
+            ParseJsonUnsigned(request, static_cast<DWORD>(headerEnd - request), "Content-Length", &contentLength);
+            DWORD completeLength = static_cast<DWORD>((headerEnd - request) + 4 + contentLength);
+            if (static_cast<DWORD>(*receivedBytes) >= completeLength)
+                return true;
+        }
+
+        return *receivedBytes > 0;
+    }
+
+    void HandleNativeDevBridgeStatus(SOCKET client)
+    {
+        HMODULE mainModule = GetModuleHandleW(nullptr);
+        char modulePath[MAX_PATH]{};
+        GetModuleFileNameA(mainModule, modulePath, MAX_PATH);
+        const char* moduleName = modulePath;
+        for (const char* cursor = modulePath; *cursor != '\0'; cursor++)
+        {
+            if (*cursor == '\\' || *cursor == '/')
+                moduleName = cursor + 1;
+        }
+        DWORD imageSize = 0;
+        if (mainModule != nullptr)
+        {
+            const IMAGE_DOS_HEADER* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(mainModule);
+            if (dos->e_magic == IMAGE_DOS_SIGNATURE)
+            {
+                const IMAGE_NT_HEADERS* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(
+                    reinterpret_cast<const BYTE*>(mainModule) + dos->e_lfanew);
+                if (nt->Signature == IMAGE_NT_SIGNATURE)
+                    imageSize = nt->OptionalHeader.SizeOfImage;
+            }
+        }
+
+        char body[1024]{};
+        AppendAnsi(body, sizeof(body), "{\"running\":true,\"host\":\"127.0.0.1\",\"port\":");
+        AppendAnsiUInt(body, sizeof(body), static_cast<unsigned long>(NativeDevBridgePort));
+        AppendAnsi(body, sizeof(body), ",\"transport\":\"native_fallback\",\"read_only\":true,\"process\":{\"process_id\":");
+        AppendAnsiUInt(body, sizeof(body), GetCurrentProcessId());
+        AppendAnsi(body, sizeof(body), ",\"process_name\":\"");
+        AppendAnsi(body, sizeof(body), moduleName);
+        AppendAnsi(body, sizeof(body), "\",\"main_module\":{\"name\":\"");
+        AppendAnsi(body, sizeof(body), moduleName);
+        AppendAnsi(body, sizeof(body), "\",\"base_address\":\"");
+        AppendAnsiHex(body, sizeof(body), reinterpret_cast<ULONG_PTR>(mainModule));
+        AppendAnsi(body, sizeof(body), "\",\"size\":");
+        AppendAnsiUInt(body, sizeof(body), imageSize);
+        AppendAnsi(body, sizeof(body), "}}}");
+        SendNativeDevBridgeJson(client, 200, body);
+    }
+
+    void HandleNativeDevBridgePeek(SOCKET client, const char* request, DWORD requestLength)
+    {
+        ULONG_PTR address = 0;
+        ULONG_PTR requestedSize = 64;
+        if (!ParseJsonUnsigned(request, requestLength, "\"address\"", &address) || address == 0)
+        {
+            SendNativeDevBridgeError(client, 400, "address is required and must be non-zero");
+            return;
+        }
+        ParseJsonUnsigned(request, requestLength, "\"size\"", &requestedSize);
+        if (requestedSize == 0 || requestedSize > DevBridgeMaxPeekBytes)
+        {
+            SendNativeDevBridgeError(client, 400, "size must be 1..4096");
+            return;
+        }
+
+        BYTE bytes[DevBridgeMaxPeekBytes]{};
+        SIZE_T read = 0;
+        BOOL ok = ReadProcessMemory(
+            GetCurrentProcess(),
+            reinterpret_cast<LPCVOID>(address),
+            bytes,
+            static_cast<SIZE_T>(requestedSize),
+            &read);
+        if (!ok || read == 0)
+        {
+            SendNativeDevBridgeError(client, 400, "memory read failed");
+            return;
+        }
+
+        char* body = static_cast<char*>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 12288));
+        if (body == nullptr)
+        {
+            SendNativeDevBridgeError(client, 400, "response allocation failed");
+            return;
+        }
+
+        static const char Digits[] = "0123456789ABCDEF";
+        AppendAnsi(body, 12288, "{\"success\":true,\"address\":\"");
+        AppendAnsiHex(body, 12288, address);
+        AppendAnsi(body, 12288, "\",\"requested_size\":");
+        AppendAnsiUInt(body, 12288, static_cast<unsigned long>(requestedSize));
+        AppendAnsi(body, 12288, ",\"read_size\":");
+        AppendAnsiUInt(body, 12288, static_cast<unsigned long>(read));
+        AppendAnsi(body, 12288, ",\"hex\":\"");
+        DWORD used = AnsiLength(body);
+        for (SIZE_T index = 0; index < read && used + 2 < 12288; index++)
+        {
+            body[used++] = Digits[(bytes[index] >> 4) & 0xF];
+            body[used++] = Digits[bytes[index] & 0xF];
+        }
+        body[used] = '\0';
+        AppendAnsi(body, 12288, "\",\"error\":null}");
+        SendNativeDevBridgeJson(client, 200, body);
+        HeapFree(GetProcessHeap(), 0, body);
+    }
+
+    void HandleNativeDevBridgeScan(SOCKET client, const char* request, DWORD requestLength)
+    {
+        ULONG_PTR start = 0;
+        ULONG_PTR requestedSize = 4096;
+        if (!ParseJsonUnsigned(request, requestLength, "\"start\"", &start) || start == 0)
+        {
+            SendNativeDevBridgeError(client, 400, "start is required and must be non-zero");
+            return;
+        }
+        ParseJsonUnsigned(request, requestLength, "\"size\"", &requestedSize);
+        if (requestedSize == 0 || requestedSize > DevBridgeMaxScanBytes)
+        {
+            SendNativeDevBridgeError(client, 400, "size must be 1..1048576");
+            return;
+        }
+
+        BYTE pattern[DevBridgeMaxPatternBytes]{};
+        BYTE masks[DevBridgeMaxPatternBytes]{};
+        int patternLength = 0;
+        if (!ParseJsonPattern(request, requestLength, pattern, masks, &patternLength))
+        {
+            SendNativeDevBridgeError(client, 400, "pattern must contain 1..64 hexadecimal or wildcard bytes");
+            return;
+        }
+
+        BYTE* bytes = static_cast<BYTE*>(HeapAlloc(GetProcessHeap(), 0, static_cast<SIZE_T>(requestedSize)));
+        if (bytes == nullptr)
+        {
+            SendNativeDevBridgeError(client, 400, "scan allocation failed");
+            return;
+        }
+
+        SIZE_T read = 0;
+        BOOL ok = ReadProcessMemory(
+            GetCurrentProcess(),
+            reinterpret_cast<LPCVOID>(start),
+            bytes,
+            static_cast<SIZE_T>(requestedSize),
+            &read);
+        if (!ok || read == 0)
+        {
+            HeapFree(GetProcessHeap(), 0, bytes);
+            SendNativeDevBridgeError(client, 400, "memory read failed");
+            return;
+        }
+
+        char body[8192]{};
+        AppendAnsi(body, sizeof(body), "{\"success\":true,\"start\":\"");
+        AppendAnsiHex(body, sizeof(body), start);
+        AppendAnsi(body, sizeof(body), "\",\"size\":");
+        AppendAnsiUInt(body, sizeof(body), static_cast<unsigned long>(requestedSize));
+        AppendAnsi(body, sizeof(body), ",\"matches\":[");
+        int matches = 0;
+        if (read >= static_cast<SIZE_T>(patternLength))
+        {
+            for (SIZE_T offset = 0; offset <= read - static_cast<SIZE_T>(patternLength); offset++)
+            {
+                bool matched = true;
+                for (int patternIndex = 0; patternIndex < patternLength; patternIndex++)
+                {
+                    if (masks[patternIndex] != 0 && bytes[offset + patternIndex] != pattern[patternIndex])
+                    {
+                        matched = false;
+                        break;
+                    }
+                }
+                if (!matched)
+                    continue;
+                if (matches > 0)
+                    AppendAnsi(body, sizeof(body), ",");
+                AppendAnsi(body, sizeof(body), "\"");
+                AppendAnsiHex(body, sizeof(body), start + offset);
+                AppendAnsi(body, sizeof(body), "\"");
+                matches++;
+                if (matches >= DevBridgeMaxScanMatches)
+                    break;
+            }
+        }
+        AppendAnsi(body, sizeof(body), "],\"error\":null}");
+        HeapFree(GetProcessHeap(), 0, bytes);
+        SendNativeDevBridgeJson(client, 200, body);
+    }
+
+    void HandleNativeDevBridgeClient(SOCKET client)
+    {
+        sockaddr_in peer{};
+        int peerLength = sizeof(peer);
+        if (getpeername(client, reinterpret_cast<sockaddr*>(&peer), &peerLength) != 0
+            || ntohl(peer.sin_addr.s_addr) != INADDR_LOOPBACK)
+        {
+            SendNativeDevBridgeError(client, 400, "loopback only");
+            return;
+        }
+
+        char request[8192]{};
+        int requestLength = 0;
+        if (!ReceiveNativeDevBridgeRequest(client, request, sizeof(request), &requestLength))
+        {
+            SendNativeDevBridgeError(client, 400, "invalid request");
+            return;
+        }
+
+        if (StartsWithAscii(request, "GET /status "))
+            HandleNativeDevBridgeStatus(client);
+        else if (StartsWithAscii(request, "GET /events"))
+            SendNativeDevBridgeJson(client, 200, "{\"events\":[]}");
+        else if (StartsWithAscii(request, "POST /memory/peek "))
+            HandleNativeDevBridgePeek(client, request, static_cast<DWORD>(requestLength));
+        else if (StartsWithAscii(request, "POST /scan/pattern "))
+            HandleNativeDevBridgeScan(client, request, static_cast<DWORD>(requestLength));
+        else
+            SendNativeDevBridgeError(client, 400, "endpoint unavailable in native fallback");
+    }
+
+    SOCKET OpenNativeDevBridgeListener(int port)
+    {
+        SOCKET listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (listener == INVALID_SOCKET)
+            return INVALID_SOCKET;
+
+        BOOL reuse = TRUE;
+        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse), sizeof(reuse));
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_port = htons(static_cast<u_short>(port));
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        if (bind(listener, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) == SOCKET_ERROR
+            || listen(listener, 4) == SOCKET_ERROR)
+        {
+            closesocket(listener);
+            return INVALID_SOCKET;
+        }
+
+        return listener;
+    }
+
+    DWORD WINAPI NativeDevBridgeThread(LPVOID)
+    {
+        WSADATA winsock{};
+        if (WSAStartup(MAKEWORD(2, 2), &winsock) != 0)
+        {
+            AppendDx9LogLiteral(L"umbra_native_dev_bridge_winsock_failed=true");
+            return 0;
+        }
+
+        int activePort = 0;
+        while (InterlockedCompareExchange(&NativeDevBridgeStopRequested, 0, 0) == 0)
+        {
+            bool enabled = false;
+            int requestedPort = DevBridgeDefaultPort;
+            bool controlRead = ReadDevBridgeControlState(&enabled, &requestedPort);
+            if (!controlRead || !enabled)
+            {
+                if (NativeDevBridgeListenSocket != INVALID_SOCKET)
+                {
+                    closesocket(NativeDevBridgeListenSocket);
+                    NativeDevBridgeListenSocket = INVALID_SOCKET;
+                    InterlockedExchange(&NativeDevBridgeRunning, 0);
+                    AppendDx9LogLiteral(L"umbra_native_dev_bridge_stopped=true");
+                }
+                Sleep(250);
+                continue;
+            }
+
+            if (NativeDevBridgeListenSocket == INVALID_SOCKET || requestedPort != activePort)
+            {
+                if (NativeDevBridgeListenSocket != INVALID_SOCKET)
+                    closesocket(NativeDevBridgeListenSocket);
+                NativeDevBridgeListenSocket = OpenNativeDevBridgeListener(requestedPort);
+                if (NativeDevBridgeListenSocket == INVALID_SOCKET)
+                {
+                    InterlockedExchange(&NativeDevBridgeRunning, 0);
+                    Sleep(1000);
+                    continue;
+                }
+
+                activePort = requestedPort;
+                InterlockedExchange(&NativeDevBridgePort, activePort);
+                InterlockedExchange(&NativeDevBridgeRunning, 1);
+                AppendDx9LogUInt(L"umbra_native_dev_bridge_started_port", static_cast<unsigned long>(activePort));
+            }
+
+            fd_set readable{};
+            FD_ZERO(&readable);
+            FD_SET(NativeDevBridgeListenSocket, &readable);
+            timeval timeout{};
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 250000;
+            int selected = select(0, &readable, nullptr, nullptr, &timeout);
+            if (selected <= 0 || !FD_ISSET(NativeDevBridgeListenSocket, &readable))
+                continue;
+
+            SOCKET client = accept(NativeDevBridgeListenSocket, nullptr, nullptr);
+            if (client == INVALID_SOCKET)
+                continue;
+            HandleNativeDevBridgeClient(client);
+            shutdown(client, SD_BOTH);
+            closesocket(client);
+        }
+
+        if (NativeDevBridgeListenSocket != INVALID_SOCKET)
+        {
+            closesocket(NativeDevBridgeListenSocket);
+            NativeDevBridgeListenSocket = INVALID_SOCKET;
+        }
+        InterlockedExchange(&NativeDevBridgeRunning, 0);
+        WSACleanup();
+        return 0;
+    }
+
+    bool StartNativeDevBridgeMonitor(HANDLE log)
+    {
+        if (!IsWine())
+            return false;
+        if (NativeDevBridgeThreadHandle != nullptr)
+            return true;
+
+        InterlockedExchange(&NativeDevBridgeStopRequested, 0);
+        NativeDevBridgeThreadHandle = CreateThread(nullptr, 0, NativeDevBridgeThread, nullptr, 0, nullptr);
+        bool started = NativeDevBridgeThreadHandle != nullptr;
+        AppendLogLiteral(log, started
+            ? L"umbra_native_dev_bridge_monitor_started=true"
+            : L"umbra_native_dev_bridge_monitor_started=false");
+        return started;
+    }
+
+    void StopNativeDevBridgeMonitor()
+    {
+        InterlockedExchange(&NativeDevBridgeStopRequested, 1);
+        SOCKET listener = NativeDevBridgeListenSocket;
+        NativeDevBridgeListenSocket = INVALID_SOCKET;
+        if (listener != INVALID_SOCKET)
+            closesocket(listener);
+        InterlockedExchange(&NativeDevBridgeRunning, 0);
+        if (NativeDevBridgeThreadHandle != nullptr)
+        {
+            CloseHandle(NativeDevBridgeThreadHandle);
+            NativeDevBridgeThreadHandle = nullptr;
+        }
     }
 
     bool BuildTrustedPlatformAssemblies(const wchar_t* assemblyDirectory, char* output, DWORD outputBytes)
@@ -4084,6 +5032,8 @@ namespace
             IsTruthy(safeMode)
                 ? L"umbra_plugin_execution_enabled=false_safe_mode"
                 : L"umbra_plugin_execution_enabled=true");
+        StartNativeDevBridgeMonitor(log);
+        StartLegacyMainMenuHook(log);
         StartDx9HookLayer(log);
         bool hosted = StartManagedFrameworkInProcess(log, frameworkPath);
         AppendLogLiteral(log, hosted ? L"umbra_framework_hosted=true" : L"umbra_framework_hosted=false");
@@ -4682,9 +5632,21 @@ extern "C" BOOL WINAPI DllMain(HMODULE module, DWORD reason, LPVOID)
     {
         UmbraModule = module;
         DisableThreadLibraryCalls(module);
+
+        // The launcher injects this DLL while the client primary thread is
+        // suspended. Install the narrowly scoped legacy menu patch before
+        // returning from LoadLibrary so MainMenuWidget cannot build its
+        // persistent row model from the original 17-entry table.
+        StartLegacyMainMenuHook(INVALID_HANDLE_VALUE);
+
         HANDLE thread = CreateThread(nullptr, 0, UmbraBootstrapThread, nullptr, 0, nullptr);
         if (thread != nullptr)
             CloseHandle(thread);
+    }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        StopLegacyMainMenuHook();
+        StopNativeDevBridgeMonitor();
     }
 
     return TRUE;

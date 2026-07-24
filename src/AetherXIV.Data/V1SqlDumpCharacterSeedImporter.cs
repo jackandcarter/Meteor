@@ -1,5 +1,6 @@
 using System.Globalization;
 using AetherXIV.Core;
+using AetherXIV.Core.Common;
 
 namespace AetherXIV.Data;
 
@@ -92,6 +93,13 @@ public sealed class V1SqlDumpCharacterSeedImporter
                 continue;
             }
 
+            if (!PlayableCharacterIdentity.IsValidTribe(legacyCharacter.Tribe))
+            {
+                warnings.Add(
+                    $"Skipped character {legacyCharacter.CharacterId}: tribe {legacyCharacter.Tribe} is outside the retail playable range.");
+                continue;
+            }
+
             parameterSaves.TryGetValue(legacyCharacter.CharacterId, out LegacyParameterSaveRow? parameterSave);
             if (parameterSave is null)
                 warnings.Add($"Character {legacyCharacter.CharacterId} has no characters_parametersave row; current class is unknown.");
@@ -109,7 +117,7 @@ public sealed class V1SqlDumpCharacterSeedImporter
                 legacyCharacter.PositionZ,
                 legacyCharacter.Rotation,
                 legacyCharacter.Slot);
-            CharacterAppearanceRecord appearance = ToAppearance(legacyCharacter, legacyAppearance);
+            CharacterAppearanceRecord appearance = ToAppearance(legacyCharacter, legacyAppearance, warnings);
             IReadOnlyList<CharacterClassStateRecord> classStates = BuildClassStates(
                 character.Id,
                 parameterSave,
@@ -509,11 +517,17 @@ public sealed class V1SqlDumpCharacterSeedImporter
         return slots.Values.OrderBy(row => row.SlotId).ToArray();
     }
 
-    private static CharacterAppearanceRecord ToAppearance(LegacyCharacterRow character, LegacyAppearanceRow appearance)
+    private static CharacterAppearanceRecord ToAppearance(
+        LegacyCharacterRow character,
+        LegacyAppearanceRow appearance,
+        ICollection<string> warnings)
     {
-        uint modelId = appearance.BaseId == UInt32.MaxValue
-            ? CharacterModelIds.FromTribe(character.Tribe)
-            : appearance.BaseId;
+        uint modelId = CharacterModelIds.FromTribe(character.Tribe);
+        if (appearance.BaseId != UInt32.MaxValue && appearance.BaseId != modelId)
+        {
+            warnings.Add(
+                $"Character {character.CharacterId} base model {appearance.BaseId} conflicts with tribe {character.Tribe}; normalized to {modelId}.");
+        }
 
         return new CharacterAppearanceRecord(
             new CharacterId(character.CharacterId),

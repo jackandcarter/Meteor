@@ -119,6 +119,7 @@ for configuration in "${configurations[@]}"; do
     verify_file "${platform_root}/Database/migrations/20260722_000023_gridania_man0g1_escort_boundary.sql"
     verify_file "${platform_root}/Database/migrations/20260722_000024_gridania_man0g1_escort_boundary_polarity.sql"
     verify_file "${platform_root}/Database/migrations/20260722_000025_gridania_man0g1_escort_actor_presentation.sql"
+    verify_file "${platform_root}/Database/migrations/20260723_000026_class_job_progression.sql"
     grep -q 'CREATE TABLE IF NOT EXISTS server_battlenpc_spawn_audit_pins' \
       "${platform_root}/Database/ffxiv_server.sql" || {
         echo "Database baseline omits pinspawn persistence: ${platform_root}" >&2

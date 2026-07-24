@@ -97,6 +97,37 @@ local function startOpeningDirector(player, spawnImmediate)
 	player:KickEvent(director, "noticeEvent", true);
 end
 
+local function resumeGridaniaPostOpeningHandoff(player)
+	if (player:HasQuest(110006) == false or
+		player:GetZoneID() ~= 155 or
+		player:GetPrivateAreaName() ~= "PrivateAreaMasterPast" or
+		player.privateAreaType ~= 2) then
+		return;
+	end
+
+	local quest = player:GetQuest(110006);
+	if (quest == nil or quest:GetSequence() ~= 5 or
+		player:GetDirector("AfterQuestWarpDirector") ~= nil) then
+		return;
+	end
+
+	-- Man0g0 has already been replaced and phase 5 is durable, but the
+	-- destination acknowledgement director is session-scoped. Reconstruct it
+	-- before the login zone bundle so an interruption between the Carline
+	-- cutscene and 0x0007 can replay the synchronous tutorial and clear the
+	-- loading veil.
+	local zone = GetWorldManager():GetZone(155);
+	if (zone == nil) then
+		return;
+	end
+
+	local director = zone:CreateDirector("AfterQuestWarpDirector", false);
+	director:StartDirector(true);
+	player:AddDirector(director);
+	player:SetLoginDirector(director);
+	player:DeferContentKickEvent(director, "noticeEvent", true);
+end
+
 function onBeginLogin(player)		
 	--New character, set the initial quest
 	if (player:GetPlayTime(false) == 0) then
@@ -123,6 +154,7 @@ function onBeginLogin(player)
 	end
 
 	setOpeningCheckpoint(player);
+	resumeGridaniaPostOpeningHandoff(player);
 end
 
 function onLogin(player)

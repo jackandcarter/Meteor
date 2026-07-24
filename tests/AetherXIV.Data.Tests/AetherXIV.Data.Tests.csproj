@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AetherXIV.Core.Common\AetherXIV.Core.Common.csproj" />
     <ProjectReference Include="..\..\src\AetherXIV.Data\AetherXIV.Data.csproj" />
   </ItemGroup>
 

@@ -170,13 +170,14 @@ verify_database() {
     echo "Database still contains ${obsolete_tables} obsolete development tables." >&2
     return 21
   }
-  local zones commands stats launcher_columns
+  local zones commands stats launcher_columns class_job_columns
   zones="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_zones")"
   commands="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_battle_commands")"
   stats="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM server_player_base_stats")"
   launcher_columns="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='launcher_config' AND column_name IN ('service_version','server_name','is_active')")"
-  [[ "${zones}" != 0 && "${commands}" != 0 && "${stats}" != 0 && "${launcher_columns}" == 3 ]] || {
-    echo "Database seed/launcher verification failed: zones=${zones} commands=${commands} stats=${stats} launcherColumns=${launcher_columns}" >&2
+  class_job_columns="$("${app[@]}" -N -B "${DB_NAME}" -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='characters' AND column_name='currentJob'")"
+  [[ "${zones}" != 0 && "${commands}" != 0 && "${stats}" != 0 && "${launcher_columns}" == 3 && "${class_job_columns}" == 1 ]] || {
+    echo "Database seed/launcher verification failed: zones=${zones} commands=${commands} stats=${stats} launcherColumns=${launcher_columns} classJobColumns=${class_job_columns}" >&2
     return 22
   }
   local npc_service_contract
@@ -209,7 +210,7 @@ verify_database() {
     echo "Database compatibility mismatch: ${contract:-missing}" >&2
     return 24
   }
-  echo "Direct-core database verified: ${DB_NAME} (zones=${zones} commands=${commands} baseStats=${stats})"
+  echo "AetherXIV 2.0 database verified: ${DB_NAME} (zones=${zones} commands=${commands} baseStats=${stats})"
 }
 
 has_current_v2_contract() {
@@ -384,7 +385,7 @@ else
   if [[ "${BASELINE_IMPORTED}" == 1 ]]; then
     echo "Canonical baseline is installed in ${DB_NAME}"
   elif [[ "${exists}" == 0 ]]; then
-    echo "Importing canonical direct-core baseline into ${DB_NAME}"
+    echo "Importing canonical AetherXIV 2.0 baseline into ${DB_NAME}"
     if ! "${admin[@]}" "${DB_NAME}" < "${BASELINE_FILE}"; then
       echo "Canonical database installation failed." >&2
       restore_original_database

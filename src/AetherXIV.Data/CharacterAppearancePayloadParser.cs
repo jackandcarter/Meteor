@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using AetherXIV.Core;
+using AetherXIV.Core.Common;
 
 namespace AetherXIV.Data;
 
@@ -17,6 +18,9 @@ public static class CharacterAppearancePayloadParser
             return false;
 
         byte tribe = payload[0x08];
+        if (!PlayableCharacterIdentity.IsValidTribe(tribe))
+            return false;
+
         byte size = payload[0x09];
         ushort hairStyle = ReadUInt16(payload, 0x0A);
         byte hairHighlightColor = payload[0x0C];
@@ -93,17 +97,6 @@ public static class CharacterModelIds
 {
     public static uint FromTribe(byte tribe)
     {
-        return tribe switch
-        {
-            2 => 2,
-            4 or 6 => 3,
-            5 or 7 => 4,
-            8 or 10 => 5,
-            9 or 11 => 6,
-            12 or 13 => 8,
-            14 or 15 => 7,
-            3 => 9,
-            _ => 1
-        };
+        return PlayableCharacterIdentity.GetModelId(tribe);
     }
 }

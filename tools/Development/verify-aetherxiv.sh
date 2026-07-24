@@ -14,6 +14,9 @@ trap cleanup EXIT
 
 cleanup
 bash -n "${ROOT_DIR}/db/direct-core/setup.sh"
+python3 "${ROOT_DIR}/tools/Universal/lua-tree-manifest.py" \
+  --scripts-root "${ROOT_DIR}/Data/scripts" \
+  --manifest "${ROOT_DIR}/Data/seeds/lua-tree/manifest.json"
 if command -v pwsh >/dev/null 2>&1; then
   AETHERXIV_SETUP_PS1="${ROOT_DIR}/db/direct-core/setup.ps1" pwsh -NoProfile -Command \
     '$errors=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($env:AETHERXIV_SETUP_PS1, [ref]$null, [ref]$errors); if ($errors.Count) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }'

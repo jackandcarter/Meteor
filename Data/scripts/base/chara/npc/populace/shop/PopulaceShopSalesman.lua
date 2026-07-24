@@ -33,6 +33,7 @@ finishTalkTurn() - Done at the end.
 
 require ("global")
 require ("shop")
+require ("shopgoods")
 
 shopInfo = { 
 --[[ 
@@ -583,32 +584,32 @@ function openShopMenu(player, menuId, shopPack, itemRangeStart, itemRangeEnd, sh
 
     callClientFunction(player, "openShopBuy", player, shopPack, shopCurrency);
     
-    player:SendMessage(0x20, "", "shopPack: "..shopPack.."   Range: "..itemRangeStart.."-"..itemRangeEnd);
-
     while (true) do     
         buyResult, quantity = callClientFunction(player, "selectShopBuy", player);
         
-        if (buyResult == 0) then
+        if (buyResult == nil or buyResult == 0) then
             callClientFunction(player, "closeShopBuy", player);                 
             break;
         else
             if itemRangeStart and itemRangeEnd then
                 itemChosen =  (itemRangeStart - 1) + buyResult;
                 
-                if (((itemRangeStart-1) + itemChosen) < itemRangeStart) or (itemChosen > itemRangeEnd) then
+                if buyResult < 1 or itemChosen < itemRangeStart or itemChosen > itemRangeEnd then
                         player:SendMessage(0x20, "", "[ERROR] Client selected item exceeds the valid range.");
                         callClientFunction(player, "finishTalkTurn", player);
                         player:EndEvent();
                         return;
                 else
-                    player:SendMessage(0x20, "", "Item chosen: " .. itemChosen .. "  Quantity: ".. quantity);
+                    requestItem = shopGoods[itemChosen];
+                    if requestItem == nil or requestItem.item == 0 or requestItem.price <= 0 or quantity == nil or quantity < 1 then
+                        player:SendMessage(0x20, "", "[ERROR] This shop selection is not available.");
+                        callClientFunction(player, "finishTalkTurn", player);
+                        player:EndEvent();
+                        return;
+                    end
 
-                    --[[
-                        TO-DO:  Request item information from server table and throw result to purchaseItem()
-
-                        requestItem = GetItemShopInfoThing(itemChosen);
-                        purchaseItem(player, INVENTORY_NORMAL, requestItem.id, quantity, requestItem.quality, requestItem.price, shopCurrency);
-                    --]]
+                    purchaseItem(player, INVENTORY_NORMAL, requestItem.item, quantity, 1,
+                        requestItem.price * quantity, shopCurrency);
                 end
             end
             

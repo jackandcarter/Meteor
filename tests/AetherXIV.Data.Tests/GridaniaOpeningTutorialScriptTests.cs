@@ -131,6 +131,43 @@ public sealed class GridaniaOpeningTutorialScriptTests
     }
 
     [Fact]
+    public void PhaseFiveCarlineHandoffIsReconstructedBeforeLoginZoneIn()
+    {
+        string login = ReadDataScript("player.lua");
+
+        Assert.Contains("local function resumeGridaniaPostOpeningHandoff(player)", login, StringComparison.Ordinal);
+        Assert.Contains("player:HasQuest(110006) == false", login, StringComparison.Ordinal);
+        Assert.Contains("player:GetZoneID() ~= 155", login, StringComparison.Ordinal);
+        Assert.Contains("player:GetPrivateAreaName() ~= \"PrivateAreaMasterPast\"", login, StringComparison.Ordinal);
+        Assert.Contains("player.privateAreaType ~= 2", login, StringComparison.Ordinal);
+        Assert.Contains("quest:GetSequence() ~= 5", login, StringComparison.Ordinal);
+        AssertOrdered(
+            login,
+            "CreateDirector(\"AfterQuestWarpDirector\", false)",
+            "director:StartDirector(true)",
+            "player:AddDirector(director)",
+            "player:SetLoginDirector(director)",
+            "player:DeferContentKickEvent(director, \"noticeEvent\", true)");
+        AssertOrdered(
+            login,
+            "setOpeningCheckpoint(player)",
+            "resumeGridaniaPostOpeningHandoff(player)");
+
+        string repositoryRoot = FindRepositoryRoot();
+        string processor = File.ReadAllText(Path.Combine(
+            repositoryRoot, "src", "AetherXIV.Core.Map", "PacketProcessor.cs"));
+        AssertOrdered(
+            processor,
+            "\"onBeginLogin\"",
+            "DoZoneIn(session.GetActor(), true, loginSpawnType)",
+            "\"onLogin\"");
+        AssertOrdered(
+            processor,
+            "session.GetActor().RefreshQuestENpcs()",
+            "session.GetActor().ReleaseDeferredContentKickEvent()");
+    }
+
+    [Fact]
     public void BentbranchAndMiounneAdvanceTheConfirmedFiveThroughFifteenPath()
     {
         string aetheryte = ReadDataScript(
@@ -183,7 +220,7 @@ public sealed class GridaniaOpeningTutorialScriptTests
         AssertOrdered(
             quest,
             "\"processEvent120\"",
-            "AddItem(1000001, 2000, 1)",
+            "player:AddGil(2000)",
             "SetCounter(COUNTER_LEATHERWORKERS, GUILD_STARTED)");
         AssertOrdered(
             quest,
@@ -204,6 +241,30 @@ public sealed class GridaniaOpeningTutorialScriptTests
             quest,
             "quest:EndOfNpcLsMsgs()",
             "quest:StartSequenceForNpcLs(SEQ_040)");
+    }
+
+    [Fact]
+    public void StoryGilRewardsUseThePlayerCurrencyContract()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string player = LoadRepositoryFile(
+            "src", "AetherXIV.Core.Map", "Actors", "Chara", "Player", "Player.cs");
+        string quest = ReadDataScript("quests", "man", "man0g1.lua");
+
+        Assert.Contains("public int AddGil(int amount)", player, StringComparison.Ordinal);
+        Assert.Contains("GetItemPackage(ItemPackage.CURRENCY_CRYSTALS).AddItem(GilCatalogId, amount, 1)", player, StringComparison.Ordinal);
+        Assert.Contains("player:AddGil(2000)", quest, StringComparison.Ordinal);
+        Assert.Contains("player:AddGil(3000)", quest, StringComparison.Ordinal);
+
+        string questRoot = Path.Combine(repositoryRoot, "Data", "scripts", "quests");
+        foreach (string path in Directory.EnumerateFiles(questRoot, "*.lua", SearchOption.AllDirectories))
+        {
+            string script = File.ReadAllText(path);
+            Assert.DoesNotContain(
+                "GetItemPackage(INVENTORY_CURRENCY):AddItem(1000001",
+                script,
+                StringComparison.Ordinal);
+        }
     }
 
     [Fact]

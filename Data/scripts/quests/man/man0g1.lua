@@ -293,7 +293,7 @@ function onTalk(player, quest, npc)
 		end
 	elseif (sequence == SEQ_015 and classId == HEREWARD) then
 		callClientFunction(player, "delegateEvent", player, quest, "processEvent120");
-		player:GetItemPackage(INVENTORY_CURRENCY):AddItem(1000001, 2000, 1);
+		player:AddGil(2000);
 		quest:GetData():SetCounter(COUNTER_LEATHERWORKERS, GUILD_STARTED);
 		queueGuildHandoff(player, quest);
 	elseif (sequence == SEQ_015 and classId == SOILEINE and

@@ -10,6 +10,7 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 
 **Highlights**
 
+- **Build 21987:** repairs the Gridania Carline Canopy login handoff so an interrupted character reconstructs the missing post-cutscene director automatically, and ships the unified progression, character-data, launcher and database fixes from this 2.0 source snapshot.
 - **Build 21986:** restores the Gridania opening tutorial and the early `Souls Gone Wild` story route through the Growery, child-emote scenes, White Wolf Gate escort, Lifemend Stump battle and public-Gridania return, including interruption and stale-instance recovery.
 - Corrected ZiPatch `0x44` handling so hash-selection records apply their payload instead of deleting valid client files.
 - Client memory patches now resolve from the suspended process's actual loaded image base, including the Windows/WOW64 helper path.
@@ -26,17 +27,17 @@ The goal of 2.0 is simple: make AetherXIV easier to install, launch, operate, te
 - Redesigned launcher home screen and server-managed news/reel presentation.
 - Umbra API 2.0 with an in-game plugin library, managed plugin host and customizable UI.
 - Build and packaging tools for macOS, Linux, SteamOS and Windows.
-- 509 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
+- 557 automated Core, protocol, data, launcher, server-management and Umbra checks passing for this release snapshot.
 
 ---
 
 ## Core updates
 
 - The original Lobby, World and Map services now live inside the 2.0 solution and build as part of the same release.
-- Core behavior was carried forward through a tracked compatibility port: 397 source files remain exact copies and 21 have narrowly documented 2.0 adaptations.
+- Core behavior was carried forward into the unified AetherXIV 2.0 source tree.
 - Server paths now resolve from the installed application instead of depending on the folder from which a service was started. This fixes missing config, script and navmesh files in packaged builds.
 - Lobby, World and Map can receive their database host, port, database name and credentials from the new AetherXIV Core app.
-- Runtime files, Lua scripts and the direct-core source set have integrity manifests so incomplete or mixed releases can be detected before launch.
+- Runtime files and Lua scripts have integrity manifests so incomplete or mixed releases can be detected before launch.
 - The server transport and protocol foundation now has typed, byte-checked coverage for login, actors, inventory, battle, chat, social groups, events, player state, countdowns and zone transitions.
 - Official packet captures are represented by focused test fixtures. This lets future fixes be checked against observed client behavior instead of guesswork.
 
@@ -96,7 +97,7 @@ __                                                                         __
 - 826 actor appearances.
 - 993 static actor spawns.
 - 734 quest actor records.
-- 1,200 tracked Lua scripts.
+- 1,201 tracked Lua scripts.
 - Invalid and orphaned actor relationships are excluded rather than filled with invented defaults.
 
 __                                                                         __
@@ -176,8 +177,8 @@ __                                                                         __
 - Linux and SteamOS releases are relocatable and launch through the native Core and Launcher executables in their `app` folders; unreliable path-dependent desktop shortcuts are not packaged.
 - **Windows:** dedicated x64 Core and Launcher app packaging with native x86 Umbra injector and bootstrap builds for the 32-bit game client.
 - Every platform build creates the same organized release layout for servers, launcher, UI, database and runtime assets.
-- Release verification rejects source files in the output, missing executables, incomplete runtime data and mismatched direct-port files.
-- Development verification can build both solutions, run all tests and validate the Lua/direct-core manifests from one entry point.
+- Release verification rejects source files in the output, missing executables and incomplete runtime data.
+- Development verification can build both solutions and run all tests from one entry point.
 - Existing platform build commands now report missing SDK, Python and native compiler prerequisites before modifying release output. Docker release validation also starts a temporary MariaDB-backed Compose stack and checks service health.
 
 __                                                                         __

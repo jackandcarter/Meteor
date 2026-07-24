@@ -374,6 +374,7 @@ case "${query}" in
   *information_schema.schemata*) echo "${FAKE_DATABASE_EXISTS}" ;;
   *"SELECT COUNT(*) FROM aether_database_compatibility"*) echo 1 ;;
   *server_battlenpc_appearance_audit*) echo 0 ;;
+  *information_schema.columns*currentJob*) echo 1 ;;
   *information_schema.columns*) echo 3 ;;
   *information_schema.tables*) [[ -e "${FAKE_SCHEMA_READY}" ]] && echo 1 || echo 0 ;;
   *server_npc_spawn_evidence_catalog*) echo "1:2026.07.19.1:f40276dea0ce6739b40d0dca3dc44f665ee525646851592a9439d5013f97b8de:23" ;;
@@ -425,7 +426,7 @@ esac
             }
             else
             {
-                Assert.Contains("Importing canonical direct-core baseline", output, StringComparison.Ordinal);
+                Assert.Contains("Importing canonical AetherXIV 2.0 baseline", output, StringComparison.Ordinal);
                 Assert.DoesNotContain("Backed up", output, StringComparison.Ordinal);
             }
 
@@ -485,7 +486,7 @@ esac
                 Assert.True(powerShellProcess.ExitCode == 0,
                     $"stdout:\n{powerShellOutput}\nstderr:\n{powerShellError}");
                 Assert.Contains(
-                    databaseExists ? "Canonical AetherXIV 2 database installed" : "Importing canonical direct-core baseline",
+                    databaseExists ? "Canonical AetherXIV 2 database installed" : "Importing canonical AetherXIV 2.0 baseline",
                     powerShellOutput,
                     StringComparison.Ordinal);
                 Assert.Contains("BASELINE_IMPORT", File.ReadAllText(logPath), StringComparison.Ordinal);
@@ -548,6 +549,7 @@ case "${query}" in
   *information_schema.schemata*) echo 1 ;;
   *"SELECT COUNT(*) FROM aether_database_compatibility"*) echo 1 ;;
   *server_battlenpc_appearance_audit*) echo 0 ;;
+  *information_schema.columns*currentJob*) echo 1 ;;
   *information_schema.columns*) echo 3 ;;
   *information_schema.tables*) echo 1 ;;
   *"migration_name='baseline/"*) echo "${TRUSTED_EARLIER_HASH}" ;;
@@ -597,7 +599,7 @@ esac
 
             Assert.True(process.ExitCode == 0, $"stdout:\n{output}\nstderr:\n{error}");
             Assert.Contains("Recognized a trusted earlier canonical baseline", output, StringComparison.Ordinal);
-            Assert.Contains("Direct-core database verified", output, StringComparison.Ordinal);
+            Assert.Contains("AetherXIV 2.0 database verified", output, StringComparison.Ordinal);
             Assert.Contains("Advanced the trusted baseline ledger", output, StringComparison.Ordinal);
             string calls = File.ReadAllText(logPath);
             if (migrationRecordedWithCrlf)
@@ -626,8 +628,8 @@ esac
         Assert.Equal(1u, AetherXivDatabaseCompatibility.SchemaVersion);
         Assert.Equal("aetherxiv-direct-core-v2", AetherXivDatabaseCompatibility.CompatibilityId);
         Assert.Contains("baseline", AetherXivDatabaseCompatibility.BaselineId, StringComparison.Ordinal);
-        Assert.Equal("20260722_000025_gridania_man0g1_escort_actor_presentation.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
-        Assert.Equal(27, AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Count);
+        Assert.Equal("20260723_000026_class_job_progression.sql", AetherXivDatabaseCompatibility.LatestDirectCoreMigration);
+        Assert.Equal(28, AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations.Count);
         Assert.Equal(
             AetherXivDatabaseCompatibility.LatestDirectCoreMigration,
             AetherXivDatabaseCompatibility.RequiredDirectCoreMigrations[^1]);
