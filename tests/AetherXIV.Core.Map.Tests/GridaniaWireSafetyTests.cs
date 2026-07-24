@@ -1,6 +1,7 @@
 using AetherXIV.Core.Map.Actors;
 using AetherXIV.Core.Map.Actors.Chara;
 using AetherXIV.Core.Map.actors.group;
+using AetherXIV.Core.Map.lua;
 using AetherXIV.Core.Map.packets.send.actor;
 using AetherXIV.Core.Map.packets.send.actor.battle;
 using AetherXIV.Core.Map.packets.send.group;
@@ -37,6 +38,30 @@ public sealed class GridaniaWireSafetyTests
         script.DoString("quest:SetENpc(1000230, 2); quest:GetData():SetCounter(1, 15)");
 
         Assert.Equal(15u, quest.GetData().GetCounter(1));
+    }
+
+    [Fact]
+    public void QuestScriptPathUsesCanonicalLowercaseLayout()
+    {
+        Quest quest = new(0xA0F00000 | 110006u, "Man0g1");
+
+        string path = LuaEngine.GetScriptPath(quest);
+
+        Assert.Equal("./scripts/quests/man/man0g1.lua", path);
+    }
+
+    [Fact]
+    public void EveryPackagedQuestScriptUsesCanonicalLowercasePathCasing()
+    {
+        string questRoot = Path.Combine(FindRepositoryRoot(), "Data", "scripts", "quests");
+        string[] scripts = Directory.GetFiles(questRoot, "*.lua", SearchOption.AllDirectories);
+
+        Assert.NotEmpty(scripts);
+        Assert.All(scripts, path =>
+        {
+            string relativePath = Path.GetRelativePath(questRoot, path);
+            Assert.Equal(relativePath.ToLowerInvariant(), relativePath);
+        });
     }
 
     [Fact]
@@ -86,6 +111,56 @@ public sealed class GridaniaWireSafetyTests
         Assert.True(result.Tuple[2].Boolean);
         Assert.True(result.Tuple[3].Boolean);
         Assert.Equal("processEventTu_001", result.Tuple[4].String);
+    }
+
+    [Fact]
+    public void GridaniaFirstNpcLinkshellMessageUsesRetailSenderAndClearsTheAlert()
+    {
+        string path = Path.Combine(
+            FindRepositoryRoot(),
+            "Data", "scripts", "quests", "man", "man0g1.lua");
+        string source = File.ReadAllText(path)
+            .Replace("require(\"global\")", "", StringComparison.Ordinal)
+            .Replace("require(\"tutorial\")", "", StringComparison.Ordinal)
+            .Replace("require(\"quest\")", "", StringComparison.Ordinal);
+
+        Script script = new();
+        DynValue result = script.DoString(source + """
+
+            MESSAGE_TYPE_NPC_LINKSHELL = 8
+            local calls = { message = nil, sender = nil, endedMessages = 0, endedEvent = 0 }
+            showTutorialSuccessWidget = function() end
+            closeTutorialWidget = function() end
+            endTutorialMode = function() end
+            wait = function() end
+
+            local quest = {
+                GetSequence = function(self)
+                    return 5
+                end,
+                EndOfNpcLsMsgs = function(self)
+                    calls.endedMessages = calls.endedMessages + 1
+                end
+            }
+            local player = {
+                SendGameMessageDisplayIDSender = function(self, eventQuest, messageId, messageType, senderId)
+                    calls.message = messageId
+                    calls.sender = senderId
+                end,
+                EndEvent = function(self)
+                    calls.endedEvent = calls.endedEvent + 1
+                end
+            }
+
+            onNpcLS(player, quest, 1, 1)
+            return calls.message, calls.sender, calls.endedMessages, calls.endedEvent
+            """);
+
+        Assert.Equal(DataType.Tuple, result.Type);
+        Assert.Equal(330d, result.Tuple[0].Number);
+        Assert.Equal(1300018d, result.Tuple[1].Number);
+        Assert.Equal(1d, result.Tuple[2].Number);
+        Assert.Equal(1d, result.Tuple[3].Number);
     }
 
     [Fact]

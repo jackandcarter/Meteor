@@ -33,7 +33,7 @@ namespace AetherXIV.Core.Lobby
 
             Log.Info("==================================");
             Log.Info("AetherXIV Core v2.0: Lobby Server");
-            Log.Info("Version: 2.0 (build 21988)");
+            Log.Info("Version: 2.0 (build 21989)");
             Log.Info("==================================");
 
             try

@@ -28,7 +28,7 @@ namespace AetherXIV.Core.World
 
             Log.Info("==================================");
             Log.Info("AetherXIV Core v2.0: World Server");
-            Log.Info("Version: 2.0 (build 21988)");
+            Log.Info("Version: 2.0 (build 21989)");
             Log.Info("==================================");
 
 #if DEBUG

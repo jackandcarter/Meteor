@@ -458,8 +458,12 @@ namespace AetherXIV.Core.Map.lua
             }
             else if (target is Quest)
             {
-                string initial = ((Quest)target).actorName.Substring(0, 3);
-                string questName = ((Quest)target).actorName;
+                // Quest class names come from the legacy catalog with mixed
+                // casing (for example, Man0g1), while the canonical packaged
+                // script tree is lowercase. APFS/NTFS tolerated the mismatch;
+                // Linux does not.
+                string questName = ((Quest)target).actorName.ToLowerInvariant();
+                string initial = questName.Substring(0, 3);
                 return String.Format(FILEPATH_QUEST, initial, questName);
             }
             else
@@ -525,6 +529,24 @@ namespace AetherXIV.Core.Map.lua
             }
 
             return current;
+        }
+
+        private static string ResolveActorScriptPath(Player player, Actor target, string funcName)
+        {
+            string requestedPath = GetScriptPath(target);
+            string resolvedPath = ResolveExistingPath(requestedPath);
+
+            DevDiagnostics.Trace(
+                "lua.script.resolve",
+                "player", player == null ? "(none)" : player.customDisplayName,
+                "actor", target == null ? "(none)" : target.GetName(),
+                "actorType", target == null ? "(none)" : target.GetType().Name,
+                "function", funcName,
+                "requestedPath", requestedPath,
+                "resolvedPath", resolvedPath,
+                "resolved", !String.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath));
+
+            return resolvedPath;
         }
 
         private List<LuaParam> CallLuaFunctionNpcForReturn(Player player, Npc target, string funcName, bool optional, params object[] args)
@@ -744,7 +766,7 @@ namespace AetherXIV.Core.Map.lua
             else
                 args2[0] = target;
 
-            string luaPath = GetScriptPath(target);
+            string luaPath = ResolveActorScriptPath(player, target, funcName);
             LuaScript script = LoadScript(luaPath);
             if (script != null)
             {
@@ -771,7 +793,7 @@ namespace AetherXIV.Core.Map.lua
 
         public List<LuaParam> CallLuaFunctionForReturn(string path, string funcName, bool optional, params object[] args)
         {
-            string luaPath = path;
+            string luaPath = ResolveExistingPath(path);
             LuaScript script = LoadScript(luaPath);
             if (script != null)
             {
@@ -800,7 +822,7 @@ namespace AetherXIV.Core.Map.lua
             args2[0] = player;
             args2[1] = target;
 
-            string luaPath = GetScriptPath(target);
+            string luaPath = ResolveActorScriptPath(player, target, funcName);
             LuaScript script = LoadScript(luaPath);
             if (script != null)
             {
