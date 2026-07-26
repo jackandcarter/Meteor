@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
 using AetherXIV.Launcher.Core;
 
@@ -12,6 +11,10 @@ internal static class ClientProcessLauncher
     private const uint EncryptionTimePatchRva = 0x9A15E3;
     private const uint LobbyHostNameRva = 0xB90110;
     private const uint LobbyHostNamePatchSize = 0x14;
+    private const ushort DosSignature = 0x5A4D;
+    private const uint PeSignature = 0x00004550;
+    private const ushort Pe32Magic = 0x010B;
+    private const ushort ImageFileRelocationsStripped = 0x0001;
 
     private static readonly byte[] EncryptionTimePatchBytes = [0xB8, 0x12, 0xE8, 0xE0, 0x50];
 
@@ -93,10 +96,14 @@ internal static class ClientProcessLauncher
         try
         {
             log?.Invoke("memory_patch_sequence_start=true");
-            uint imageBase = ReadSuspendedImageBaseFromThreadContext(
-                processInfo.hProcess,
-                processInfo.hThread,
-                log);
+            PeImageLayout imageLayout = ReadPeImageLayout(options.GamePath);
+            uint imageBase = SelectSupportedImageBase(imageLayout);
+            log?.Invoke($"pe_preferred_image_base=0x{imageLayout.PreferredImageBase:X8}");
+            log?.Invoke($"pe_size_of_image=0x{imageLayout.SizeOfImage:X8}");
+            log?.Invoke($"pe_relocations_stripped={imageLayout.RelocationsStripped.ToString().ToLowerInvariant()}");
+            log?.Invoke(
+                $"pe_base_relocation_table=0x{imageLayout.BaseRelocationTableRva:X8}:0x{imageLayout.BaseRelocationTableSize:X8}");
+            log?.Invoke("image_base_source=pe_fixed_preferred");
             log?.Invoke($"loaded_image_base=0x{imageBase:X8}");
             ApplyPatches(processInfo.hProcess, imageBase, lobbyHost, log);
             log?.Invoke("memory_patch_sequence_complete=true");
@@ -280,57 +287,81 @@ internal static class ClientProcessLauncher
         return UIntPtr.Size == 8 ? value.ToUInt64() : value.ToUInt32();
     }
 
-    private static uint ReadSuspendedImageBaseFromThreadContext(
-        IntPtr processHandle,
-        IntPtr threadHandle,
-        Action<string>? log)
+    internal static PeImageLayout ReadPeImageLayout(string gamePath)
     {
-        NativeMethods.WOW64_CONTEXT context = new()
+        using FileStream stream = File.OpenRead(gamePath);
+        using BinaryReader reader = new(stream, Encoding.ASCII, leaveOpen: false);
+
+        if (stream.Length < 0x40)
+            throw new InvalidOperationException("Client executable is too small to contain a PE header.");
+        if (reader.ReadUInt16() != DosSignature)
+            throw new InvalidOperationException("Client executable has an invalid DOS header.");
+
+        stream.Position = 0x3C;
+        int peHeaderOffset = reader.ReadInt32();
+        const int minimumPeHeaderSize = 24 + 140;
+        if (peHeaderOffset < 0 || peHeaderOffset > stream.Length - minimumPeHeaderSize)
+            throw new InvalidOperationException("Client executable has an invalid PE header offset.");
+
+        stream.Position = peHeaderOffset;
+        if (reader.ReadUInt32() != PeSignature)
+            throw new InvalidOperationException("Client executable has an invalid PE signature.");
+
+        stream.Position = peHeaderOffset + 20;
+        ushort optionalHeaderSize = reader.ReadUInt16();
+        ushort characteristics = reader.ReadUInt16();
+        if (optionalHeaderSize < 140)
+            throw new InvalidOperationException("Client executable has an incomplete PE32 optional header.");
+
+        long optionalHeaderOffset = peHeaderOffset + 24L;
+        stream.Position = optionalHeaderOffset;
+        if (reader.ReadUInt16() != Pe32Magic)
+            throw new InvalidOperationException("Client executable is not a supported PE32 image.");
+
+        stream.Position = optionalHeaderOffset + 28;
+        uint preferredImageBase = reader.ReadUInt32();
+        stream.Position = optionalHeaderOffset + 56;
+        uint sizeOfImage = reader.ReadUInt32();
+        stream.Position = optionalHeaderOffset + 92;
+        uint numberOfDataDirectories = reader.ReadUInt32();
+
+        uint relocationTableRva = 0;
+        uint relocationTableSize = 0;
+        if (numberOfDataDirectories > 5)
         {
-            ContextFlags = NativeMethods.ContextFullX86
-        };
-        bool contextRead;
-        if (Environment.Is64BitProcess)
-        {
-            log?.Invoke("thread_context_api=Wow64GetThreadContext");
-            contextRead = NativeMethods.Wow64GetThreadContext(threadHandle, ref context);
+            stream.Position = optionalHeaderOffset + 96 + (5 * 8);
+            relocationTableRva = reader.ReadUInt32();
+            relocationTableSize = reader.ReadUInt32();
         }
-        else
+
+        return new PeImageLayout(
+            preferredImageBase,
+            sizeOfImage,
+            (characteristics & ImageFileRelocationsStripped) != 0,
+            relocationTableRva,
+            relocationTableSize);
+    }
+
+    internal static uint SelectSupportedImageBase(PeImageLayout imageLayout)
+    {
+        if (!imageLayout.IsFixedAddress)
         {
-            log?.Invoke("thread_context_api=GetThreadContext");
-            contextRead = NativeMethods.GetThreadContext(threadHandle, ref context);
+            throw new InvalidOperationException(
+                "The supported client executable must use a fixed image base.");
         }
 
-        if (!contextRead)
-            throw new Win32Exception();
-        if (context.Ebx > uint.MaxValue - 8)
-            throw new InvalidOperationException("Suspended client PEB address is invalid.");
+        if (imageLayout.PreferredImageBase == 0 || imageLayout.SizeOfImage == 0)
+            throw new InvalidOperationException("Client executable has an invalid fixed image layout.");
 
-        uint imageBasePointer = context.Ebx + 8;
-        log?.Invoke($"thread_context_ebx=0x{context.Ebx:X8}");
-        log?.Invoke($"image_base_pointer=0x{imageBasePointer:X8}");
-        byte[] imageBaseBytes = new byte[sizeof(uint)];
-        if (!NativeMethods.ReadProcessMemory(
-                processHandle,
-                (IntPtr)(long)imageBasePointer,
-                imageBaseBytes,
-                (nuint)sizeof(uint),
-                out nuint nativeBytesRead))
+        uint encryptionPatchEnd = checked(EncryptionTimePatchRva + (uint)EncryptionTimePatchBytes.Length);
+        uint lobbyPatchEnd = checked(LobbyHostNameRva + LobbyHostNamePatchSize);
+        if (encryptionPatchEnd > imageLayout.SizeOfImage || lobbyPatchEnd > imageLayout.SizeOfImage)
         {
-            int error = Marshal.GetLastPInvokeError();
-            throw new Win32Exception(error);
+            throw new InvalidOperationException(
+                "Client executable does not contain the required patch locations.");
         }
 
-        int bytesRead = checked((int)nativeBytesRead);
-        if (bytesRead != sizeof(uint))
-            throw new InvalidOperationException($"Incomplete client image-base read ({bytesRead}/{sizeof(uint)} bytes).");
-
-        uint imageBase = BitConverter.ToUInt32(imageBaseBytes);
-        if (imageBase == 0)
-            throw new InvalidOperationException("Suspended client reported a null image base.");
-
-        log?.Invoke("image_base_source=thread_context_ebx_plus_8");
-        return imageBase;
+        return imageLayout.PreferredImageBase;
     }
 
     internal static uint ResolvePatchAddress(uint imageBase, uint relativeVirtualAddress) =>
@@ -411,6 +442,19 @@ internal static class ClientProcessLauncher
         log?.Invoke($"virtual_protect_restore_done={patchName}");
         log?.Invoke($"patch_done={patchName}");
     }
+}
+
+internal readonly record struct PeImageLayout(
+    uint PreferredImageBase,
+    uint SizeOfImage,
+    bool RelocationsStripped,
+    uint BaseRelocationTableRva,
+    uint BaseRelocationTableSize)
+{
+    internal bool IsFixedAddress =>
+        RelocationsStripped
+        || BaseRelocationTableRva == 0
+        || BaseRelocationTableSize == 0;
 }
 
 internal sealed record ClientLaunchResult(

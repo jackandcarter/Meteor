@@ -32,8 +32,8 @@ concurrency:
 
 env:
   BUILD_CONFIGURATION: Release
-  BUILD_NUMBER: 21995
-  RELEASE_NAME: AetherXIV 2.0 Build 21995
+  BUILD_NUMBER: 21996
+  RELEASE_NAME: AetherXIV 2.0 Build 21996
 
 jobs:
   verify:
@@ -127,12 +127,12 @@ jobs:
       - name: Package the Linux release
         run: |
           mkdir -p artifacts
-          tar -czf artifacts/AetherXIV-2.0.21995-Linux-x64.tar.gz -C bin/build/Release Linux
+          tar -czf artifacts/AetherXIV-2.0.21996-Linux-x64.tar.gz -C bin/build/Release Linux
 
       - name: Upload the Linux release
         uses: actions/upload-artifact@v7
         with:
-          name: release-AetherXIV-2.0.21995-Linux-x64
+          name: release-AetherXIV-2.0.21996-Linux-x64
           path: artifacts/*
           if-no-files-found: error
 
@@ -166,12 +166,12 @@ jobs:
       - name: Package the SteamOS release
         run: |
           mkdir -p artifacts
-          tar -czf artifacts/AetherXIV-2.0.21995-SteamOS-x64.tar.gz -C bin/build/Release SteamOS
+          tar -czf artifacts/AetherXIV-2.0.21996-SteamOS-x64.tar.gz -C bin/build/Release SteamOS
 
       - name: Upload the SteamOS release
         uses: actions/upload-artifact@v7
         with:
-          name: release-AetherXIV-2.0.21995-SteamOS-x64
+          name: release-AetherXIV-2.0.21996-SteamOS-x64
           path: artifacts/*
           if-no-files-found: error
 
@@ -232,12 +232,12 @@ jobs:
           mkdir -p artifacts
           ditto -c -k --sequesterRsrc --keepParent \
             bin/build/Release/MacOS \
-            artifacts/AetherXIV-2.0.21995-MacOS-arm64.zip
+            artifacts/AetherXIV-2.0.21996-MacOS-arm64.zip
 
       - name: Upload the macOS release
         uses: actions/upload-artifact@v7
         with:
-          name: release-AetherXIV-2.0.21995-MacOS-arm64
+          name: release-AetherXIV-2.0.21996-MacOS-arm64
           path: artifacts/*
           if-no-files-found: error
 
@@ -268,12 +268,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          Compress-Archive -Path "bin/build/Release/Windows" -DestinationPath "artifacts/AetherXIV-2.0.21995-Windows-x64.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "bin/build/Release/Windows" -DestinationPath "artifacts/AetherXIV-2.0.21996-Windows-x64.zip" -CompressionLevel Optimal -Force
 
       - name: Upload the Windows release
         uses: actions/upload-artifact@v7
         with:
-          name: release-AetherXIV-2.0.21995-Windows-x64
+          name: release-AetherXIV-2.0.21996-Windows-x64
           path: artifacts/*
           if-no-files-found: error
 
@@ -349,7 +349,7 @@ jobs:
       - name: Download release artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: release-AetherXIV-2.0.21995-*
+          pattern: release-AetherXIV-2.0.21996-*
           path: release-assets
           merge-multiple: true
 
