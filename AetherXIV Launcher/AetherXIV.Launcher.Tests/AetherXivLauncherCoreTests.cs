@@ -113,6 +113,22 @@ public sealed class AetherXivLauncherCoreTests
     }
 
     [Fact]
+    public void GameLaunchTokenMatchesLegacyClientVector()
+    {
+        const string sessionId =
+            "0123456789abcdef0123456789abcdef0123456789abcdef01234567";
+        const string expectedToken =
+            "6xCHY6xuLy7cOVN1RWrahXMKCox5OzAammFyAg5NeBR-7olmbZZUVAdBOrx40Vu-"
+            + "jUmFJGb_U5e05fxxFBr-jqpkmcCo0VcWGJdUVQRHPXSLJlApEyjRKyQVTM_kNgs"
+            + "GiyZQKRMo0SskFUzP5DYLBosmUCkTKNErJBVMz-Q2CwY1NjcA";
+
+        GameLaunchToken token =
+            GameLaunchTokenGenerator.Generate(sessionId, () => 0x12345678);
+
+        Assert.Equal(expectedToken, token.Token);
+    }
+
+    [Fact]
     public void WinePathMapperMapsUnixRootThroughZDrive()
     {
         string mapped = WinePathMapper.ToWindowsPath("/Volumes/Dev2/SquareEnix/FINAL FANTASY XIV/ffxivgame.exe");
@@ -144,6 +160,24 @@ public sealed class AetherXivLauncherCoreTests
         Assert.Equal(x86Helper, ClientLaunchHelperLocator.FindLaunchHelper(ClientLaunchHelperMode.X86, root));
         Assert.Equal(x64Helper, ClientLaunchHelperLocator.FindLaunchHelper(ClientLaunchHelperMode.X64, root));
         Assert.Equal(arm64Helper, ClientLaunchHelperLocator.FindLaunchHelper(ClientLaunchHelperMode.Arm64, root));
+    }
+
+    [Theory]
+    [InlineData(ClientLaunchHelperMode.Automatic, false, ClientLaunchHelperMode.X86)]
+    [InlineData(ClientLaunchHelperMode.X86, false, ClientLaunchHelperMode.X86)]
+    [InlineData(ClientLaunchHelperMode.X64, false, ClientLaunchHelperMode.X86)]
+    [InlineData(ClientLaunchHelperMode.Arm64, false, ClientLaunchHelperMode.X86)]
+    [InlineData(ClientLaunchHelperMode.Automatic, true, ClientLaunchHelperMode.X64)]
+    [InlineData(ClientLaunchHelperMode.X86, true, ClientLaunchHelperMode.X64)]
+    [InlineData(ClientLaunchHelperMode.X64, true, ClientLaunchHelperMode.X64)]
+    public void LaunchHelperModeMatchesNativeClientAndWineHostingRequirements(
+        ClientLaunchHelperMode requested,
+        bool requiresCompatibilityRuntime,
+        ClientLaunchHelperMode expected)
+    {
+        Assert.Equal(
+            expected,
+            ClientLaunchHelperLocator.ResolveEffectiveMode(requested, requiresCompatibilityRuntime));
     }
 
     [Fact]

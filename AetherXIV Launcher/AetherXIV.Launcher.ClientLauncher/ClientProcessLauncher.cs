@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using AetherXIV.Launcher.Core;
 
@@ -11,24 +12,8 @@ internal static class ClientProcessLauncher
     private const uint EncryptionTimePatchRva = 0x9A15E3;
     private const uint LobbyHostNameRva = 0xB90110;
     private const uint LobbyHostNamePatchSize = 0x14;
-    private const uint BootSkipPatchRva = 0x3698;
-    private const uint LaunchFlag1PatchRva = 0xBB952B;
-    private const uint LaunchFlag2PatchRva = 0xBB95D3;
 
-    private static readonly byte[] EncryptionTimeOriginalBytes = [0xE8, 0x3D, 0x41, 0xC3, 0xFF];
     private static readonly byte[] EncryptionTimePatchBytes = [0xB8, 0x12, 0xE8, 0xE0, 0x50];
-    private static readonly byte[] LobbyHostOriginalBytes = Encoding.ASCII.GetBytes("lobby01.ffxiv.com\0\0\0");
-    private static readonly byte[] BootSkipOriginalBytes =
-    [
-        0x6A, 0xFF, 0xFF, 0x15, 0xCC, 0xE1, 0xF3, 0x00,
-        0x50, 0xFF, 0x15, 0xA8, 0xE1, 0xF3, 0x00, 0x6A,
-        0xFF, 0xFF, 0x15, 0xAC, 0xE1, 0xF3, 0x00, 0x50,
-        0xFF, 0x15, 0xB0, 0xE1, 0xF3, 0x00
-    ];
-    private static readonly byte[] BootSkipPatchBytes = Enumerable.Repeat<byte>(0x90, 30).ToArray();
-    private static readonly byte[] LaunchFlag1OriginalBytes = [0x00, 0xD0];
-    private static readonly byte[] LaunchFlag2OriginalBytes = [0x00, 0x00];
-    private static readonly byte[] LaunchFlagPatchBytes = [0xB5, 0x01];
 
     public static ClientLaunchResult Launch(
         LaunchOptions options,
@@ -43,7 +28,13 @@ internal static class ClientProcessLauncher
 
         UIntPtr? affinityMask = TryCapCurrentProcessAffinity(log);
 
-        string commandLine = BuildGameCommandLine(options, token, log);
+        bool useLegacyNativePath = !Environment.Is64BitProcess;
+        string commandLine = useLegacyNativePath
+            ? BuildLegacyNativeCommandLine(options.GamePath, token)
+            : BuildWineCommandLine(options.GamePath, token);
+        log?.Invoke(useLegacyNativePath
+            ? "game_command_line_style=legacy_native_path_plus_launch_argument"
+            : "game_command_line_style=wine_quoted_path_plus_launch_argument");
         log?.Invoke($"game_command_line_length={commandLine.Length}");
         if (options.Umbra.Enabled)
         {
@@ -53,17 +44,42 @@ internal static class ClientProcessLauncher
 
         log?.Invoke("create_process_start=true");
         Stopwatch launchStopwatch = Stopwatch.StartNew();
-        bool success = NativeMethods.CreateProcess(
-            options.GamePath,
-            commandLine,
-            IntPtr.Zero,
-            IntPtr.Zero,
-            false,
-            NativeMethods.ProcessCreationFlags.CREATE_SUSPENDED,
-            IntPtr.Zero,
-            options.WorkingDirectory,
-            ref startupInfo,
-            out NativeMethods.PROCESS_INFORMATION processInfo);
+        StringBuilder mutableCommandLine = new(commandLine, 1024);
+        NativeMethods.ProcessCreationFlags creationFlags =
+            NativeMethods.ProcessCreationFlags.CREATE_SUSPENDED
+            | NativeMethods.ProcessCreationFlags.NORMAL_PRIORITY_CLASS;
+        bool success;
+        NativeMethods.PROCESS_INFORMATION processInfo;
+        if (useLegacyNativePath)
+        {
+            log?.Invoke("create_process_api=CreateProcessA");
+            success = NativeMethods.CreateProcessA(
+                null,
+                mutableCommandLine,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                false,
+                creationFlags,
+                IntPtr.Zero,
+                options.WorkingDirectory,
+                ref startupInfo,
+                out processInfo);
+        }
+        else
+        {
+            log?.Invoke("create_process_api=CreateProcessW");
+            success = NativeMethods.CreateProcessW(
+                null,
+                mutableCommandLine,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                false,
+                creationFlags,
+                IntPtr.Zero,
+                options.WorkingDirectory,
+                ref startupInfo,
+                out processInfo);
+        }
 
         if (!success)
             throw new Win32Exception();
@@ -73,10 +89,14 @@ internal static class ClientProcessLauncher
         log?.Invoke($"created_thread_id={processInfo.dwThreadId}");
         TryCapGameProcessAffinity(processInfo.hProcess, affinityMask, log);
 
+        bool resumed = false;
         try
         {
             log?.Invoke("memory_patch_sequence_start=true");
-            uint imageBase = ReadSuspendedImageBase(processInfo.hProcess, processInfo.hThread, log);
+            uint imageBase = ReadSuspendedImageBaseFromThreadContext(
+                processInfo.hProcess,
+                processInfo.hThread,
+                log);
             log?.Invoke($"loaded_image_base=0x{imageBase:X8}");
             ApplyPatches(processInfo.hProcess, imageBase, lobbyHost, log);
             log?.Invoke("memory_patch_sequence_complete=true");
@@ -97,6 +117,7 @@ internal static class ClientProcessLauncher
             log?.Invoke($"resume_thread_result={resumeResult}");
             if (resumeResult == NativeMethods.ResumeThreadFailed)
                 throw new Win32Exception();
+            resumed = true;
 
             log?.Invoke("observation_wait_start=true");
             uint waitResult = NativeMethods.WaitForSingleObject(
@@ -132,6 +153,19 @@ internal static class ClientProcessLauncher
                 false,
                 null);
         }
+        catch
+        {
+            if (!resumed)
+            {
+                log?.Invoke("terminate_suspended_process_start=true");
+                bool terminated = NativeMethods.TerminateProcess(processInfo.hProcess, 1);
+                log?.Invoke($"terminate_suspended_process_success={terminated}");
+                if (!terminated)
+                    log?.Invoke($"terminate_suspended_process_error={new Win32Exception().Message}");
+            }
+
+            throw;
+        }
         finally
         {
             if (processInfo.hThread != IntPtr.Zero)
@@ -141,21 +175,11 @@ internal static class ClientProcessLauncher
         }
     }
 
-    private static string BuildGameCommandLine(
-        LaunchOptions options,
-        GameLaunchToken token,
-        Action<string>? log)
-    {
-        string style = Environment.GetEnvironmentVariable("AETHERXIV_GAME_COMMAND_LINE_STYLE") ?? "";
-        if (string.Equals(style, "path-plus-args", StringComparison.OrdinalIgnoreCase))
-        {
-            log?.Invoke("game_command_line_style=application_name_plus_launch_argument");
-            return $"{CommandLineArguments.Quote(options.GamePath)}{token.LaunchArgument}";
-        }
+    internal static string BuildLegacyNativeCommandLine(string gamePath, GameLaunchToken token) =>
+        $"{gamePath}{token.LaunchArgument}";
 
-        log?.Invoke("game_command_line_style=legacy_launch_argument_only");
-        return token.LaunchArgument;
-    }
+    internal static string BuildWineCommandLine(string gamePath, GameLaunchToken token) =>
+        $"{CommandLineArguments.Quote(gamePath)}{token.LaunchArgument}";
 
     private static UIntPtr? TryCapCurrentProcessAffinity(Action<string>? log)
     {
@@ -256,7 +280,7 @@ internal static class ClientProcessLauncher
         return UIntPtr.Size == 8 ? value.ToUInt64() : value.ToUInt32();
     }
 
-    private static uint ReadSuspendedImageBase(
+    private static uint ReadSuspendedImageBaseFromThreadContext(
         IntPtr processHandle,
         IntPtr threadHandle,
         Action<string>? log)
@@ -290,12 +314,14 @@ internal static class ClientProcessLauncher
                 processHandle,
                 (IntPtr)(long)imageBasePointer,
                 imageBaseBytes,
-                sizeof(uint),
-                out int bytesRead))
+                (nuint)sizeof(uint),
+                out nuint nativeBytesRead))
         {
-            throw new Win32Exception();
+            int error = Marshal.GetLastPInvokeError();
+            throw new Win32Exception(error);
         }
 
+        int bytesRead = checked((int)nativeBytesRead);
         if (bytesRead != sizeof(uint))
             throw new InvalidOperationException($"Incomplete client image-base read ({bytesRead}/{sizeof(uint)} bytes).");
 
@@ -303,6 +329,7 @@ internal static class ClientProcessLauncher
         if (imageBase == 0)
             throw new InvalidOperationException("Suspended client reported a null image base.");
 
+        log?.Invoke("image_base_source=thread_context_ebx_plus_8");
         return imageBase;
     }
 
@@ -316,21 +343,16 @@ internal static class ClientProcessLauncher
             "encryption_time",
             ResolvePatchAddress(imageBase, EncryptionTimePatchRva),
             EncryptionTimePatchBytes,
-            EncryptionTimeOriginalBytes,
             log);
 
         if ((uint)lobbyHost.Length + 1 > LobbyHostNamePatchSize)
             throw new InvalidOperationException("Lobby host name is too long for the 1.23b client patch location.");
 
         log?.Invoke($"lobby_host_patch_length={lobbyHost.Length + 1}");
-        byte[] lobbyHostPatch = new byte[LobbyHostNamePatchSize];
         byte[] lobbyHostBytes = Encoding.ASCII.GetBytes(lobbyHost);
+        byte[] lobbyHostPatch = new byte[lobbyHostBytes.Length + 1];
         Buffer.BlockCopy(lobbyHostBytes, 0, lobbyHostPatch, 0, lobbyHostBytes.Length);
-        ApplyPatch(processHandle, "lobby_host", ResolvePatchAddress(imageBase, LobbyHostNameRva), lobbyHostPatch, LobbyHostOriginalBytes, log);
-
-        ApplyPatch(processHandle, "boot_skip", ResolvePatchAddress(imageBase, BootSkipPatchRva), BootSkipPatchBytes, BootSkipOriginalBytes, log);
-        ApplyPatch(processHandle, "launch_flag_1", ResolvePatchAddress(imageBase, LaunchFlag1PatchRva), LaunchFlagPatchBytes, LaunchFlag1OriginalBytes, log);
-        ApplyPatch(processHandle, "launch_flag_2", ResolvePatchAddress(imageBase, LaunchFlag2PatchRva), LaunchFlagPatchBytes, LaunchFlag2OriginalBytes, log);
+        ApplyPatch(processHandle, "lobby_host", ResolvePatchAddress(imageBase, LobbyHostNameRva), lobbyHostPatch, log);
     }
 
     private static void ApplyPatch(
@@ -338,131 +360,56 @@ internal static class ClientProcessLauncher
         string patchName,
         uint address,
         byte[] patchBytes,
-        byte[] expectedOriginalBytes,
         Action<string>? log)
     {
         log?.Invoke($"patch_start={patchName}");
         log?.Invoke($"patch_address=0x{address:X8}");
         log?.Invoke($"patch_length={patchBytes.Length}");
-        byte[] beforeBytes = ReadPatchBytes(processHandle, address, patchBytes.Length, patchName, "before", log);
-        ValidatePatchSignature(patchName, beforeBytes, expectedOriginalBytes, patchBytes, log);
         log?.Invoke($"virtual_protect_start={patchName}");
         if (!NativeMethods.VirtualProtectEx(
-            processHandle,
-            (IntPtr)address,
-            (uint)patchBytes.Length,
-            (uint)NativeMethods.MemoryProtectionFlags.PAGE_READWRITE,
-            out uint oldProtect))
+                processHandle,
+                (IntPtr)(long)address,
+                (nuint)patchBytes.Length,
+                (uint)NativeMethods.MemoryProtectionFlags.PAGE_READWRITE,
+                out uint oldProtect))
         {
             throw new Win32Exception();
         }
 
         log?.Invoke($"virtual_protect_done={patchName}");
+        log?.Invoke("writable_protection=0x00000004");
         log?.Invoke($"old_protection=0x{oldProtect:X8}");
 
-        try
+        log?.Invoke($"write_process_memory_start={patchName}");
+        if (!NativeMethods.WriteProcessMemory(
+            processHandle,
+            (IntPtr)(long)address,
+            patchBytes,
+            (nuint)patchBytes.Length,
+            out nuint nativeBytesWritten))
         {
-            log?.Invoke($"write_process_memory_start={patchName}");
-            if (!NativeMethods.WriteProcessMemory(
-                processHandle,
-                (IntPtr)address,
-                patchBytes,
-                (uint)patchBytes.Length,
-                out int bytesWritten))
-            {
-                throw new Win32Exception();
-            }
-
-            log?.Invoke($"write_process_memory_done={patchName}");
-            log?.Invoke($"bytes_written={bytesWritten}");
-            log?.Invoke($"patch_expected_bytes={ToHex(patchBytes)}");
-
-            if (bytesWritten != patchBytes.Length)
-                throw new InvalidOperationException("Incomplete client memory patch write.");
+            throw new Win32Exception();
         }
-        finally
-        {
-            log?.Invoke($"virtual_protect_restore_start={patchName}");
-            NativeMethods.VirtualProtectEx(
+
+        int bytesWritten = checked((int)nativeBytesWritten);
+        log?.Invoke($"write_process_memory_done={patchName}");
+        log?.Invoke($"bytes_written={bytesWritten}");
+        if (bytesWritten != patchBytes.Length)
+            throw new InvalidOperationException("Incomplete client memory patch write.");
+
+        log?.Invoke($"virtual_protect_restore_start={patchName}");
+        if (!NativeMethods.VirtualProtectEx(
                 processHandle,
-                (IntPtr)address,
-                (uint)patchBytes.Length,
+                (IntPtr)(long)address,
+                (nuint)patchBytes.Length,
                 oldProtect,
-                out _);
-            log?.Invoke($"virtual_protect_restore_done={patchName}");
+                out _))
+        {
+            throw new Win32Exception();
         }
 
-        byte[] afterBytes = ReadPatchBytes(processHandle, address, patchBytes.Length, patchName, "after", log);
-        log?.Invoke($"patch_changed={beforeBytes.Length == afterBytes.Length && !beforeBytes.SequenceEqual(afterBytes)}");
+        log?.Invoke($"virtual_protect_restore_done={patchName}");
         log?.Invoke($"patch_done={patchName}");
-    }
-
-    private static byte[] ReadPatchBytes(
-        IntPtr processHandle,
-        uint address,
-        int length,
-        string patchName,
-        string phase,
-        Action<string>? log)
-    {
-        byte[] bytes = new byte[length];
-        if (!NativeMethods.ReadProcessMemory(
-                processHandle,
-                (IntPtr)address,
-                bytes,
-                (uint)bytes.Length,
-                out int bytesRead))
-        {
-            log?.Invoke($"patch_{phase}_read_failed={patchName}:{new Win32Exception().Message}");
-            return [];
-        }
-
-        if (bytesRead != bytes.Length)
-        {
-            log?.Invoke($"patch_{phase}_read_short={patchName}:{bytesRead}/{bytes.Length}");
-            bytes = bytes[..Math.Max(0, bytesRead)];
-        }
-
-        log?.Invoke($"patch_{phase}_bytes={patchName}:{ToHex(bytes)}");
-        return bytes;
-    }
-
-    private static void ValidatePatchSignature(
-        string patchName,
-        byte[] actualBytes,
-        byte[] expectedOriginalBytes,
-        byte[] patchBytes,
-        Action<string>? log)
-    {
-        if (actualBytes.SequenceEqual(expectedOriginalBytes))
-        {
-            log?.Invoke($"patch_signature={patchName}:original");
-            return;
-        }
-
-        if (actualBytes.SequenceEqual(patchBytes))
-        {
-            log?.Invoke($"patch_signature={patchName}:already_patched");
-            return;
-        }
-
-        log?.Invoke($"patch_signature={patchName}:unexpected");
-        log?.Invoke($"patch_expected_original_bytes={patchName}:{ToHex(expectedOriginalBytes)}");
-        throw new InvalidOperationException(
-            $"Unexpected client bytes at {patchName} patch location. "
-            + "Verify this is the supported FFXIV 1.23b client executable.");
-    }
-
-    private static string ToHex(byte[] bytes)
-    {
-        if (bytes.Length == 0)
-            return "";
-
-        StringBuilder builder = new(bytes.Length * 2);
-        foreach (byte value in bytes)
-            builder.Append(value.ToString("X2"));
-
-        return builder.ToString();
     }
 }
 

@@ -22,7 +22,7 @@
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
     <FileVersion>2.0.0.0</FileVersion>
     <Version>2.0.0-foundation</Version>
-    <InformationalVersion>2.0.0+build.21991</InformationalVersion>
-    <AetherXivBuildNumber>21991</AetherXivBuildNumber>
+    <InformationalVersion>2.0.0+build.21995</InformationalVersion>
+    <AetherXivBuildNumber>21995</AetherXivBuildNumber>
   </PropertyGroup>
 </Project>

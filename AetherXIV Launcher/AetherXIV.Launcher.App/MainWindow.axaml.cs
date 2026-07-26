@@ -1456,11 +1456,15 @@ public sealed partial class MainWindow : Window
             SetLaunchInProgress("Launching game...", "Launching game...");
             ClientLaunchHelperMode helperMode = ReadLaunchHelperMode();
             UmbraLaunchOptions umbraLaunchOptions = await ResolveUmbraLaunchOptionsForLaunchAsync(clientInstall);
-            if (platform.RequiresCompatibilityRuntime
-                && helperMode == ClientLaunchHelperMode.X86)
+            ClientLaunchHelperMode effectiveHelperMode = ClientLaunchHelperLocator.ResolveEffectiveMode(
+                helperMode,
+                platform.RequiresCompatibilityRuntime);
+            if (effectiveHelperMode != helperMode)
             {
-                AppendLog("Wine uses the 64-bit managed helper for reliable .NET hosting; x86 game and Umbra work remains in the native x86 processes.");
-                helperMode = ClientLaunchHelperMode.X64;
+                AppendLog(platform.RequiresCompatibilityRuntime
+                    ? "Wine uses the 64-bit managed helper for reliable .NET hosting; x86 game and Umbra work remains in the native x86 processes."
+                    : "Native Windows uses the 32-bit helper to match the FFXIV 1.23b client.");
+                helperMode = effectiveHelperMode;
             }
 
             if (platform.RequiresCompatibilityRuntime)

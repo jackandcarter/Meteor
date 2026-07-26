@@ -51,6 +51,20 @@ public static class ClientLaunchHelperLocator
             ?? throw new FileNotFoundException("AetherXIV Launcher client launch helper is missing from the application bundle.");
     }
 
+    public static ClientLaunchHelperMode ResolveEffectiveMode(
+        ClientLaunchHelperMode requestedMode,
+        bool requiresCompatibilityRuntime)
+    {
+        if (requiresCompatibilityRuntime)
+        {
+            return requestedMode is ClientLaunchHelperMode.X86 or ClientLaunchHelperMode.Automatic
+                ? ClientLaunchHelperMode.X64
+                : requestedMode;
+        }
+
+        return ClientLaunchHelperMode.X86;
+    }
+
     private static IEnumerable<string> GetLaunchCandidateRelativePaths(ClientLaunchHelperMode mode)
     {
         return mode switch

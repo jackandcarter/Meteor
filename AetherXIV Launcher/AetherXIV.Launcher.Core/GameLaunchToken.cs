@@ -38,15 +38,12 @@ public static class GameLaunchTokenGenerator
         string commandLine =
             $" T ={tickCount} /LANG =en-us /REGION =2 /SERVER_UTC =1356916742 /SESSION_ID ={sessionId}";
 
-        byte[] commandBytes = Encoding.ASCII.GetBytes(commandLine);
+        byte[] commandBytes = Encoding.ASCII.GetBytes($"{commandLine}\0");
         byte[] key = Encoding.ASCII.GetBytes((tickCount & ~0xFFFFu).ToString("x8"));
 
         Blowfish blowfish = new(key);
 
-        int encryptedLength = (commandBytes.Length + 1) & ~0x7;
-        if (encryptedLength > commandBytes.Length)
-            encryptedLength = commandBytes.Length & ~0x7;
-
+        int encryptedLength = commandBytes.Length & ~0x7;
         if (encryptedLength > 0)
             blowfish.Encipher(commandBytes, 0, encryptedLength);
 

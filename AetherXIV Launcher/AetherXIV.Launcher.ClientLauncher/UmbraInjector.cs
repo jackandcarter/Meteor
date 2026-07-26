@@ -190,12 +190,13 @@ internal static class UmbraInjector
                     processHandle,
                     remotePath,
                     dllPathBytes,
-                    (uint)dllPathBytes.Length,
-                    out int bytesWritten))
+                    (nuint)dllPathBytes.Length,
+                    out nuint nativeBytesWritten))
             {
                 throw new Win32Exception();
             }
 
+            int bytesWritten = checked((int)nativeBytesWritten);
             if (bytesWritten != dllPathBytes.Length)
                 throw new InvalidOperationException("Incomplete Umbra bootstrap path write.");
 

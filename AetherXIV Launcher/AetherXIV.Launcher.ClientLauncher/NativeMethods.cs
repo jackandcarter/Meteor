@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AetherXIV.Launcher.ClientLauncher;
 
@@ -26,16 +27,16 @@ internal static partial class NativeMethods
         IntPtr hProcess,
         IntPtr lpBaseAddress,
         byte[] lpBuffer,
-        uint nSize,
-        out int lpNumberOfBytesWritten);
+        nuint nSize,
+        out nuint lpNumberOfBytesWritten);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool ReadProcessMemory(
         IntPtr hProcess,
         IntPtr lpBaseAddress,
         byte[] lpBuffer,
-        uint nSize,
-        out int lpNumberOfBytesRead);
+        nuint nSize,
+        out nuint lpNumberOfBytesRead);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool GetThreadContext(
@@ -51,7 +52,7 @@ internal static partial class NativeMethods
     internal static extern bool VirtualProtectEx(
         IntPtr hProcess,
         IntPtr lpAddress,
-        uint dwSize,
+        nuint dwSize,
         uint flNewProtect,
         out uint lpflOldProtect);
 
@@ -70,10 +71,23 @@ internal static partial class NativeMethods
         UIntPtr dwSize,
         FreeType dwFreeType);
 
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    internal static extern bool CreateProcess(
-        string lpApplicationName,
-        string lpCommandLine,
+    [DllImport("kernel32.dll", EntryPoint = "CreateProcessA", ExactSpelling = true, SetLastError = true, CharSet = CharSet.Ansi)]
+    internal static extern bool CreateProcessA(
+        string? lpApplicationName,
+        StringBuilder lpCommandLine,
+        IntPtr lpProcessAttributes,
+        IntPtr lpThreadAttributes,
+        bool bInheritHandles,
+        ProcessCreationFlags dwCreationFlags,
+        IntPtr lpEnvironment,
+        string lpCurrentDirectory,
+        ref STARTUPINFO lpStartupInfo,
+        out PROCESS_INFORMATION lpProcessInformation);
+
+    [DllImport("kernel32.dll", EntryPoint = "CreateProcessW", ExactSpelling = true, SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern bool CreateProcessW(
+        string? lpApplicationName,
+        StringBuilder lpCommandLine,
         IntPtr lpProcessAttributes,
         IntPtr lpThreadAttributes,
         bool bInheritHandles,
@@ -85,6 +99,9 @@ internal static partial class NativeMethods
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern uint ResumeThread(IntPtr hThread);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern IntPtr CreateRemoteThread(
@@ -130,12 +147,23 @@ internal static partial class NativeMethods
     [Flags]
     internal enum ProcessCreationFlags : uint
     {
-        CREATE_SUSPENDED = 0x00000004
+        CREATE_SUSPENDED = 0x00000004,
+        NORMAL_PRIORITY_CLASS = 0x00000020
     }
 
+    [Flags]
     internal enum MemoryProtectionFlags : uint
     {
-        PAGE_READWRITE = 0x04
+        PAGE_READONLY = 0x02,
+        PAGE_READWRITE = 0x04,
+        PAGE_WRITECOPY = 0x08,
+        PAGE_EXECUTE = 0x10,
+        PAGE_EXECUTE_READ = 0x20,
+        PAGE_EXECUTE_READWRITE = 0x40,
+        PAGE_EXECUTE_WRITECOPY = 0x80,
+        PAGE_GUARD = 0x100,
+        PAGE_NOCACHE = 0x200,
+        PAGE_WRITECOMBINE = 0x400
     }
 
     [Flags]
@@ -181,4 +209,5 @@ internal static partial class NativeMethods
         internal uint dwProcessId;
         internal uint dwThreadId;
     }
+
 }
