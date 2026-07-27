@@ -53,8 +53,9 @@ internal static class ClientProcessLauncher
         if (useLegacyNativePath)
         {
             log?.Invoke("create_process_api=CreateProcessA");
+            log?.Invoke("create_process_application_name=explicit_game_path");
             success = NativeMethods.CreateProcessA(
-                null,
+                options.GamePath,
                 mutableCommandLine,
                 IntPtr.Zero,
                 IntPtr.Zero,
@@ -68,8 +69,9 @@ internal static class ClientProcessLauncher
         else
         {
             log?.Invoke("create_process_api=CreateProcessW");
+            log?.Invoke("create_process_application_name=explicit_game_path");
             success = NativeMethods.CreateProcessW(
-                null,
+                options.GamePath,
                 mutableCommandLine,
                 IntPtr.Zero,
                 IntPtr.Zero,
@@ -87,6 +89,7 @@ internal static class ClientProcessLauncher
         log?.Invoke("create_process_success=true");
         log?.Invoke($"created_process_id={processInfo.dwProcessId}");
         log?.Invoke($"created_thread_id={processInfo.dwThreadId}");
+        LogCreatedProcessImage(processInfo.hProcess, options.GamePath, log);
         TryCapGameProcessAffinity(processInfo.hProcess, affinityMask, log);
 
         bool resumed = false;
@@ -180,6 +183,48 @@ internal static class ClientProcessLauncher
 
     internal static string BuildWineCommandLine(string gamePath, GameLaunchToken token) =>
         $"{CommandLineArguments.Quote(gamePath)}{token.LaunchArgument}";
+
+    private static void LogCreatedProcessImage(
+        IntPtr processHandle,
+        string requestedGamePath,
+        Action<string>? log)
+    {
+        StringBuilder imagePath = new(32768);
+        uint imagePathLength = (uint)imagePath.Capacity;
+        if (!NativeMethods.QueryFullProcessImageName(
+                processHandle,
+                0,
+                imagePath,
+                ref imagePathLength))
+        {
+            throw new Win32Exception();
+        }
+
+        string createdImagePath = imagePath.ToString();
+        bool pathMatches = PathsReferToSameLocation(requestedGamePath, createdImagePath);
+        log?.Invoke($"created_process_image={createdImagePath}");
+        log?.Invoke($"created_process_image_matches_requested={pathMatches.ToString().ToLowerInvariant()}");
+        if (!pathMatches)
+        {
+            throw new InvalidOperationException(
+                $"Windows created an unexpected process image. Requested '{requestedGamePath}', created '{createdImagePath}'.");
+        }
+    }
+
+    internal static bool PathsReferToSameLocation(string first, string second)
+    {
+        string normalizedFirst = NormalizeWindowsPath(first);
+        string normalizedSecond = NormalizeWindowsPath(second);
+        return string.Equals(normalizedFirst, normalizedSecond, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeWindowsPath(string path)
+    {
+        string normalized = path.Trim();
+        if (normalized.StartsWith(@"\\?\", StringComparison.Ordinal))
+            normalized = normalized[4..];
+        return Path.GetFullPath(normalized).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    }
 
     private static UIntPtr? TryCapCurrentProcessAffinity(Action<string>? log)
     {

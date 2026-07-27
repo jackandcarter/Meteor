@@ -128,6 +128,13 @@ internal static partial class NativeMethods
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
 
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern bool QueryFullProcessImageName(
+        IntPtr hProcess,
+        uint dwFlags,
+        StringBuilder lpExeName,
+        ref uint lpdwSize);
+
     internal const uint WaitObject0 = 0x00000000;
     internal const uint WaitTimeout = 0x00000102;
     internal const uint WaitFailed = 0xFFFFFFFF;

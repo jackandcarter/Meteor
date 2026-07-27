@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Text;
 using AetherXIV.Launcher.ClientLauncher;
 using AetherXIV.Launcher.Core;
 
@@ -56,6 +58,14 @@ public sealed class ClientProcessLauncherTests
     }
 
     [Fact]
+    public void CreatedProcessPathComparisonAcceptsWindowsExtendedPrefixAndCase()
+    {
+        Assert.True(ClientProcessLauncher.PathsReferToSameLocation(
+            @"D:\Games\FINAL FANTASY XIV\ffxivgame.exe",
+            @"\\?\d:\games\final fantasy xiv\FFXIVGAME.EXE"));
+    }
+
+    [Fact]
     public void NativePatchInteropMatchesLegacyClientSurface()
     {
         const System.Reflection.BindingFlags flags =
@@ -64,11 +74,94 @@ public sealed class ClientProcessLauncherTests
         Assert.NotNull(typeof(NativeMethods).GetMethod("GetThreadContext", flags));
         Assert.NotNull(typeof(NativeMethods).GetMethod("CreateProcessA", flags));
         Assert.NotNull(typeof(NativeMethods).GetMethod("CreateProcessW", flags));
+        Assert.NotNull(typeof(NativeMethods).GetMethod("QueryFullProcessImageName", flags));
         Assert.NotNull(typeof(NativeMethods).GetMethod("ReadProcessMemory", flags));
         Assert.NotNull(typeof(NativeMethods).GetMethod("VirtualProtectEx", flags));
         Assert.NotNull(typeof(NativeMethods).GetMethod("WriteProcessMemory", flags));
         Assert.Null(typeof(NativeMethods).GetMethod("VirtualQueryEx", flags));
         Assert.Null(typeof(NativeMethods).GetMethod("FlushInstructionCache", flags));
         Assert.Equal(0x04u, (uint)NativeMethods.MemoryProtectionFlags.PAGE_READWRITE);
+    }
+
+    [Fact]
+    public void ExplicitApplicationNamePreventsSpaceDelimitedExecutableSubstitutionOnWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string testRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"AetherXivProcessTarget-{Guid.NewGuid():N}");
+        string targetDirectory = Path.Combine(testRoot, "Client Path");
+        string targetPath = Path.Combine(targetDirectory, "Target.exe");
+        string decoyPath = Path.Combine(testRoot, "Client.exe");
+        Directory.CreateDirectory(targetDirectory);
+        File.Copy(Path.Combine(Environment.SystemDirectory, "cmd.exe"), targetPath);
+        File.Copy(Path.Combine(Environment.SystemDirectory, "cmd.exe"), decoyPath);
+
+        try
+        {
+            string ambiguousCommandLine = $"{targetPath} /c exit 0";
+            string ambiguousImage = CreateSuspendedAndGetImagePath(null, ambiguousCommandLine, testRoot);
+            Assert.True(ClientProcessLauncher.PathsReferToSameLocation(decoyPath, ambiguousImage));
+
+            string explicitImage = CreateSuspendedAndGetImagePath(
+                targetPath,
+                ambiguousCommandLine,
+                testRoot);
+            Assert.True(ClientProcessLauncher.PathsReferToSameLocation(targetPath, explicitImage));
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    private static string CreateSuspendedAndGetImagePath(
+        string? applicationName,
+        string commandLine,
+        string workingDirectory)
+    {
+        NativeMethods.STARTUPINFO startupInfo = new()
+        {
+            cb = (uint)Marshal.SizeOf<NativeMethods.STARTUPINFO>()
+        };
+        StringBuilder mutableCommandLine = new(commandLine, 1024);
+        if (!NativeMethods.CreateProcessA(
+                applicationName,
+                mutableCommandLine,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                false,
+                NativeMethods.ProcessCreationFlags.CREATE_SUSPENDED,
+                IntPtr.Zero,
+                workingDirectory,
+                ref startupInfo,
+                out NativeMethods.PROCESS_INFORMATION processInfo))
+        {
+            throw new Win32Exception();
+        }
+
+        try
+        {
+            StringBuilder imagePath = new(32768);
+            uint imagePathLength = (uint)imagePath.Capacity;
+            if (!NativeMethods.QueryFullProcessImageName(
+                    processInfo.hProcess,
+                    0,
+                    imagePath,
+                    ref imagePathLength))
+            {
+                throw new Win32Exception();
+            }
+
+            return imagePath.ToString();
+        }
+        finally
+        {
+            _ = NativeMethods.TerminateProcess(processInfo.hProcess, 0);
+            _ = NativeMethods.CloseHandle(processInfo.hThread);
+            _ = NativeMethods.CloseHandle(processInfo.hProcess);
+        }
     }
 }
