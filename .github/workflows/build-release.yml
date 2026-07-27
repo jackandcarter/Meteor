@@ -287,10 +287,6 @@ jobs:
             foreach ($root in $imageOptionsRoots) {
               foreach ($clientExecutable in $clientExecutables) {
                 $key = Join-Path $root $clientExecutable
-                if (Test-Path -LiteralPath $key) {
-                  throw "The disposable Windows runner unexpectedly already contains $key."
-                }
-
                 New-Item -Path $key -Force | Out-Null
                 New-ItemProperty `
                   -LiteralPath $key `
