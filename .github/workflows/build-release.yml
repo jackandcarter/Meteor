@@ -273,6 +273,61 @@ jobs:
         shell: pwsh
         run: ./tools/Windows/build-aetherxiv.ps1 -Configuration $env:BUILD_CONFIGURATION
 
+      - name: Validate Windows client redirect repair
+        shell: pwsh
+        run: |
+          $imageOptionsRoots = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
+          )
+          $clientExecutables = @("ffxivboot.exe", "ffxivlogin.exe", "ffxivgame.exe")
+          $testKeys = @()
+
+          try {
+            foreach ($root in $imageOptionsRoots) {
+              foreach ($clientExecutable in $clientExecutables) {
+                $key = Join-Path $root $clientExecutable
+                if (Test-Path -LiteralPath $key) {
+                  throw "The disposable Windows runner unexpectedly already contains $key."
+                }
+
+                New-Item -Path $key -Force | Out-Null
+                New-ItemProperty `
+                  -LiteralPath $key `
+                  -Name Debugger `
+                  -PropertyType String `
+                  -Value "D:\Downloads\NovumLauncher\NovumLauncher.exe" `
+                  -Force | Out-Null
+                $testKeys += $key
+              }
+            }
+
+            $launcher = Resolve-Path "bin\build\Release\Windows\launcher\app\AetherXIV.Launcher.App.exe"
+            $repair = Start-Process `
+              -FilePath $launcher `
+              -ArgumentList "--remove-novum-ffxiv-launch-redirects" `
+              -Wait `
+              -PassThru
+            if ($repair.ExitCode -ne 0) {
+              throw "Packaged Windows redirect repair exited with $($repair.ExitCode)."
+            }
+
+            foreach ($key in $testKeys) {
+              $debugger = (Get-ItemProperty `
+                -LiteralPath $key `
+                -Name Debugger `
+                -ErrorAction SilentlyContinue).Debugger
+              if ($null -ne $debugger) {
+                throw "Windows redirect repair left the Debugger value under $key."
+              }
+            }
+          }
+          finally {
+            foreach ($key in $testKeys) {
+              Remove-Item -LiteralPath $key -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
+
       - name: Package the Windows release
         shell: pwsh
         run: |

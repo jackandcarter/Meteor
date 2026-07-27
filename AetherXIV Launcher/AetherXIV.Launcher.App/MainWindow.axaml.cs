@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -1423,6 +1424,13 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (OperatingSystem.IsWindows()
+                && platform.UsesNativeWindowsClient
+                && !await EnsureNovumCompatibilityAsync())
+            {
+                return;
+            }
+
             ServerProfile serverProfile = ReadServerProfile();
             WineRuntimeProfile runtimeProfile = ReadRuntimeProfile();
             ClientGraphicsTarget graphicsTarget = ReadGraphicsTarget();
@@ -1520,6 +1528,210 @@ public sealed partial class MainWindow : Window
         {
             ClearLaunchInProgress();
         }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private async Task<bool> EnsureNovumCompatibilityAsync()
+    {
+        IReadOnlyList<WindowsFfxivLaunchRedirect> redirects;
+        try
+        {
+            redirects = WindowsFfxivLaunchRedirects.FindNovumRedirects();
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Novum compatibility check failed: {ex.Message}");
+            HomeLoginStatus.Text = "Could not check Windows client launch redirects.";
+            return false;
+        }
+
+        if (redirects.Count == 0)
+            return true;
+
+        AppendLog($"Novum launch redirects detected: {redirects.Count}");
+        foreach (WindowsFfxivLaunchRedirect redirect in redirects)
+        {
+            AppendLog(
+                $"Novum redirect: {redirect.ExecutableName} ({redirect.RegistryView}) -> {redirect.DebuggerCommand}");
+        }
+
+        bool proceed = await ConfirmNovumRedirectRemovalAsync(redirects);
+        if (!proceed)
+        {
+            AppendLog("Novum redirect removal cancelled; closing launcher.");
+            Close();
+            return false;
+        }
+
+        SetLaunchInProgress("Removing conflict...", "Requesting permission to remove Novum launch redirects...");
+        int repairExitCode;
+        try
+        {
+            string executablePath = Environment.ProcessPath
+                ?? Process.GetCurrentProcess().MainModule?.FileName
+                ?? throw new InvalidOperationException("Could not resolve the AetherXIV Launcher executable path.");
+            ProcessStartInfo repairStartInfo = new()
+            {
+                FileName = executablePath,
+                UseShellExecute = true,
+                Verb = "runas",
+                WorkingDirectory = AppContext.BaseDirectory
+            };
+            repairStartInfo.ArgumentList.Add(WindowsFfxivLaunchRedirects.RepairCommand);
+
+            using Process repairProcess = Process.Start(repairStartInfo)
+                ?? throw new InvalidOperationException("Windows did not start the registry repair process.");
+            await repairProcess.WaitForExitAsync();
+            repairExitCode = repairProcess.ExitCode;
+            AppendLog($"Novum redirect repair exit code: {repairExitCode}");
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Novum redirect repair failed: {ex.Message}");
+            await ShowNovumRepairFailureAsync(
+                "Windows did not grant permission to remove the Novum registry edits.");
+            Close();
+            return false;
+        }
+
+        IReadOnlyList<WindowsFfxivLaunchRedirect> remainingRedirects;
+        try
+        {
+            remainingRedirects = WindowsFfxivLaunchRedirects.FindNovumRedirects();
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Novum compatibility recheck failed: {ex.Message}");
+            await ShowNovumRepairFailureAsync(
+                "AetherXIV could not verify that the Novum registry edits were removed.");
+            Close();
+            return false;
+        }
+
+        if (repairExitCode != 0 || remainingRedirects.Count != 0)
+        {
+            AppendLog($"Novum redirects remaining after repair: {remainingRedirects.Count}");
+            await ShowNovumRepairFailureAsync(
+                "The Novum registry edits are still present and AetherXIV cannot safely launch the client.");
+            Close();
+            return false;
+        }
+
+        AppendLog("Novum launch redirects removed and verified.");
+        HomeLoginStatus.Text = "Novum launch redirects removed. Continuing...";
+        return true;
+    }
+
+    private async Task<bool> ConfirmNovumRedirectRemovalAsync(
+        IReadOnlyList<WindowsFfxivLaunchRedirect> redirects)
+    {
+        Button continueButton = new()
+        {
+            Content = "Continue",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        Button cancelButton = new()
+        {
+            Content = "Cancel",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        string detectedRedirects = string.Join(
+            Environment.NewLine,
+            redirects.Select(redirect =>
+                $"• {redirect.ExecutableName} ({redirect.RegistryView}) → {redirect.DebuggerCommand}"));
+        Window dialog = new()
+        {
+            Title = "Novum Installation Detected",
+            Width = 640,
+            Height = 400,
+            MinWidth = 560,
+            MinHeight = 360,
+            Background = Background,
+            Foreground = Foreground,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(18),
+                Spacing = 14,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "AetherXIV Launcher is not compatible with existing Novum installations.",
+                        FontSize = 20,
+                        FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                    },
+                    new ScrollViewer
+                    {
+                        MaxHeight = 230,
+                        VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+                        Content = new TextBlock
+                        {
+                            Text =
+                                "Novum registered Windows launch redirects for the FFXIV client. These registry edits must be removed before AetherXIV can continue.\n\n"
+                                + detectedRedirects
+                                + "\n\nAetherXIV will remove only these registry redirect values. It will not delete Novum or any game files. Windows will request administrator permission.\n\nProceed to remove these?",
+                            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                            Foreground = Avalonia.Media.Brushes.LightGray
+                        }
+                    },
+                    new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Spacing = 10,
+                        Children = { continueButton, cancelButton }
+                    }
+                }
+            }
+        };
+        continueButton.Click += (_, _) => dialog.Close(true);
+        cancelButton.Click += (_, _) => dialog.Close(false);
+        return await dialog.ShowDialog<bool>(this);
+    }
+
+    private async Task ShowNovumRepairFailureAsync(string message)
+    {
+        Button closeButton = new()
+        {
+            Content = "Close Launcher",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        Window dialog = new()
+        {
+            Title = "Novum Registry Edits Remain",
+            Width = 560,
+            Height = 280,
+            MinWidth = 500,
+            MinHeight = 250,
+            Background = Background,
+            Foreground = Foreground,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(18),
+                Spacing = 14,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "AetherXIV cannot continue the Windows client launch.",
+                        FontSize = 20,
+                        FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                    },
+                    new TextBlock
+                    {
+                        Text = message,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                        Foreground = Avalonia.Media.Brushes.LightGray
+                    },
+                    closeButton
+                }
+            }
+        };
+        closeButton.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(this);
     }
 
     private async Task MonitorLaunchHelperAsync(string? helperLogPath)
