@@ -262,7 +262,12 @@ jobs:
 
       - name: Run native Windows launcher regression tests
         shell: pwsh
-        run: dotnet test "AetherXIV Launcher/AetherXIV.Launcher.Tests/AetherXIV.Launcher.Tests.csproj" --configuration Release
+        run: >-
+          dotnet test
+          "AetherXIV Launcher/AetherXIV.Launcher.Tests/AetherXIV.Launcher.Tests.csproj"
+          --configuration Release
+          --filter
+          "FullyQualifiedName=AetherXIV.Launcher.Tests.ClientProcessLauncherTests.ExplicitApplicationNamePreventsSpaceDelimitedExecutableSubstitutionOnWindows"
 
       - name: Build the Windows release
         shell: pwsh

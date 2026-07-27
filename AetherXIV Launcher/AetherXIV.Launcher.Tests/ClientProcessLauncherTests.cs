@@ -160,6 +160,7 @@ public sealed class ClientProcessLauncherTests
         finally
         {
             _ = NativeMethods.TerminateProcess(processInfo.hProcess, 0);
+            _ = NativeMethods.WaitForSingleObject(processInfo.hProcess, 5000);
             _ = NativeMethods.CloseHandle(processInfo.hThread);
             _ = NativeMethods.CloseHandle(processInfo.hProcess);
         }
